@@ -247,6 +247,7 @@ cmd_check() {
 
     # --- 4.2 Architecture Check ---
     echo -ne "Checking Architecture... "
+    # Suportado: Apenas amd64 (x86_64).
     ARCH_COUNT=$(kubectl get nodes -o jsonpath='{.items[*].status.nodeInfo.architecture}' | tr ' ' '\n' | sort | uniq -c)
     if echo "$ARCH_COUNT" | grep -q "amd64"; then
          # Check if ONLY amd64
@@ -262,20 +263,59 @@ cmd_check() {
 
     # --- 4.3 Container Runtime Check ---
     echo -ne "Checking Container Runtime... "
+    # Suportados: Containerd (1.6+), CRI-O (1.24+).
+    # Format typically: containerd://1.6.20 or cri-o://1.24.1
     RUNTIMES=$(kubectl get nodes -o jsonpath='{.items[*].status.nodeInfo.containerRuntimeVersion}' | tr ' ' '\n' | sort | uniq)
     echo -e "${BLUE}$RUNTIMES${NC}"
+    
     for rt in $RUNTIMES; do
-        if [[ "$rt" == containerd* ]]; then
-             # Simple check for containerd 1.6+ could go here
-             :
-        elif [[ "$rt" == cri-o* ]]; then
-             :
-        elif [[ "$rt" == docker* ]]; then
-             echo -e "${YELLOW}Warning: Docker runtime detected (Deprecated in modern K8s). Ensure compatibility.${NC}"
+        # Extract name and version
+        RT_NAME=$(echo "$rt" | awk -F'://' '{print $1}')
+        RT_VER=$(echo "$rt" | awk -F'://' '{print $2}')
+        
+        # Version comparison helper
+        check_ver() {
+             local ver=$1
+             local min=$2
+             if [ "$(printf '%s\n' "$min" "$ver" | sort -V | head -n1)" = "$min" ]; then echo "ok"; else echo "fail"; fi
+        }
+
+        if [[ "$RT_NAME" == "containerd" ]]; then
+             if [ "$(check_ver "$RT_VER" "1.6")" == "ok" ]; then
+                 echo -e "  - containerd $RT_VER ${GREEN}(OK - 1.6+)${NC}"
+             else
+                 echo -e "  - containerd $RT_VER ${RED}(FAIL - Min 1.6)${NC}"
+                 ERROR=1
+             fi
+        elif [[ "$RT_NAME" == "cri-o" ]]; then
+             if [ "$(check_ver "$RT_VER" "1.24")" == "ok" ]; then
+                  echo -e "  - cri-o $RT_VER ${GREEN}(OK - 1.24+)${NC}"
+             else
+                  echo -e "  - cri-o $RT_VER ${RED}(FAIL - Min 1.24)${NC}"
+                  ERROR=1
+             fi
+        elif [[ "$RT_NAME" == "docker" ]]; then
+             echo -e "  - docker ${YELLOW}(Warning: Deprecated. Ensure KCS compatibility)${NC}"
         else
-             echo -e "${YELLOW}Unknown runtime: $rt${NC}"
+             echo -e "  - $rt ${YELLOW}(Unknown/Untested)${NC}"
         fi
     done
+    
+    # --- 4.4 CNI Plugin Check ---
+    echo -ne "Checking CNI Plugin... "
+    # Check for common CNI pods in Running state
+    CNI_PODS=$(kubectl get pods -A --no-headers | grep -E "calico|flannel|cilium|weave|antrea|kube-proxy" | grep "Running" || true)
+    
+    if [ -n "$CNI_PODS" ]; then
+        # Extract unique CNI names for display
+        CNI_NAMES=$(echo "$CNI_PODS" | awk '{print $2}' | grep -oE "calico|flannel|cilium|weave|antrea" | sort | uniq | tr '\n' ' ')
+        if [ -z "$CNI_NAMES" ]; then CNI_NAMES="kube-proxy (Standard)"; fi
+        
+        echo -e "${GREEN}OK${NC} (Detected: $CNI_NAMES)"
+    else
+        echo -e "${YELLOW}Warning: No common CNI pods (Calico, Flannel, Cilium) detected in Running state.${NC}"
+        # Not a hard fail as customized CNI might have different names, but warning is strict.
+    fi
 
     # --- 4.4 Node Resources & Deep Inspection ---
     echo -e "\n${BLUE}Node Resources (CPU / RAM / Disk / Kernel Headers):${NC}"
