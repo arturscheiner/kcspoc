@@ -349,12 +349,15 @@ EOF
                 DISK_AVAIL=$(kubectl exec debug-node-${name} -- chroot /host df -h / | tail -n 1 | awk '{print $4}' 2>/dev/null || echo "N/A")
                 
                 # HEADERS
-                if kubectl exec debug-node-${name} -- chroot /host command -v dpkg &> /dev/null; then
-                     HAS_HEADERS=$(kubectl exec debug-node-${name} -- chroot /host dpkg -l | grep -q "linux-headers" && echo "YES" || echo "NO")
-                elif kubectl exec debug-node-${name} -- chroot /host command -v rpm &> /dev/null; then
-                     HAS_HEADERS=$(kubectl exec debug-node-${name} -- chroot /host rpm -qa | grep -q "headers" && echo "YES" || echo "NO")
+                # Validating if headers/devel packages are installed (Required for eBPF)
+                if HEADERS_OUT=$(kubectl exec "debug-node-${name}" -- /bin/bash -c "chroot /host sh -c 'dpkg -l 2>/dev/null | grep -i headers || rpm -qa 2>/dev/null | grep -i headers'" 2>/dev/null); then
+                     if [ -n "$HEADERS_OUT" ]; then
+                         HAS_HEADERS="${GREEN}YES${NC}"
+                     else
+                         HAS_HEADERS="${RED}NO${NC}"
+                     fi
                 else
-                     HAS_HEADERS="unk"
+                     HAS_HEADERS="${RED}Err${NC}"
                 fi
             fi
 
@@ -367,7 +370,10 @@ EOF
         fi
 
         # Print Row
-        printf "%-30s %-15s %-10s %-15s %-15s %-20s\n" "$name" "$role" "$cpu" "${MEM_GB}G" "$DISK_AVAIL" "$HAS_HEADERS"
+        # Note: HAS_HEADERS contains color codes, so printf spacing might be affected visually if not accounted for, 
+        # but bash printf %s usually handles the string length including codes. 
+        # We might want to reset color at end of string if not already done.
+        printf "%-30s %-15s %-10s %-15s %-15s %-20b\n" "$name" "$role" "$cpu" "${MEM_GB}G" "$DISK_AVAIL" "$HAS_HEADERS"
 
     done <<< "$NODES"
 
