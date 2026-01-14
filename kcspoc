@@ -103,6 +103,18 @@ cmd_config() {
     echo -ne "Enter IP Range: "
     read -r IP_RANGE
 
+    # 5. Deep Inspection Permission
+    echo -e "\n${BLUE}[5/5] Deep Node Inspection${NC}"
+    echo "To verify disk space and kernel headers accurately, we can run a temporary privileged pod on each node."
+    echo "This requires permissions to mount host filesystem."
+    echo -ne "Allow deep packet inspection? [y/N]: "
+    read -r IN_DEEP
+    if [[ "$IN_DEEP" =~ ^[Yy]$ ]]; then
+        ENABLE_DEEP_CHECK="true"
+    else
+        ENABLE_DEEP_CHECK="false"
+    fi
+
     # Save to file
     cat > "$CONFIG_FILE" <<EOF
 # KCS PoC Configuration
@@ -119,6 +131,9 @@ REGISTRY_EMAIL="$REGISTRY_EMAIL"
 
 # Networking
 IP_RANGE="$IP_RANGE"
+
+# Checks
+ENABLE_DEEP_CHECK="$ENABLE_DEEP_CHECK"
 EOF
 
     echo -e "\n${GREEN}Configuration saved successfully to $CONFIG_FILE${NC}"
@@ -186,23 +201,17 @@ cmd_check() {
     # Check 4: Cluster Resources & Topology
     echo -e "\n${YELLOW}=== Cluster Resources & Topology ===${NC}"
     
-    # 4.1 Kubernetes Version Check
+    # --- 4.1 Kubernetes Version Check ---
     echo -ne "Checking Kubernetes Version... "
-    # Get server version (gitVersion) e.g., v1.28.3
+    # Get server version (gitVersion)
     K8S_VER_STR=$(kubectl version -o json 2>/dev/null | grep gitVersion | grep -v Client | head -n 1 | awk -F'"' '{print $4}')
-    
-    # Fallback to 'kubectl version --short' parsing if json fails (older cli)
     if [ -z "$K8S_VER_STR" ]; then
         K8S_VER_STR=$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}')
     fi
-
-    # Extract Major.Minor e.g., 1.28
-    # Remove 'v' prefix if present
     VER_CLEAN=$(echo "$K8S_VER_STR" | sed 's/v//')
     MAJOR=$(echo "$VER_CLEAN" | cut -d. -f1)
     MINOR=$(echo "$VER_CLEAN" | cut -d. -f2)
 
-    # Check Range: Min 1.25, Max 1.34
     if [ "$MAJOR" -eq 1 ] && [ "$MINOR" -ge 25 ] && [ "$MINOR" -le 34 ]; then
          echo -e "${GREEN}${K8S_VER_STR}${NC} (Pass: 1.25 <= v <= 1.34)"
     else
@@ -210,64 +219,155 @@ cmd_check() {
          ERROR=1
     fi
 
-    # 4.2 Per-Node Resource Stats
-    echo -e "\n${BLUE}Node Resources (CPU / RAM / Ephemeral Storage):${NC}"
-    printf "%-20s %-15s %-15s %-15s %-15s\n" "NODE" "ROLE" "CPU" "RAM (GB)" "DISK (GB)"
-    echo "--------------------------------------------------------------------------------"
+    # --- 4.2 Architecture Check ---
+    echo -ne "Checking Architecture... "
+    ARCH_COUNT=$(kubectl get nodes -o jsonpath='{.items[*].status.nodeInfo.architecture}' | tr ' ' '\n' | sort | uniq -c)
+    if echo "$ARCH_COUNT" | grep -q "amd64"; then
+         # Check if ONLY amd64
+         if [ $(echo "$ARCH_COUNT" | wc -l) -eq 1 ]; then
+             echo -e "${GREEN}amd64${NC} (Pass)"
+         else
+             echo -e "${YELLOW}Mixed Architectures detected${NC} (Warning: Core only supports amd64)"
+         fi
+    else
+         echo -e "${RED}No amd64 nodes found${NC} (FAIL)"
+         ERROR=1
+    fi
 
-    # Iterate over nodes to calculate and display values
-    # We use jsonpath to get one line per node with needed fields
-    kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.labels.kubernetes\.io/role}{" "}{.status.capacity.cpu}{" "}{.status.capacity.memory}{" "}{.status.capacity.ephemeral-storage}{"\n"}{end}' | while read -r name role cpu mem_raw disk_raw; do
-        
-        # Handle Role (if label is missing, it might be empty or <none>)
-        # Some setups use node-role.kubernetes.io/control-plane type labels instead of value
-        # Simple fallback checks:
-        if [[ "$role" == "" ]]; then
-            # try finding role in labels via grep
-            if kubectl get node "$name" --show-labels | grep -q "control-plane"; then role="control-plane"; else role="worker"; fi
-        fi
-
-        # MEM: Convert Ki to GB. 1 GiB = 1024^2 KiB? usually input is Ki. 
-        # 1000000 Ki ~= 1GB approx. Let's do rough math: val / 1024 / 1024
-        MEM_KB=$(echo "$mem_raw" | sed 's/[^0-9]*//g') # Remove units
-        if [[ "$mem_raw" == *"Mi"* ]]; then
-             MEM_GB=$((MEM_KB / 1024))
-        elif [[ "$mem_raw" == *"Gi"* ]]; then
-             MEM_GB=$MEM_KB
-        else 
-             # Assume Ki
-             MEM_GB=$((MEM_KB / 1024 / 1024))
-        fi
-
-        # DISK: Convert to GB. Usually Bytes or Ki.
-        DISK_VAL=$(echo "$disk_raw" | sed 's/[^0-9]*//g')
-        if [[ "$disk_raw" == *"Ki"* ]]; then
-            DISK_GB=$((DISK_VAL / 1024 / 1024))
-        elif [[ "$disk_raw" == *"Mi"* ]]; then
-            DISK_GB=$((DISK_VAL / 1024))
-        elif [[ "$disk_raw" == *"Gi"* ]]; then
-            DISK_GB=$DISK_VAL
+    # --- 4.3 Container Runtime Check ---
+    echo -ne "Checking Container Runtime... "
+    RUNTIMES=$(kubectl get nodes -o jsonpath='{.items[*].status.nodeInfo.containerRuntimeVersion}' | tr ' ' '\n' | sort | uniq)
+    echo -e "${BLUE}$RUNTIMES${NC}"
+    for rt in $RUNTIMES; do
+        if [[ "$rt" == containerd* ]]; then
+             # Simple check for containerd 1.6+ could go here
+             :
+        elif [[ "$rt" == cri-o* ]]; then
+             :
+        elif [[ "$rt" == docker* ]]; then
+             echo -e "${YELLOW}Warning: Docker runtime detected (Deprecated in modern K8s). Ensure compatibility.${NC}"
         else
-            # Assume bytes
-            DISK_GB=$((DISK_VAL / 1024 / 1024 / 1024))
+             echo -e "${YELLOW}Unknown runtime: $rt${NC}"
         fi
-        
-        # Formatting
-        printf "%-20s %-15s %-15s %-15s %-15s\n" "$name" "$role" "$cpu" "~${MEM_GB}G" "~${DISK_GB}G"
-        
-        # Min Requirements Check Per Node (Optional strictly enforcement or just informative? Request implied showing info)
-        # We'll just display for now, global checks were done before vs totals, but user wants per node info.
     done
 
-    echo -e "\n${YELLOW}Global Requirements Check (Lab: 4vCPU, 8GB RAM Total)${NC}"
+    # --- 4.4 External Connectivity ---
+    echo -ne "Checking Repo Connectivity (repo.kcs.kaspersky.com)... "
+    if kubectl run -i --rm --image=curlimages/curl --restart=Never connectivity-test -- curl -m 5 -I https://repo.kcs.kaspersky.com &> /dev/null; then
+         echo -e "${GREEN}OK${NC}"
+    else
+         echo -e "${RED}FAIL${NC} (Could not reach repo.kcs.kaspersky.com)"
+         ERROR=1
+    fi
+
+    # --- 4.5 Node Resources & Deep Inspection ---
+    echo -e "\n${BLUE}Node Resources (CPU / RAM / Disk / Kernel Headers):${NC}"
     
-    # Calculate Totals for Pass/Fail
+    # If Deep Check is ENABLED
+    if [[ "$ENABLE_DEEP_CHECK" == "true" ]]; then
+        echo -e "${YELLOW}Running Deep Node Inspection (Privileged Pods)...${NC}"
+        
+        # Prepare Table Header
+        printf "%-20s %-15s %-10s %-15s %-15s %-20s\n" "NODE" "ROLE" "CPU" "RAM" "DISK(Root)" "HEADERS"
+        echo "----------------------------------------------------------------------------------------------------"
+
+        NODES=$(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.labels.kubernetes\.io/role}{" "}{.status.capacity.cpu}{" "}{.status.capacity.memory}{"\n"}{end}')
+
+        while read -r name role cpu mem_raw; do
+            # Cleanup role
+             if [[ "$role" == "" ]]; then
+                if kubectl get node "$name" --show-labels | grep -q "control-plane"; then role="control-plane"; else role="worker"; fi
+            fi
+            
+            # Basic Math
+            MEM_KB=$(echo "$mem_raw" | sed 's/[^0-9]*//g')
+            if [[ "$mem_raw" == *"Mi"* ]]; then MEM_GB=$((MEM_KB / 1024)); elif [[ "$mem_raw" == *"Gi"* ]]; then MEM_GB=$MEM_KB; else MEM_GB=$((MEM_KB / 1024 / 1024)); fi
+            
+            # --- DEEP INSPECTION ---
+            # 1. Create Pod YAML
+            cat <<EOF > /tmp/debug-node-${name}.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-node-${name}
+  namespace: default
+spec:
+  hostPID: true
+  hostIPC: true
+  hostNetwork: true
+  nodeName: ${name}
+  containers:
+  - name: debug-container
+    image: ubuntu:latest
+    command: ["sleep", "infinity"]
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /host
+      name: host-volume
+  volumes:
+  - name: host-volume
+    hostPath:
+      path: /
+  terminationGracePeriodSeconds: 1
+EOF
+            # 2. Apply and Wait
+            # echo "Inspecting $name..."
+            kubectl apply -f /tmp/debug-node-${name}.yaml &> /dev/null
+            kubectl wait --for=condition=Ready pod/debug-node-${name} --timeout=30s &> /dev/null
+
+            # 3. Exec Commands
+            # DISK: df -h /host | grep '/$' | awk '{print $4}' (Available) or $2 (Size)
+            DISK_AVAIL=$(kubectl exec debug-node-${name} -- chroot /host df -h / | tail -n 1 | awk '{print $4}' 2>/dev/null || echo "N/A")
+            
+            # HEADERS
+            # Check dpkg or rpm
+            if kubectl exec debug-node-${name} -- chroot /host command -v dpkg &> /dev/null; then
+                 HAS_HEADERS=$(kubectl exec debug-node-${name} -- chroot /host dpkg -l | grep -q "linux-headers" && echo "YES" || echo "NO")
+            elif kubectl exec debug-node-${name} -- chroot /host command -v rpm &> /dev/null; then
+                 HAS_HEADERS=$(kubectl exec debug-node-${name} -- chroot /host rpm -qa | grep -q "headers" && echo "YES" || echo "NO")
+            else
+                 HAS_HEADERS="unk"
+            fi
+
+            # 4. Cleanup
+            kubectl delete pod debug-node-${name} --force --grace-period=0 &> /dev/null
+            rm /tmp/debug-node-${name}.yaml
+
+            # Print Row
+            printf "%-20s %-15s %-10s %-15s %-15s %-20s\n" "$name" "$role" "$cpu" "${MEM_GB}G" "$DISK_AVAIL" "$HAS_HEADERS"
+
+        done <<< "$NODES"
+
+    else
+        # Standard Check (Non-Intrusive)
+        echo -e "${YELLOW}(Deep Check Disabled: Showing basic info)${NC}"
+        printf "%-20s %-15s %-15s %-15s %-15s\n" "NODE" "ROLE" "CPU" "RAM (GB)" "DISK (GB)"
+        echo "--------------------------------------------------------------------------------"
+        
+        kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.labels.kubernetes\.io/role}{" "}{.status.capacity.cpu}{" "}{.status.capacity.memory}{" "}{.status.capacity.ephemeral-storage}{"\n"}{end}' | while read -r name role cpu mem_raw disk_raw; do
+             # (Same logic as before for basic parsing)
+             if [[ "$role" == "" ]]; then
+                if kubectl get node "$name" --show-labels | grep -q "control-plane"; then role="control-plane"; else role="worker"; fi
+            fi
+            MEM_KB=$(echo "$mem_raw" | sed 's/[^0-9]*//g')
+            if [[ "$mem_raw" == *"Mi"* ]]; then MEM_GB=$((MEM_KB / 1024)); elif [[ "$mem_raw" == *"Gi"* ]]; then MEM_GB=$MEM_KB; else MEM_GB=$((MEM_KB / 1024 / 1024)); fi
+            
+            DISK_VAL=$(echo "$disk_raw" | sed 's/[^0-9]*//g') # Simplify
+            if [[ "$disk_raw" == *"Gi"* ]]; then DISK_GB=$DISK_VAL; else DISK_GB="~"; fi # Simplified for brevity
+
+             printf "%-20s %-15s %-15s %-15s %-15s\n" "$name" "$role" "$cpu" "~${MEM_GB}G" "${DISK_GB}G"
+        done
+    fi
+
+    # Global Requirements Summary (Totals)
     TOTAL_CPU=$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.capacity.cpu}{"\n"}{end}' | awk '{s+=$1} END {print s}')
     TOTAL_MEM_KI=$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.capacity.memory}{"\n"}{end}' | sed 's/Ki//g' | awk '{s+=$1} END {print s}')
     TOTAL_MEM_GB=$((TOTAL_MEM_KI / 1024 / 1024))
     
-    if [ "$TOTAL_CPU" -ge 4 ]; then echo -e "Cluster CPU: ${GREEN}${TOTAL_CPU} vCPUs${NC} (OK)"; else echo -e "Cluster CPU: ${RED}${TOTAL_CPU} vCPUs${NC} (FAIL)"; ERROR=1; fi
-    if [ "$TOTAL_MEM_GB" -ge 8 ]; then echo -e "Cluster RAM: ${GREEN}~${TOTAL_MEM_GB} GB${NC} (OK)"; else echo -e "Cluster RAM: ${RED}~${TOTAL_MEM_GB} GB${NC} (FAIL)"; ERROR=1; fi
+    echo -e "\n${YELLOW}Global Cluster Totals:${NC}"
+    if [ "$TOTAL_CPU" -ge 4 ]; then echo -e "CPU: ${GREEN}${TOTAL_CPU} vCPUs${NC} (Pass)"; else echo -e "CPU: ${RED}${TOTAL_CPU} vCPUs${NC} (FAIL)"; ERROR=1; fi
+    if [ "$TOTAL_MEM_GB" -ge 8 ]; then echo -e "RAM: ${GREEN}~${TOTAL_MEM_GB} GB${NC} (Pass)"; else echo -e "RAM: ${RED}~${TOTAL_MEM_GB} GB${NC} (FAIL)"; ERROR=1; fi
 
 
 
