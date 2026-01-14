@@ -178,9 +178,80 @@ cmd_check() {
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}FAIL${NC}"
-        echo "Could not connect to Kubernetes cluster ${YELLOW}${CURRENT_CTX}${NC} using current kubeconfig."
+        echo -e "Could not connect to Kubernetes cluster ${YELLOW}${CURRENT_CTX}${NC} using current kubeconfig."
+        ERROR=1
+        return 1
+    fi
+
+    # Check 4: Cluster Resources & Topology
+    echo -e "\n${YELLOW}=== Cluster Resources & Topology ===${NC}"
+    
+    echo -ne "Gathering node information... "
+    
+    # Node Counts
+    TOTAL_NODES=$(kubectl get nodes --no-headers | wc -l)
+    MASTERS=$(kubectl get nodes --no-headers | grep -E "control-plane|master" | wc -l)
+    WORKERS=$((TOTAL_NODES - MASTERS))
+    
+    echo -e "Done"
+    echo -e "Total Nodes: ${BLUE}$TOTAL_NODES${NC} (Masters: $MASTERS, Workers: $WORKERS)"
+    echo -e "\n${BLUE}Node List:${NC}"
+    kubectl get nodes -o custom-columns=NAME:.metadata.name,ROLE:.metadata.labels."kubernetes\.io/role",VERSION:.status.nodeInfo.kubeletVersion,KERNEL:.status.nodeInfo.kernelVersion,OS:.status.nodeInfo.osImage
+    
+    echo -e "\n${YELLOW}Resource Validation (Min Requirements: 4 vCPU, 8GB RAM, Kernel 5.4)${NC}"
+    
+    # CPU Check (Sum of all nodes)
+    # CPU capacity usually in integer or 'm'. 
+    # Simplification: Assume integer for simplicity or parse 'm'. 
+    # Using awk to sum.
+    TOTAL_CPU=$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.capacity.cpu}{"\n"}{end}' | awk '{s+=$1} END {print s}')
+    # Prepare display
+    if [ "$TOTAL_CPU" -ge 4 ]; then
+        echo -e "CPU (Total): ${GREEN}${TOTAL_CPU} vCPUs${NC} (PASS)"
+    else
+        echo -e "CPU (Total): ${RED}${TOTAL_CPU} vCPUs${NC} (FAIL - Min 4)"
         ERROR=1
     fi
+
+    # RAM Check (Sum of all nodes)
+    # Memory usually in Ki. 1GB ~ 1000000Ki or 1048576Ki. 
+    # Minimum 8GB = ~8000000Ki
+    TOTAL_MEM_KI=$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.capacity.memory}{"\n"}{end}' | sed 's/Ki//g' | awk '{s+=$1} END {print s}')
+    TOTAL_MEM_GB=$((TOTAL_MEM_KI / 1024 / 1024))
+    
+    if [ "$TOTAL_MEM_GB" -ge 8 ]; then
+        echo -e "RAM (Total): ${GREEN}~${TOTAL_MEM_GB} GB${NC} (PASS)"
+    else
+        echo -e "RAM (Total): ${RED}~${TOTAL_MEM_GB} GB${NC} (FAIL - Min 8 GB)"
+        ERROR=1
+    fi
+    
+    # Kernel Version Check (Min 5.4)
+    # We check each node.
+    echo -e "Kernel Versions:"
+    kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}: {.status.nodeInfo.kernelVersion}{"\n"}{end}' | while read -r node_kernel; do
+        # Extract version number X.Y
+        KVER=$(echo "$node_kernel" | awk '{print $2}' | cut -d'-' -f1)
+        MAJOR=$(echo "$KVER" | cut -d. -f1)
+        MINOR=$(echo "$KVER" | cut -d. -f2)
+        
+        # Simple check 5.4
+        if [ "$MAJOR" -gt 5 ] || { [ "$MAJOR" -eq 5 ] && [ "$MINOR" -ge 4 ]; }; then
+             echo -e "  - $node_kernel ${GREEN}(PASS)${NC}"
+        else
+             echo -e "  - $node_kernel ${RED}(FAIL - Min 5.4)${NC}"
+             ERROR=1
+        fi
+    done
+
+    # Disk Space Warning (Manual Check hint as requested or simple parsing)
+    # The user asked for "kubectl describe nodes" command validation.
+    # Showing capacity of ephemeral-storage as proxy or just list it.
+    echo -e "\n${BLUE}Disk Capacity (Ephemeral Storage):${NC}"
+    kubectl get nodes -o custom-columns=NAME:.metadata.name,DISK:.status.capacity.ephemeral-storage
+    echo -e "${YELLOW}Note: Check if 'DISK' meets 80GB req per node manually if unsure.${NC}"
+
+
 
     if [ $ERROR -eq 0 ]; then
         echo -e "\n${GREEN}All checks passed. You are ready to run '$0 prepare'.${NC}"
