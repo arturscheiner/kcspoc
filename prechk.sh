@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# Script: prechk.sh
+# Script: prechk.shx
 # Descrição: Automação total dos pré-requisitos para Kaspersky Container Security.
 #            Inclui: Namespace, Registry Secrets, Deps K8s e Kernel Headers.
 # Ambiente: Laboratório Interno (Ubuntu 24.04 / K8s v1.32.5)
