@@ -277,43 +277,34 @@ cmd_check() {
         fi
     done
 
-    # --- 4.4 External Connectivity ---
-    echo -ne "Checking Repo Connectivity (repo.kcs.kaspersky.com)... "
-    if kubectl run -i --rm --image=curlimages/curl --restart=Never connectivity-test -- curl -m 5 -I https://repo.kcs.kaspersky.com &> /dev/null; then
-         echo -e "${GREEN}OK${NC}"
-    else
-         echo -e "${RED}FAIL${NC} (Could not reach repo.kcs.kaspersky.com)"
-         ERROR=1
-    fi
-
-    # --- 4.5 Node Resources & Deep Inspection ---
+    # --- 4.4 Node Resources & Deep Inspection ---
     echo -e "\n${BLUE}Node Resources (CPU / RAM / Disk / Kernel Headers):${NC}"
     
-    # If Deep Check is ENABLED
     if [[ "$ENABLE_DEEP_CHECK" == "true" ]]; then
         echo -e "${YELLOW}Running Deep Node Inspection (Privileged Pods)...${NC}"
+    else
+        echo -e "${YELLOW}(Deep Check Disabled: Basic info only. Templates saved to $CONFIG_DIR)${NC}"
+    fi
+    
+    # Unified Table Header
+    printf "%-30s %-15s %-10s %-15s %-15s %-20s\n" "NODE" "ROLE" "CPU" "RAM" "DISK(Root)" "HEADERS"
+    echo "-----------------------------------------------------------------------------------------------------------------"
+
+    NODES=$(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.labels.kubernetes\.io/role}{" "}{.status.capacity.cpu}{" "}{.status.capacity.memory}{"\n"}{end}')
+
+    while read -r name role cpu mem_raw; do
+        # Role Cleanup
+        if [[ "$role" == "" ]]; then
+           if kubectl get node "$name" --show-labels | grep -q "control-plane"; then role="control-plane"; else role="worker"; fi
+        fi
         
-        # Prepare Table Header
-        printf "%-30s %-15s %-10s %-15s %-15s %-20s\n" "NODE" "ROLE" "CPU" "RAM" "DISK(Root)" "HEADERS"
-        echo "-----------------------------------------------------------------------------------------------------------------"
-
-        NODES=$(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.labels.kubernetes\.io/role}{" "}{.status.capacity.cpu}{" "}{.status.capacity.memory}{"\n"}{end}')
-
-        while read -r name role cpu mem_raw; do
-            # Cleanup role
-             if [[ "$role" == "" ]]; then
-                if kubectl get node "$name" --show-labels | grep -q "control-plane"; then role="control-plane"; else role="worker"; fi
-            fi
-            
-            # Basic Math
-            MEM_KB=$(echo "$mem_raw" | sed 's/[^0-9]*//g')
-            if [[ "$mem_raw" == *"Mi"* ]]; then MEM_GB=$((MEM_KB / 1024)); elif [[ "$mem_raw" == *"Gi"* ]]; then MEM_GB=$MEM_KB; else MEM_GB=$((MEM_KB / 1024 / 1024)); fi
-            
-            # --- DEEP INSPECTION ---
-            # 1. Create Pod YAML in ~/.kcspoc
-            POD_FILE="$CONFIG_DIR/debug-node-${name}.yaml"
-            
-            cat <<EOF > "$POD_FILE"
+        # Basic Math
+        MEM_KB=$(echo "$mem_raw" | sed 's/[^0-9]*//g')
+        if [[ "$mem_raw" == *"Mi"* ]]; then MEM_GB=$((MEM_KB / 1024)); elif [[ "$mem_raw" == *"Gi"* ]]; then MEM_GB=$MEM_KB; else MEM_GB=$((MEM_KB / 1024 / 1024)); fi
+        
+        # --- GENERATE DEBUG TEMPLATE (ALWAYS) ---
+        POD_FILE="$CONFIG_DIR/debug-node-${name}.yaml"
+        cat <<EOF > "$POD_FILE"
 apiVersion: v1
 kind: Pod
 metadata:
@@ -340,22 +331,21 @@ spec:
       path: /
   terminationGracePeriodSeconds: 1
 EOF
-            # 2. Apply and Wait
-            # echo "Inspecting $name..."
+
+        # --- DEEP INSPECTION EXECUTION ---
+        if [[ "$ENABLE_DEEP_CHECK" == "true" ]]; then
+            # Apply and Wait
             kubectl apply -f "$POD_FILE" &> /dev/null
             
             # Wait loop (kubectl wait sometimes fails if pod is not immediately seen)
-            # Give it 2 seconds to appear then wait for Ready
             sleep 2
             if ! kubectl wait --for=condition=Ready pod/debug-node-${name} --timeout=40s &> /dev/null; then
                 # If timed out or failed
                 DISK_AVAIL="Err-Pod"
                 HAS_HEADERS="Err-Pod"
             else
-                # 3. Exec Commands
-                # DISK: df -h /host | grep '/$' | awk '{print $4}' (Available) or $2 (Size)
-                # Some systems mount root at /host but df output might vary.
-                # Try finding line ending in /host or just /
+                # Exec Commands
+                # DISK
                 DISK_AVAIL=$(kubectl exec debug-node-${name} -- chroot /host df -h / | tail -n 1 | awk '{print $4}' 2>/dev/null || echo "N/A")
                 
                 # HEADERS
@@ -368,34 +358,26 @@ EOF
                 fi
             fi
 
-            # 4. Cleanup
+            # Cleanup Pod (BUT KEEP FILE)
             kubectl delete pod debug-node-${name} --force --grace-period=0 &> /dev/null
-            rm "$POD_FILE"
+        else
+            # Skipping execution
+            DISK_AVAIL="-"
+            HAS_HEADERS="-"
+        fi
 
-            # Print Row
-            printf "%-30s %-15s %-10s %-15s %-15s %-20s\n" "$name" "$role" "$cpu" "${MEM_GB}G" "$DISK_AVAIL" "$HAS_HEADERS"
+        # Print Row
+        printf "%-30s %-15s %-10s %-15s %-15s %-20s\n" "$name" "$role" "$cpu" "${MEM_GB}G" "$DISK_AVAIL" "$HAS_HEADERS"
 
-        done <<< "$NODES"
+    done <<< "$NODES"
 
+    # --- 4.5 External Connectivity (Moved to End) ---
+    echo -e "\n${BLUE}Checking Repo Connectivity (repo.kcs.kaspersky.com)...${NC}"
+    if kubectl run -i --rm --image=curlimages/curl --restart=Never connectivity-test -- curl -m 5 -I https://repo.kcs.kaspersky.com &> /dev/null; then
+         echo -e "${GREEN}OK${NC}"
     else
-        # Standard Check (Non-Intrusive)
-        echo -e "${YELLOW}(Deep Check Disabled: Showing basic info)${NC}"
-        printf "%-30s %-15s %-15s %-15s %-15s\n" "NODE" "ROLE" "CPU" "RAM (GB)" "DISK (GB)"
-        echo "-------------------------------------------------------------------------------------------------"
-        
-        kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.labels.kubernetes\.io/role}{" "}{.status.capacity.cpu}{" "}{.status.capacity.memory}{" "}{.status.capacity.ephemeral-storage}{"\n"}{end}' | while read -r name role cpu mem_raw disk_raw; do
-             # (Same logic as before for basic parsing)
-             if [[ "$role" == "" ]]; then
-                if kubectl get node "$name" --show-labels | grep -q "control-plane"; then role="control-plane"; else role="worker"; fi
-            fi
-            MEM_KB=$(echo "$mem_raw" | sed 's/[^0-9]*//g')
-            if [[ "$mem_raw" == *"Mi"* ]]; then MEM_GB=$((MEM_KB / 1024)); elif [[ "$mem_raw" == *"Gi"* ]]; then MEM_GB=$MEM_KB; else MEM_GB=$((MEM_KB / 1024 / 1024)); fi
-            
-            DISK_VAL=$(echo "$disk_raw" | sed 's/[^0-9]*//g') # Simplify
-            if [[ "$disk_raw" == *"Gi"* ]]; then DISK_GB=$DISK_VAL; else DISK_GB="~"; fi # Simplified for brevity
-
-             printf "%-30s %-15s %-15s %-15s %-15s\n" "$name" "$role" "$cpu" "~${MEM_GB}G" "${DISK_GB}G"
-        done
+         echo -e "${RED}FAIL${NC} (Could not reach repo.kcs.kaspersky.com)"
+         ERROR=1
     fi
 
     # Global Requirements Summary (Totals)
