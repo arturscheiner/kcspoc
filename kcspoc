@@ -294,8 +294,8 @@ cmd_check() {
         echo -e "${YELLOW}Running Deep Node Inspection (Privileged Pods)...${NC}"
         
         # Prepare Table Header
-        printf "%-20s %-15s %-10s %-15s %-15s %-20s\n" "NODE" "ROLE" "CPU" "RAM" "DISK(Root)" "HEADERS"
-        echo "----------------------------------------------------------------------------------------------------"
+        printf "%-30s %-15s %-10s %-15s %-15s %-20s\n" "NODE" "ROLE" "CPU" "RAM" "DISK(Root)" "HEADERS"
+        echo "-----------------------------------------------------------------------------------------------------------------"
 
         NODES=$(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.labels.kubernetes\.io/role}{" "}{.status.capacity.cpu}{" "}{.status.capacity.memory}{"\n"}{end}')
 
@@ -310,8 +310,10 @@ cmd_check() {
             if [[ "$mem_raw" == *"Mi"* ]]; then MEM_GB=$((MEM_KB / 1024)); elif [[ "$mem_raw" == *"Gi"* ]]; then MEM_GB=$MEM_KB; else MEM_GB=$((MEM_KB / 1024 / 1024)); fi
             
             # --- DEEP INSPECTION ---
-            # 1. Create Pod YAML
-            cat <<EOF > /tmp/debug-node-${name}.yaml
+            # 1. Create Pod YAML in ~/.kcspoc
+            POD_FILE="$CONFIG_DIR/debug-node-${name}.yaml"
+            
+            cat <<EOF > "$POD_FILE"
 apiVersion: v1
 kind: Pod
 metadata:
@@ -322,6 +324,7 @@ spec:
   hostIPC: true
   hostNetwork: true
   nodeName: ${name}
+  restartPolicy: Never
   containers:
   - name: debug-container
     image: ubuntu:latest
@@ -339,37 +342,46 @@ spec:
 EOF
             # 2. Apply and Wait
             # echo "Inspecting $name..."
-            kubectl apply -f /tmp/debug-node-${name}.yaml &> /dev/null
-            kubectl wait --for=condition=Ready pod/debug-node-${name} --timeout=30s &> /dev/null
-
-            # 3. Exec Commands
-            # DISK: df -h /host | grep '/$' | awk '{print $4}' (Available) or $2 (Size)
-            DISK_AVAIL=$(kubectl exec debug-node-${name} -- chroot /host df -h / | tail -n 1 | awk '{print $4}' 2>/dev/null || echo "N/A")
+            kubectl apply -f "$POD_FILE" &> /dev/null
             
-            # HEADERS
-            # Check dpkg or rpm
-            if kubectl exec debug-node-${name} -- chroot /host command -v dpkg &> /dev/null; then
-                 HAS_HEADERS=$(kubectl exec debug-node-${name} -- chroot /host dpkg -l | grep -q "linux-headers" && echo "YES" || echo "NO")
-            elif kubectl exec debug-node-${name} -- chroot /host command -v rpm &> /dev/null; then
-                 HAS_HEADERS=$(kubectl exec debug-node-${name} -- chroot /host rpm -qa | grep -q "headers" && echo "YES" || echo "NO")
+            # Wait loop (kubectl wait sometimes fails if pod is not immediately seen)
+            # Give it 2 seconds to appear then wait for Ready
+            sleep 2
+            if ! kubectl wait --for=condition=Ready pod/debug-node-${name} --timeout=40s &> /dev/null; then
+                # If timed out or failed
+                DISK_AVAIL="Err-Pod"
+                HAS_HEADERS="Err-Pod"
             else
-                 HAS_HEADERS="unk"
+                # 3. Exec Commands
+                # DISK: df -h /host | grep '/$' | awk '{print $4}' (Available) or $2 (Size)
+                # Some systems mount root at /host but df output might vary.
+                # Try finding line ending in /host or just /
+                DISK_AVAIL=$(kubectl exec debug-node-${name} -- chroot /host df -h / | tail -n 1 | awk '{print $4}' 2>/dev/null || echo "N/A")
+                
+                # HEADERS
+                if kubectl exec debug-node-${name} -- chroot /host command -v dpkg &> /dev/null; then
+                     HAS_HEADERS=$(kubectl exec debug-node-${name} -- chroot /host dpkg -l | grep -q "linux-headers" && echo "YES" || echo "NO")
+                elif kubectl exec debug-node-${name} -- chroot /host command -v rpm &> /dev/null; then
+                     HAS_HEADERS=$(kubectl exec debug-node-${name} -- chroot /host rpm -qa | grep -q "headers" && echo "YES" || echo "NO")
+                else
+                     HAS_HEADERS="unk"
+                fi
             fi
 
             # 4. Cleanup
             kubectl delete pod debug-node-${name} --force --grace-period=0 &> /dev/null
-            rm /tmp/debug-node-${name}.yaml
+            rm "$POD_FILE"
 
             # Print Row
-            printf "%-20s %-15s %-10s %-15s %-15s %-20s\n" "$name" "$role" "$cpu" "${MEM_GB}G" "$DISK_AVAIL" "$HAS_HEADERS"
+            printf "%-30s %-15s %-10s %-15s %-15s %-20s\n" "$name" "$role" "$cpu" "${MEM_GB}G" "$DISK_AVAIL" "$HAS_HEADERS"
 
         done <<< "$NODES"
 
     else
         # Standard Check (Non-Intrusive)
         echo -e "${YELLOW}(Deep Check Disabled: Showing basic info)${NC}"
-        printf "%-20s %-15s %-15s %-15s %-15s\n" "NODE" "ROLE" "CPU" "RAM (GB)" "DISK (GB)"
-        echo "--------------------------------------------------------------------------------"
+        printf "%-30s %-15s %-15s %-15s %-15s\n" "NODE" "ROLE" "CPU" "RAM (GB)" "DISK (GB)"
+        echo "-------------------------------------------------------------------------------------------------"
         
         kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.labels.kubernetes\.io/role}{" "}{.status.capacity.cpu}{" "}{.status.capacity.memory}{" "}{.status.capacity.ephemeral-storage}{"\n"}{end}' | while read -r name role cpu mem_raw disk_raw; do
              # (Same logic as before for basic parsing)
@@ -382,7 +394,7 @@ EOF
             DISK_VAL=$(echo "$disk_raw" | sed 's/[^0-9]*//g') # Simplify
             if [[ "$disk_raw" == *"Gi"* ]]; then DISK_GB=$DISK_VAL; else DISK_GB="~"; fi # Simplified for brevity
 
-             printf "%-20s %-15s %-15s %-15s %-15s\n" "$name" "$role" "$cpu" "~${MEM_GB}G" "${DISK_GB}G"
+             printf "%-30s %-15s %-15s %-15s %-15s\n" "$name" "$role" "$cpu" "~${MEM_GB}G" "${DISK_GB}G"
         done
     fi
 
