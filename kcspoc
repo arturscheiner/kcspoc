@@ -672,6 +672,10 @@ case "$1" in
     config)
         cmd_config
         ;;
+    pull)
+        shift # Remove 'pull' from args
+        cmd_pull "$@"
+        ;;
     check)
         cmd_check
         ;;
