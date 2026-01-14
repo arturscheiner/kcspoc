@@ -46,6 +46,8 @@ ui_banner() {
     echo -e "${NC}"
     echo -e "${DIM}  Kaspersky Container Security - Proof of Concept Tool${NC}"
     echo -e "${BLUE}  ====================================================${NC}"
+    echo -e "${DIM}  Version: 0.1.0${NC}"
+    echo -e "${DIM}  Author: Arturs Scheiner${NC}"
     echo ""
 }
 
