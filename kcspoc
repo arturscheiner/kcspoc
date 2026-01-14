@@ -55,64 +55,90 @@ cmd_config() {
     echo ""
 
     mkdir -p "$CONFIG_DIR"
+    
+    # Load existing config to use as defaults
+    if [ -f "$CONFIG_FILE" ]; then
+        source "$CONFIG_FILE"
+        echo -e "${GREEN}Loaded existing configuration as defaults.${NC}"
+    fi
 
     # 1. Namespace
-    echo -e "${BLUE}[1/4] K8s Namespace${NC}"
+    DEFAULT_NS=${NAMESPACE:-"kcs"}
+    echo -e "${BLUE}[1/5] K8s Namespace${NC}"
     echo "This is the Kubernetes namespace where KCS will be installed."
-    echo "Default: kcs"
-    echo -ne "Enter Namespace [kcs]: "
+    echo "Default: $DEFAULT_NS"
+    echo -ne "Enter Namespace [$DEFAULT_NS]: "
     read -r IN_NAMESPACE
-    NAMESPACE=${IN_NAMESPACE:-"kcs"}
+    NAMESPACE=${IN_NAMESPACE:-$DEFAULT_NS}
 
     # 2. Domain
-    echo -e "\n${BLUE}[2/4] Domain Name${NC}"
+    DEFAULT_DOMAIN=${DOMAIN:-"kcs.cluster.lab"}
+    echo -e "\n${BLUE}[2/5] Domain Name${NC}"
     echo "The base domain for the KCS console and services."
-    echo "Example: kcs.cluster.lab"
-    echo "Default: kcs.cluster.lab"
-    echo -ne "Enter Domain [kcs.cluster.lab]: "
+    echo "Default: $DEFAULT_DOMAIN"
+    echo -ne "Enter Domain [$DEFAULT_DOMAIN]: "
     read -r IN_DOMAIN
-    DOMAIN=${IN_DOMAIN:-"kcs.cluster.lab"}
+    DOMAIN=${IN_DOMAIN:-$DEFAULT_DOMAIN}
 
     # 3. Registry Credentials
-    echo -e "\n${BLUE}[3/4] Registry Credentials${NC}"
+    DEFAULT_REG_SERVER=${REGISTRY_SERVER:-"registry.k8s.io"}
+    echo -e "\n${BLUE}[3/5] Registry Credentials${NC}"
     echo "Credentials to access the private registry container images."
     
-    echo -ne "Registry Server URL [registry.k8s.io]: "
+    echo -ne "Registry Server URL [$DEFAULT_REG_SERVER]: "
     read -r IN_REGISTRY_SERVER
-    REGISTRY_SERVER=${IN_REGISTRY_SERVER:-"registry.k8s.io"}
+    REGISTRY_SERVER=${IN_REGISTRY_SERVER:-$DEFAULT_REG_SERVER}
     
-    echo -ne "Registry Username: "
-    read -r REGISTRY_USER
+    DEFAULT_REG_USER=${REGISTRY_USER}
+    echo -ne "Registry Username${DEFAULT_REG_USER:+ [$DEFAULT_REG_USER]}: "
+    read -r IN_REGISTRY_USER
+    REGISTRY_USER=${IN_REGISTRY_USER:-$DEFAULT_REG_USER}
     
-    echo -ne "Registry Password: "
+    echo -ne "Registry Password (leave empty to keep existing or enter new): "
     # Read password silently
     stty -echo
-    read -r REGISTRY_PASS
+    read -r IN_REGISTRY_PASS
     stty echo
     echo ""
+    if [ -n "$IN_REGISTRY_PASS" ]; then
+        REGISTRY_PASS="$IN_REGISTRY_PASS"
+    fi
+    #(If empty, keeps $REGISTRY_PASS from loaded config)
     
-    echo -ne "Registry Email: "
-    read -r REGISTRY_EMAIL
+    DEFAULT_REG_EMAIL=${REGISTRY_EMAIL}
+    echo -ne "Registry Email${DEFAULT_REG_EMAIL:+ [$DEFAULT_REG_EMAIL]}: "
+    read -r IN_REGISTRY_EMAIL
+    REGISTRY_EMAIL=${IN_REGISTRY_EMAIL:-$DEFAULT_REG_EMAIL}
 
     # 4. MetalLB IP Range
-    echo -e "\n${BLUE}[4/4] MetalLB IP Range${NC}"
+    DEFAULT_IP_RANGE=${IP_RANGE}
+    echo -e "\n${BLUE}[4/5] MetalLB IP Range${NC}"
     echo "MetalLB needs a range of IPs from your local network to assign to the LoadBalancer."
-    echo "This allows you to access the KCS web console."
     echo "Example: 172.16.3.200-172.16.3.210"
-    echo "Why? Without this, services stay in <Pending> state."
-    echo -ne "Enter IP Range: "
-    read -r IP_RANGE
+    if [ -n "$DEFAULT_IP_RANGE" ]; then echo "Current: $DEFAULT_IP_RANGE"; fi
+    echo -ne "Enter IP Range${DEFAULT_IP_RANGE:+ [$DEFAULT_IP_RANGE]}: "
+    read -r IN_IP_RANGE
+    IP_RANGE=${IN_IP_RANGE:-$DEFAULT_IP_RANGE}
 
     # 5. Deep Inspection Permission
+    DEFAULT_DEEP=${ENABLE_DEEP_CHECK:-"false"}
     echo -e "\n${BLUE}[5/5] Deep Node Inspection${NC}"
     echo "To verify disk space and kernel headers accurately, we can run a temporary privileged pod on each node."
-    echo "This requires permissions to mount host filesystem."
+    echo "Current: $DEFAULT_DEEP"
     echo -ne "Allow deep packet inspection? [y/N]: "
     read -r IN_DEEP
-    if [[ "$IN_DEEP" =~ ^[Yy]$ ]]; then
-        ENABLE_DEEP_CHECK="true"
+    
+    if [ -z "$IN_DEEP" ]; then
+        # Keep existing if user just hints enter? Or default to N if not set?
+        # Standard input behavior: empty input usually means default.
+        # If we have a previous value, we should respect it effectively.
+        ENABLE_DEEP_CHECK=$DEFAULT_DEEP
     else
-        ENABLE_DEEP_CHECK="false"
+        if [[ "$IN_DEEP" =~ ^[Yy]$ ]]; then
+            ENABLE_DEEP_CHECK="true"
+        else
+            ENABLE_DEEP_CHECK="false"
+        fi
     fi
 
     # Save to file
