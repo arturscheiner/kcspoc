@@ -290,15 +290,30 @@ cmd_check() {
     printf "%-30s %-15s %-10s %-15s %-15s %-20s\n" "NODE" "ROLE" "CPU" "RAM" "DISK(Root)" "HEADERS"
     echo "-----------------------------------------------------------------------------------------------------------------"
 
-    NODES=$(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.labels.kubernetes\.io/role}{" "}{.status.capacity.cpu}{" "}{.status.capacity.memory}{"\n"}{end}')
-
-    while read -r name role cpu mem_raw; do
-        # Role Cleanup
-        if [[ "$role" == "" ]]; then
-           if kubectl get node "$name" --show-labels | grep -q "control-plane"; then role="control-plane"; else role="worker"; fi
+    # Get list of nodes names only
+    # Loop one by one to avoid alignment issues with missing fields in bulk jsonpath
+    for name in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
+        
+        # 1. Fetch Node Details
+        # Role: Check labels for control-plane or master
+        # CPU/Mem: Get capacity
+        # We use a single jsonpath call to get cpu and memory to minimize calls.
+        # Let's get raw json or multiple fields with delimiter ' | '
+        
+        node_info=$(kubectl get node "$name" -o jsonpath='{.metadata.labels}|{.status.capacity.cpu}|{.status.capacity.memory}')
+        
+        # Parse output: labels|cpu|memory
+        IFS='|' read -r labels cpu mem_raw <<< "$node_info"
+        unset IFS
+        
+        # Determine Role
+        if [[ "$labels" == *"node-role.kubernetes.io/control-plane"* ]] || [[ "$labels" == *"node-role.kubernetes.io/master"* ]]; then
+            role="control-plane"
+        else
+            role="worker"
         fi
         
-        # Basic Math
+        # Basic Math: RAM
         MEM_KB=$(echo "$mem_raw" | sed 's/[^0-9]*//g')
         if [[ "$mem_raw" == *"Mi"* ]]; then MEM_GB=$((MEM_KB / 1024)); elif [[ "$mem_raw" == *"Gi"* ]]; then MEM_GB=$MEM_KB; else MEM_GB=$((MEM_KB / 1024 / 1024)); fi
         
@@ -370,12 +385,9 @@ EOF
         fi
 
         # Print Row
-        # Note: HAS_HEADERS contains color codes, so printf spacing might be affected visually if not accounted for, 
-        # but bash printf %s usually handles the string length including codes. 
-        # We might want to reset color at end of string if not already done.
         printf "%-30s %-15s %-10s %-15s %-15s %-20b\n" "$name" "$role" "$cpu" "${MEM_GB}G" "$DISK_AVAIL" "$HAS_HEADERS"
 
-    done <<< "$NODES"
+    done
 
     # --- 4.5 External Connectivity (Moved to End) ---
     echo -e "\n${BLUE}Checking Repo Connectivity (repo.kcs.kaspersky.com)...${NC}"

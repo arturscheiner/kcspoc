@@ -1,8 +1,0 @@
-# --- CONFIGURAÇÕES ---
-NAMESPACE="kcs"
-REGISTRY_SERVER="repo.kcs.kaspersky.com"
-REGISTRY_USER=""
-REGISTRY_PASS=""
-REGISTRY_EMAIL=""
-DOMAIN="kcs.cluster.lab"
-IP_RANGE="" # Pode ser deixado em branco para ser passado por argumento ou input interativo
