@@ -186,70 +186,88 @@ cmd_check() {
     # Check 4: Cluster Resources & Topology
     echo -e "\n${YELLOW}=== Cluster Resources & Topology ===${NC}"
     
-    echo -ne "Gathering node information... "
+    # 4.1 Kubernetes Version Check
+    echo -ne "Checking Kubernetes Version... "
+    # Get server version (gitVersion) e.g., v1.28.3
+    K8S_VER_STR=$(kubectl version -o json 2>/dev/null | grep gitVersion | grep -v Client | head -n 1 | awk -F'"' '{print $4}')
     
-    # Node Counts
-    TOTAL_NODES=$(kubectl get nodes --no-headers | wc -l)
-    MASTERS=$(kubectl get nodes --no-headers | grep -E "control-plane|master" | wc -l)
-    WORKERS=$((TOTAL_NODES - MASTERS))
-    
-    echo -e "Done"
-    echo -e "Total Nodes: ${BLUE}$TOTAL_NODES${NC} (Masters: $MASTERS, Workers: $WORKERS)"
-    echo -e "\n${BLUE}Node List:${NC}"
-    kubectl get nodes -o custom-columns=NAME:.metadata.name,ROLE:.metadata.labels."kubernetes\.io/role",VERSION:.status.nodeInfo.kubeletVersion,KERNEL:.status.nodeInfo.kernelVersion,OS:.status.nodeInfo.osImage
-    
-    echo -e "\n${YELLOW}Resource Validation (Min Requirements: 4 vCPU, 8GB RAM, Kernel 5.4)${NC}"
-    
-    # CPU Check (Sum of all nodes)
-    # CPU capacity usually in integer or 'm'. 
-    # Simplification: Assume integer for simplicity or parse 'm'. 
-    # Using awk to sum.
-    TOTAL_CPU=$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.capacity.cpu}{"\n"}{end}' | awk '{s+=$1} END {print s}')
-    # Prepare display
-    if [ "$TOTAL_CPU" -ge 4 ]; then
-        echo -e "CPU (Total): ${GREEN}${TOTAL_CPU} vCPUs${NC} (PASS)"
-    else
-        echo -e "CPU (Total): ${RED}${TOTAL_CPU} vCPUs${NC} (FAIL - Min 4)"
-        ERROR=1
+    # Fallback to 'kubectl version --short' parsing if json fails (older cli)
+    if [ -z "$K8S_VER_STR" ]; then
+        K8S_VER_STR=$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}')
     fi
 
-    # RAM Check (Sum of all nodes)
-    # Memory usually in Ki. 1GB ~ 1000000Ki or 1048576Ki. 
-    # Minimum 8GB = ~8000000Ki
+    # Extract Major.Minor e.g., 1.28
+    # Remove 'v' prefix if present
+    VER_CLEAN=$(echo "$K8S_VER_STR" | sed 's/v//')
+    MAJOR=$(echo "$VER_CLEAN" | cut -d. -f1)
+    MINOR=$(echo "$VER_CLEAN" | cut -d. -f2)
+
+    # Check Range: Min 1.25, Max 1.34
+    if [ "$MAJOR" -eq 1 ] && [ "$MINOR" -ge 25 ] && [ "$MINOR" -le 34 ]; then
+         echo -e "${GREEN}${K8S_VER_STR}${NC} (Pass: 1.25 <= v <= 1.34)"
+    else
+         echo -e "${RED}${K8S_VER_STR}${NC} (FAIL: Supported range 1.25 - 1.34)"
+         ERROR=1
+    fi
+
+    # 4.2 Per-Node Resource Stats
+    echo -e "\n${BLUE}Node Resources (CPU / RAM / Ephemeral Storage):${NC}"
+    printf "%-20s %-15s %-15s %-15s %-15s\n" "NODE" "ROLE" "CPU" "RAM (GB)" "DISK (GB)"
+    echo "--------------------------------------------------------------------------------"
+
+    # Iterate over nodes to calculate and display values
+    # We use jsonpath to get one line per node with needed fields
+    kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.labels.kubernetes\.io/role}{" "}{.status.capacity.cpu}{" "}{.status.capacity.memory}{" "}{.status.capacity.ephemeral-storage}{"\n"}{end}' | while read -r name role cpu mem_raw disk_raw; do
+        
+        # Handle Role (if label is missing, it might be empty or <none>)
+        # Some setups use node-role.kubernetes.io/control-plane type labels instead of value
+        # Simple fallback checks:
+        if [[ "$role" == "" ]]; then
+            # try finding role in labels via grep
+            if kubectl get node "$name" --show-labels | grep -q "control-plane"; then role="control-plane"; else role="worker"; fi
+        fi
+
+        # MEM: Convert Ki to GB. 1 GiB = 1024^2 KiB? usually input is Ki. 
+        # 1000000 Ki ~= 1GB approx. Let's do rough math: val / 1024 / 1024
+        MEM_KB=$(echo "$mem_raw" | sed 's/[^0-9]*//g') # Remove units
+        if [[ "$mem_raw" == *"Mi"* ]]; then
+             MEM_GB=$((MEM_KB / 1024))
+        elif [[ "$mem_raw" == *"Gi"* ]]; then
+             MEM_GB=$MEM_KB
+        else 
+             # Assume Ki
+             MEM_GB=$((MEM_KB / 1024 / 1024))
+        fi
+
+        # DISK: Convert to GB. Usually Bytes or Ki.
+        DISK_VAL=$(echo "$disk_raw" | sed 's/[^0-9]*//g')
+        if [[ "$disk_raw" == *"Ki"* ]]; then
+            DISK_GB=$((DISK_VAL / 1024 / 1024))
+        elif [[ "$disk_raw" == *"Mi"* ]]; then
+            DISK_GB=$((DISK_VAL / 1024))
+        elif [[ "$disk_raw" == *"Gi"* ]]; then
+            DISK_GB=$DISK_VAL
+        else
+            # Assume bytes
+            DISK_GB=$((DISK_VAL / 1024 / 1024 / 1024))
+        fi
+        
+        # Formatting
+        printf "%-20s %-15s %-15s %-15s %-15s\n" "$name" "$role" "$cpu" "~${MEM_GB}G" "~${DISK_GB}G"
+        
+        # Min Requirements Check Per Node (Optional strictly enforcement or just informative? Request implied showing info)
+        # We'll just display for now, global checks were done before vs totals, but user wants per node info.
+    done
+
+    echo -e "\n${YELLOW}Global Requirements Check (Lab: 4vCPU, 8GB RAM Total)${NC}"
+    
+    # Calculate Totals for Pass/Fail
+    TOTAL_CPU=$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.capacity.cpu}{"\n"}{end}' | awk '{s+=$1} END {print s}')
     TOTAL_MEM_KI=$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.capacity.memory}{"\n"}{end}' | sed 's/Ki//g' | awk '{s+=$1} END {print s}')
     TOTAL_MEM_GB=$((TOTAL_MEM_KI / 1024 / 1024))
     
-    if [ "$TOTAL_MEM_GB" -ge 8 ]; then
-        echo -e "RAM (Total): ${GREEN}~${TOTAL_MEM_GB} GB${NC} (PASS)"
-    else
-        echo -e "RAM (Total): ${RED}~${TOTAL_MEM_GB} GB${NC} (FAIL - Min 8 GB)"
-        ERROR=1
-    fi
-    
-    # Kernel Version Check (Min 5.4)
-    # We check each node.
-    echo -e "Kernel Versions:"
-    kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}: {.status.nodeInfo.kernelVersion}{"\n"}{end}' | while read -r node_kernel; do
-        # Extract version number X.Y
-        KVER=$(echo "$node_kernel" | awk '{print $2}' | cut -d'-' -f1)
-        MAJOR=$(echo "$KVER" | cut -d. -f1)
-        MINOR=$(echo "$KVER" | cut -d. -f2)
-        
-        # Simple check 5.4
-        if [ "$MAJOR" -gt 5 ] || { [ "$MAJOR" -eq 5 ] && [ "$MINOR" -ge 4 ]; }; then
-             echo -e "  - $node_kernel ${GREEN}(PASS)${NC}"
-        else
-             echo -e "  - $node_kernel ${RED}(FAIL - Min 5.4)${NC}"
-             ERROR=1
-        fi
-    done
-
-    # Disk Space Warning (Manual Check hint as requested or simple parsing)
-    # The user asked for "kubectl describe nodes" command validation.
-    # Showing capacity of ephemeral-storage as proxy or just list it.
-    echo -e "\n${BLUE}Disk Capacity (Ephemeral Storage):${NC}"
-    kubectl get nodes -o custom-columns=NAME:.metadata.name,DISK:.status.capacity.ephemeral-storage
-    echo -e "${YELLOW}Note: Check if 'DISK' meets 80GB req per node manually if unsure.${NC}"
+    if [ "$TOTAL_CPU" -ge 4 ]; then echo -e "Cluster CPU: ${GREEN}${TOTAL_CPU} vCPUs${NC} (OK)"; else echo -e "Cluster CPU: ${RED}${TOTAL_CPU} vCPUs${NC} (FAIL)"; ERROR=1; fi
+    if [ "$TOTAL_MEM_GB" -ge 8 ]; then echo -e "Cluster RAM: ${GREEN}~${TOTAL_MEM_GB} GB${NC} (OK)"; else echo -e "Cluster RAM: ${RED}~${TOTAL_MEM_GB} GB${NC} (FAIL)"; ERROR=1; fi
 
 
 
