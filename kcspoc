@@ -141,6 +141,15 @@ cmd_config() {
         fi
     fi
 
+    # 6. KCS Version
+    DEFAULT_VERSION=${KCS_VERSION:-"latest"}
+    echo -e "\n${BLUE}[6/6] KCS Version${NC}"
+    echo "The version of Kaspersky Container Security to install."
+    echo "Default: $DEFAULT_VERSION"
+    echo -ne "Enter Version [$DEFAULT_VERSION]: "
+    read -r IN_VERSION
+    KCS_VERSION=${IN_VERSION:-$DEFAULT_VERSION}
+
     # Save to file
     cat > "$CONFIG_FILE" <<EOF
 # KCS PoC Configuration
@@ -158,10 +167,13 @@ REGISTRY_EMAIL="$REGISTRY_EMAIL"
 # Networking
 IP_RANGE="$IP_RANGE"
 
+# Installation
+KCS_VERSION="$KCS_VERSION"
+
 # Checks
 ENABLE_DEEP_CHECK="$ENABLE_DEEP_CHECK"
 EOF
-
+    
     echo -e "\n${GREEN}Configuration saved successfully to $CONFIG_FILE${NC}"
 }
 
