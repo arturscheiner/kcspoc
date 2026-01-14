@@ -40,6 +40,7 @@ cmd_usage() {
     echo ""
     echo "Commands:"
     echo "  config   Run interactive configuration wizard"
+    echo "  pull     Download KCS chart (usage: pull [--version X.X.X])"
     echo "  check    Verify environment and prerequisites"
     echo "  prepare  Run the installation preparation (requires config)"
     echo "  help     Show this help message"
@@ -478,6 +479,92 @@ EOF
     fi
 }
 
+cmd_pull() {
+    print_header
+    
+    # Args Parsing
+    local FORCE_VERSION=""
+    while [[ "$#" -gt 0 ]]; do
+        case $1 in
+            --version) FORCE_VERSION="$2"; shift ;;
+            *) ;;
+        esac
+        shift
+    done
+
+    # Load Config
+    if ! load_config; then
+        echo -e "${RED}Error: Configuration not found. Please run '$0 config' first.${NC}"
+        exit 1
+    fi
+    
+    echo -e "${YELLOW}=== Pulling KCS Chart ===${NC}"
+
+    # 1. Registry Login
+    echo -e "${YELLOW}Authenticating to Registry ($REGISTRY_SERVER)...${NC}"
+    if echo "$REGISTRY_PASS" | helm registry login "$REGISTRY_SERVER/v2/" --username "$REGISTRY_USER" --password-stdin; then
+        echo -e "${GREEN}Login Successful${NC}"
+    else
+        echo -e "${RED}Login Failed${NC} (Trying fallback to root path...)"
+        if echo "$REGISTRY_PASS" | helm registry login "$REGISTRY_SERVER" --username "$REGISTRY_USER" --password-stdin; then
+             echo -e "${GREEN}Login Successful${NC}"
+        else
+             echo -e "${RED}Error: Could not login to registry.${NC}"
+             exit 1
+        fi
+    fi
+
+    # 2. Determine Version
+    # Logic: Flag > Config > "latest"
+    # User Spec: "if not specified use the version of the config file"
+    # "if specified only 'latest' remove the --version X.X.X"
+    
+    local TARGET_VER=""
+    
+    if [ -n "$FORCE_VERSION" ]; then
+        TARGET_VER="$FORCE_VERSION"
+        echo -e "Version Source: Command Flag ($TARGET_VER)"
+    elif [ -n "$KCS_VERSION" ] && [ "$KCS_VERSION" != "latest" ]; then
+        TARGET_VER="$KCS_VERSION"
+        echo -e "Version Source: Config File ($TARGET_VER)"
+    else
+        TARGET_VER="latest"
+        echo -e "Version Source: Default (latest)"
+    fi
+    
+    local HELM_ARGS=""
+    if [ "$TARGET_VER" != "latest" ]; then
+        HELM_ARGS="--version $TARGET_VER"
+    fi
+
+    # 3. Helm Pull
+    cd "$CONFIG_DIR" || exit 1
+    echo -e "\n${BLUE}Downloading KCS Chart...${NC}"
+    
+    # Using explicit repo URL as requested
+    if helm pull oci://repo.kcs.kaspersky.com/charts/kcs $HELM_ARGS; then
+        echo -e "${GREEN}Download successful.${NC}"
+        
+        # 4. Extract
+        # Identify the file. Helm saves as kcs-X.X.X.tgz
+        # We sort by time to get the freshest one, or match version?
+        # Freshest is safest if we just downloaded it.
+        TGZ_FILE=$(ls -t kcs-*.tgz 2>/dev/null | head -n 1)
+        
+        if [ -f "$TGZ_FILE" ]; then
+            echo "Extracting $TGZ_FILE..."
+            tar -xzf "$TGZ_FILE"
+            echo -e "${GREEN}Chart extracted to $CONFIG_DIR${NC}"
+        else
+             echo -e "${RED}Error: Downloaded file not found!${NC}"
+             exit 1
+        fi
+    else
+        echo -e "${RED}Helm pull failed.${NC}"
+        exit 1
+    fi
+}
+
 cmd_prepare() {
     print_header
     
@@ -494,26 +581,8 @@ cmd_prepare() {
     echo "Using IP Range: $IP_RANGE"
     echo "----------------------------"
 
-    # 0. Helm Registry Login
-    echo -e "${YELLOW}[0/6] Authenticating to Helm Registry...${NC}"
-    # Cleaning server URL just in case (remove protocol if exists for helm login usually, but user specified full string?)
-    # User said: repo.kcs.kaspersky.com/v2/
-    # If REGISTRY_SERVER is just 'repo.kcs.kaspersky.com', we adhere to user specific request format for login if different.
-    # Assuming REGISTRY_SERVER contains the host.
-    
-    # Try login. Uses --password-stdin for security if possible, or plain flag.
-    if echo "$REGISTRY_PASS" | helm registry login "$REGISTRY_SERVER/v2/" --username "$REGISTRY_USER" --password-stdin; then
-        echo -e "${GREEN}Registry Login Successful${NC}"
-    else
-        echo -e "${RED}Registry Login Failed${NC} - Checking fallback..."
-        # Fallback to plain host if /v2/ fails? 
-        if echo "$REGISTRY_PASS" | helm registry login "$REGISTRY_SERVER" --username "$REGISTRY_USER" --password-stdin; then
-             echo -e "${GREEN}Registry Login Successful (Fallback path)${NC}"
-        else
-             echo -e "${RED}Error: Could not login to registry $REGISTRY_SERVER${NC}"
-             exit 1
-        fi
-    fi
+    # 0. Helm Registry Login (Moved to 'pull' command)
+    # The user manual flow is now: config -> pull -> prepare -> install
 
     # 1. Namespace & Secret
     echo -e "${YELLOW}[1/6] Configuring Namespace and Registry Auth...${NC}"
