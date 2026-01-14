@@ -178,7 +178,7 @@ cmd_check() {
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}FAIL${NC}"
-        echo "Could not connect to Kubernetes cluster using current kubeconfig."
+        echo "Could not connect to Kubernetes cluster ${YELLOW}${CURRENT_CTX}${NC} using current kubeconfig."
         ERROR=1
     fi
 
