@@ -327,8 +327,8 @@ cmd_check() {
     fi
     
     # Unified Table Header
-    printf "%-30s %-15s %-10s %-15s %-15s %-20s\n" "NODE" "ROLE" "CPU" "RAM" "DISK(Root)" "HEADERS"
-    echo "-----------------------------------------------------------------------------------------------------------------"
+    printf "%-30s %-15s %-10s %-15s %-15s %-10s %-20s\n" "NODE" "ROLE" "CPU" "RAM" "DISK" "eBPF" "HEADERS"
+    echo "----------------------------------------------------------------------------------------------------------------------------------"
 
     # Get list of nodes names only
     # Loop one by one to avoid alignment issues with missing fields in bulk jsonpath
@@ -398,11 +398,19 @@ EOF
                 # If timed out or failed
                 DISK_AVAIL="Err-Pod"
                 HAS_HEADERS="Err-Pod"
+                HAS_EBPF="Err-Pod"
             else
                 # Exec Commands
                 # DISK
                 DISK_AVAIL=$(kubectl exec debug-node-${name} -- chroot /host df -h / | tail -n 1 | awk '{print $4}' 2>/dev/null || echo "N/A")
                 
+                # eBPF (BTF) Check
+                if kubectl exec debug-node-${name} -- chroot /host test -f /sys/kernel/btf/vmlinux &> /dev/null; then
+                     HAS_EBPF="${GREEN}OK${NC}"
+                else
+                     HAS_EBPF="${RED}NO${NC}"
+                fi
+
                 # HEADERS
                 # Validating if headers/devel packages are installed (Required for eBPF)
                 if HEADERS_OUT=$(kubectl exec "debug-node-${name}" -- /bin/bash -c "chroot /host sh -c 'dpkg -l 2>/dev/null | grep -i headers || rpm -qa 2>/dev/null | grep -i headers'" 2>/dev/null); then
@@ -422,10 +430,11 @@ EOF
             # Skipping execution
             DISK_AVAIL="-"
             HAS_HEADERS="-"
+            HAS_EBPF="-"
         fi
 
         # Print Row
-        printf "%-30s %-15s %-10s %-15s %-15s %-20b\n" "$name" "$role" "$cpu" "${MEM_GB}G" "$DISK_AVAIL" "$HAS_HEADERS"
+        printf "%-30s %-15s %-10s %-15s %-15s %-20b %-20b\n" "$name" "$role" "$cpu" "${MEM_GB}G" "$DISK_AVAIL" "$HAS_EBPF" "$HAS_HEADERS"
 
     done
 
