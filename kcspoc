@@ -81,7 +81,7 @@ cmd_config() {
     DOMAIN=${IN_DOMAIN:-$DEFAULT_DOMAIN}
 
     # 3. Registry Credentials
-    DEFAULT_REG_SERVER=${REGISTRY_SERVER:-"registry.k8s.io"}
+    DEFAULT_REG_SERVER=${REGISTRY_SERVER:-"repo.kcs.kaspersky.com"}
     echo -e "\n${BLUE}[3/5] Registry Credentials${NC}"
     echo "Credentials to access the private registry container images."
     
@@ -477,9 +477,31 @@ cmd_prepare() {
 
     echo -e "${BLUE}=== Starting Preparation ===${NC}"
     echo "Using Namespace: $NAMESPACE"
+    echo "Using Registry: $REGISTRY_SERVER"
     echo "Using Domain: $DOMAIN"
     echo "Using IP Range: $IP_RANGE"
     echo "----------------------------"
+
+    # 0. Helm Registry Login
+    echo -e "${YELLOW}[0/6] Authenticating to Helm Registry...${NC}"
+    # Cleaning server URL just in case (remove protocol if exists for helm login usually, but user specified full string?)
+    # User said: repo.kcs.kaspersky.com/v2/
+    # If REGISTRY_SERVER is just 'repo.kcs.kaspersky.com', we adhere to user specific request format for login if different.
+    # Assuming REGISTRY_SERVER contains the host.
+    
+    # Try login. Uses --password-stdin for security if possible, or plain flag.
+    if echo "$REGISTRY_PASS" | helm registry login "$REGISTRY_SERVER/v2/" --username "$REGISTRY_USER" --password-stdin; then
+        echo -e "${GREEN}Registry Login Successful${NC}"
+    else
+        echo -e "${RED}Registry Login Failed${NC} - Checking fallback..."
+        # Fallback to plain host if /v2/ fails? 
+        if echo "$REGISTRY_PASS" | helm registry login "$REGISTRY_SERVER" --username "$REGISTRY_USER" --password-stdin; then
+             echo -e "${GREEN}Registry Login Successful (Fallback path)${NC}"
+        else
+             echo -e "${RED}Error: Could not login to registry $REGISTRY_SERVER${NC}"
+             exit 1
+        fi
+    fi
 
     # 1. Namespace & Secret
     echo -e "${YELLOW}[1/6] Configuring Namespace and Registry Auth...${NC}"
