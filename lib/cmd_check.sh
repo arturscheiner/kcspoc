@@ -274,8 +274,100 @@ EOF
         printf "   %-25s %-12s %-6s %-8s %-10s %-25b %-25b\n" "$name" "$role" "$cpu" "${MEM_GB}G" "$DISK_AVAIL" "$HAS_EBPF" "$HAS_HEADERS"
     done
 
-    # --- [6] Connectivity Test ---
-    ui_section "6. Repository Connectivity"
+    # --- [6] Hardware Compliance Audit (Detailed) ---
+    ui_section "6. $MSG_AUDIT_TITLE"
+    
+    # Constants (POC Min / Ideal)
+    local MIN_CPU=4000      # 4 vCPUs (in millicores)
+    local MIN_RAM=7680      # 8 GB (approx 7.5GiB in MiB)
+    local MIN_DISK=80       # 80 GB (in GiB)
+    
+    # Reference Table
+    echo -e "   ${BOLD}$MSG_AUDIT_REF_TABLE:${NC}"
+    printf "   %-20s | %-15s | %-15s\n" "$MSG_AUDIT_RES" "$MSG_AUDIT_MIN" "$MSG_AUDIT_IDEAL"
+    printf "   %-20s | %-15s | %-15s\n" "--------------------" "---------------" "---------------"
+    printf "   %-20s | %-15s | %-15s\n" "$MSG_AUDIT_CPU" "4 Cores" "12 Cores"
+    printf "   %-20s | %-15s | %-15s\n" "$MSG_AUDIT_RAM" "8 GB" "20 GB"
+    printf "   %-20s | %-15s | %-15s\n" "$MSG_AUDIT_DISK" "80 GB" "150 GB"
+    echo ""
+
+    local CLUSTER_PASS=true
+    local NODE_NAMES=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
+
+    for name in $NODE_NAMES; do
+        # Get allocatable resources. Note: ephemeral-storage might not be present on some nodes/versions
+        local RAW_RES=$(kubectl get node "$name" -o jsonpath='{.status.allocatable.cpu}|{.status.allocatable.memory}|{.status.allocatable.ephemeral-storage}')
+        
+        IFS='|' read -r CPU_ALLOC MEM_ALLOC DISK_ALLOC <<< "$RAW_RES"
+        unset IFS
+        
+        # CPU: convert to millicores
+        local CPU_MILLI=0
+        if [[ "$CPU_ALLOC" == *m ]]; then CPU_MILLI=${CPU_ALLOC%m}; else CPU_MILLI=$((CPU_ALLOC * 1000)); fi
+        
+        # RAM: convert to MiB
+        local MEM_CLEAN=$(echo "$MEM_ALLOC" | sed 's/[^0-9]*//g') # Remove units like Ki, Mi, Gi
+        local MEM_MIB=0
+        # Kubectl usually returns Ki for memory. Let's handle Ki, Mi, Gi.
+        if [[ "$MEM_ALLOC" == *Gi ]]; then MEM_MIB=$((MEM_CLEAN * 1024)); 
+        elif [[ "$MEM_ALLOC" == *Mi ]]; then MEM_MIB=$MEM_CLEAN;
+        elif [[ "$MEM_ALLOC" == *Ki ]]; then MEM_MIB=$((MEM_CLEAN / 1024));
+        else MEM_MIB=$((MEM_CLEAN / 1024 / 1024)); fi # bytes
+        
+        # Disk: convert to GiB. If empty (unreported), treat as 0 or skip? Let's treat as 0 and warn.
+        local DISK_GIB=0
+        local DISK_CLEAN=$(echo "$DISK_ALLOC" | sed 's/[^0-9]*//g')
+        if [ -n "$DISK_ALLOC" ]; then
+            if [[ "$DISK_ALLOC" == *Gi ]]; then DISK_GIB=$DISK_CLEAN;
+            elif [[ "$DISK_ALLOC" == *Ki ]]; then DISK_GIB=$((DISK_CLEAN / 1024 / 1024));
+            else DISK_GIB=$((DISK_CLEAN / 1024 / 1024 / 1024)); fi # bytes
+        fi
+
+        local FAIL_REASONS=""
+        
+        # Check CPU
+        if [ "$CPU_MILLI" -lt "$MIN_CPU" ]; then
+            FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_CPU" "$((CPU_MILLI/1000))" "4")${NC}\n"
+            FAIL_REASONS+="        -> $MSG_AUDIT_CAUSE_CPU\n"
+        fi
+        
+        # Check RAM
+        if [ "$MEM_MIB" -lt "$MIN_RAM" ]; then
+            FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_RAM" "$MEM_MIB" "7680")${NC}\n" # 7680 MiB = ~8GB
+            FAIL_REASONS+="        -> $MSG_AUDIT_CAUSE_RAM\n"
+        fi
+        
+        # Check Disk
+        if [ "$DISK_GIB" -lt "$MIN_DISK" ]; then
+             if [ "$DISK_GIB" -eq 0 ]; then
+                 # Disk info missing often implies cloud managed or special config. Warn but maybe don't fail hard if unsure? 
+                 # User script fails hard. I will fail hard too to be safe.
+                 FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_DISK" "0 (Unknown)" "80")${NC}\n"
+             else
+                 FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_DISK" "$DISK_GIB" "80")${NC}\n"
+             fi
+             FAIL_REASONS+="        -> $MSG_AUDIT_CAUSE_DISK\n"
+        fi
+
+        if [ -n "$FAIL_REASONS" ]; then
+            CLUSTER_PASS=false
+            echo -e "   ${BOLD}$MSG_AUDIT_NODE_EVAL: $name${NC} ${RED}$MSG_AUDIT_REJECTED${NC}"
+            echo -e "$FAIL_REASONS"
+            echo -e "      ${DIM}Recursos: ${CPU_MILLI}m CPU | ${MEM_MIB}Mi RAM | ${DISK_GIB}Gi Disk${NC}"
+            echo "   ----------------------------------------------------"
+        fi
+    done
+
+    if [ "$CLUSTER_PASS" = true ]; then
+        echo -e "   ${GREEN}$MSG_AUDIT_SUCCESS${NC}"
+    else
+        echo -e "   ${RED}$MSG_AUDIT_FAIL${NC}"
+        echo -e "   ${YELLOW}$MSG_AUDIT_REC${NC}"
+        ERROR=1
+    fi
+
+    # --- [7] Connectivity Test ---
+    ui_section "7. Repository Connectivity"
     
     echo -ne "   ${ICON_GEAR} $MSG_CHECK_REPO_CONN... "
     if kubectl run -i --rm --image=curlimages/curl --restart=Never kcspoc-repo-connectivity-test -- curl -m 5 -I https://repo.kcs.kaspersky.com &> /dev/null; then
