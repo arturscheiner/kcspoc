@@ -267,12 +267,12 @@ EOF
             HAS_EBPF="-"
         fi
 
-        printf "%-30s %-15s %-10s %-15s %-15s %-10s %-20b\n" "$name" "$role" "$cpu" "${MEM_GB}G" "$DISK_AVAIL" "$HAS_EBPF" "$HAS_HEADERS"
+        printf "%-30s %-15s %-10s %-15s %-15s %-20b %-20b\n" "$name" "$role" "$cpu" "${MEM_GB}G" "$DISK_AVAIL" "$HAS_EBPF" "$HAS_HEADERS"
     done
 
     # 4.6 Repo Connectivity
     echo -e "\n${BLUE}${MSG_CHECK_REPO_CONN} (repo.kcs.kaspersky.com)...${NC}"
-    if kubectl run -i --rm --image=curlimages/curl --restart=Never connectivity-test -- curl -m 5 -I https://repo.kcs.kaspersky.com &> /dev/null; then
+    if kubectl run -i --rm --image=curlimages/curl --restart=Never kcspoc-repo-connectivity-test -- curl -m 5 -I https://repo.kcs.kaspersky.com &> /dev/null; then
          echo -e "${GREEN}OK${NC}"
     else
          echo -e "${RED}${MSG_CHECK_FAIL}${NC}"
