@@ -1,6 +1,45 @@
 #!/bin/bash
 
+# Labelling Constant
+POC_LABEL="provisioned-by=kcspoc"
+
+confirm_step() {
+    local step_name="$1"
+    local title="$2"
+    local desc="$3"
+    local unattended="$4"
+
+    if [ "$unattended" = true ]; then
+        return 0
+    fi
+
+    echo -e "\n${BLUE}${BOLD}--- $title ---${NC}"
+    echo -e "${BLUE}${MSG_AUDIT_RES}:${NC} $desc"
+    echo ""
+    echo -ne "   ${ICON_QUESTION} $(printf "$MSG_PREPARE_PROMPT_INSTALL" "$step_name")"
+    read -r response
+    if [[ "$response" =~ ^[SsYy]$ ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 cmd_prepare() {
+    # --- Argument Parsing ---
+    local UNATTENDED=false
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --unattended)
+                UNATTENDED=true
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
     ui_banner
     
     # Load config first
@@ -9,60 +48,87 @@ cmd_prepare() {
         exit 1
     fi
 
-    echo -e "${YELLOW}${ICON_GEAR} ${MSG_PREPARE_START}${NC}"
-    echo "${MSG_PREPARE_USING_NS}: $NAMESPACE"
-    echo "${MSG_PREPARE_USING_REG}: $REGISTRY_SERVER"
-    echo "${MSG_PREPARE_USING_DOMAIN}: $DOMAIN"
-    echo "${MSG_PREPARE_USING_IP}: $IP_RANGE"
-    echo "----------------------------"
+    echo -e "${YELLOW}${ICON_GEAR} $MSG_PREPARE_START${NC}"
+    if [ "$UNATTENDED" = true ]; then
+        echo -e "   ${DIM}$MSG_PREPARE_UNATTENDED_RUN${NC}"
+    else
+        echo -e "   ${DIM}$MSG_PREPARE_INTERACTIVE_WARN${NC}"
+    fi
+    echo -e "   ${DIM}$MSG_PREPARE_LABEL_INFO: ${BOLD}$POC_LABEL${NC}"
+    echo ""
+    echo "   ${MSG_PREPARE_USING_NS}: $NAMESPACE"
+    echo "   ${MSG_PREPARE_USING_REG}: $REGISTRY_SERVER"
+    echo "   ${MSG_PREPARE_USING_DOMAIN}: $DOMAIN"
+    echo "   ${MSG_PREPARE_USING_IP}: $IP_RANGE"
+    echo "   ----------------------------"
 
     # 1. Namespace & Secret
-    echo -e "${YELLOW}[1/6] ${MSG_PREPARE_STEP_1}${NC}"
-    kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-    
-    echo "${MSG_PREPARE_CREATING_SECRET}"
-    kubectl create secret docker-registry kcs-registry-secret \
-      --docker-server="$REGISTRY_SERVER" \
-      --docker-username="$REGISTRY_USER" \
-      --docker-password="$REGISTRY_PASS" \
-      --docker-email="$REGISTRY_EMAIL" \
-      -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    if confirm_step "Namespace & Secret" "$MSG_PREPARE_STEP_1" "Setup of $NAMESPACE and credentials." "$UNATTENDED"; then
+        echo -ne "   ${ICON_GEAR} $MSG_PREPARE_STEP_1... "
+        kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>/dev/null
+        kubectl label namespace "$NAMESPACE" $POC_LABEL --overwrite &>/dev/null
+        
+        kubectl create secret docker-registry kcs-registry-secret \
+          --docker-server="$REGISTRY_SERVER" \
+          --docker-username="$REGISTRY_USER" \
+          --docker-password="$REGISTRY_PASS" \
+          --docker-email="$REGISTRY_EMAIL" \
+          -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>/dev/null
+        kubectl label secret kcs-registry-secret -n "$NAMESPACE" $POC_LABEL --overwrite &>/dev/null
+        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+    fi
 
-    # 2. Infrastructure Dependencies
-    echo -e "${YELLOW}[2/6] ${MSG_PREPARE_STEP_2}${NC}"
-    
-    # Cert-Manager
-    echo "${MSG_PREPARE_INSTALL_CERT}"
-    helm repo add jetstack https://charts.jetstack.io --force-update > /dev/null
-    helm upgrade --install cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace --set crds.enabled=true --wait > /dev/null
+    # 2. Cert-Manager
+    if confirm_step "Cert-Manager" "$MSG_PREPARE_WHY_CERT_TITLE" "$MSG_PREPARE_WHY_CERT_DESC" "$UNATTENDED"; then
+        echo -ne "   ${ICON_GEAR} $MSG_PREPARE_INSTALL_CERT... "
+        helm repo add jetstack https://charts.jetstack.io --force-update &> /dev/null
+        helm upgrade --install cert-manager jetstack/cert-manager \
+            --namespace cert-manager --create-namespace \
+            --set crds.enabled=true \
+            --set "commonLabels.provisioned-by=kcspoc" \
+            --wait &> /dev/null
+        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+    fi
 
-    # Local Path Storage
-    echo "${MSG_PREPARE_INSTALL_LOCAL}"
-    kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.31/deploy/local-path-storage.yaml > /dev/null
-    kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+    # 3. Local Path Storage
+    if confirm_step "Local Path Storage" "$MSG_PREPARE_WHY_STORAGE_TITLE" "$MSG_PREPARE_WHY_STORAGE_DESC" "$UNATTENDED"; then
+        echo -ne "   ${ICON_GEAR} $MSG_PREPARE_INSTALL_LOCAL... "
+        kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.31/deploy/local-path-storage.yaml &> /dev/null
+        kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' &> /dev/null
+        kubectl label sc local-path $POC_LABEL --overwrite &> /dev/null
+        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+    fi
 
-    # Metrics Server
-    echo "${MSG_PREPARE_INSTALL_METRICS}"
-    kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml > /dev/null
-    # Patch for lab environments (insecure TLS)
-    kubectl patch deployment metrics-server -n kube-system --type='json' -p='[
-      {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"},
-      {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-preferred-address-types=InternalIP"}
-    ]' 2>/dev/null || true
+    # 4. Metrics Server
+    if confirm_step "Metrics Server" "$MSG_PREPARE_WHY_METRICS_TITLE" "$MSG_PREPARE_WHY_METRICS_DESC" "$UNATTENDED"; then
+        echo -ne "   ${ICON_GEAR} $MSG_PREPARE_INSTALL_METRICS... "
+        kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml &> /dev/null
+        kubectl patch deployment metrics-server -n kube-system --type='json' -p='[
+          {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"},
+          {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-preferred-address-types=InternalIP"}
+        ]' &> /dev/null
+        kubectl label deployment metrics-server -n kube-system $POC_LABEL --overwrite &> /dev/null
+        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+    fi
 
-    # 3. MetalLB
-    echo -e "${YELLOW}[3/6] ${MSG_PREPARE_STEP_3}${NC}"
-    helm repo add metallb https://metallb.github.io/metallb > /dev/null
-    helm upgrade --install metallb metallb/metallb --namespace metallb-system --create-namespace --wait > /dev/null
-    
-    sleep 5
-    
-    cat <<EOF | kubectl apply -f -
+    # 5. MetalLB
+    if confirm_step "MetalLB" "$MSG_PREPARE_WHY_METALLB_TITLE" "$MSG_PREPARE_WHY_METALLB_DESC" "$UNATTENDED"; then
+        echo -ne "   ${ICON_GEAR} $MSG_PREPARE_STEP_3... "
+        helm repo add metallb https://metallb.github.io/metallb &> /dev/null
+        helm upgrade --install metallb metallb/metallb \
+            --namespace metallb-system --create-namespace \
+            --set "commonLabels.provisioned-by=kcspoc" \
+            --wait &> /dev/null
+        
+        sleep 5
+        cat <<EOF | kubectl apply -f - &> /dev/null
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
 metadata:
   name: first-pool
   namespace: metallb-system
+  labels:
+    $POC_LABEL
 spec:
   addresses:
   - $IP_RANGE
@@ -72,28 +138,45 @@ kind: L2Advertisement
 metadata:
   name: l2-adv
   namespace: metallb-system
+  labels:
+    $POC_LABEL
+spec:
+  ipAddressPools:
+  - first-pool
 EOF
-
-    # 4. Ingress-Nginx
-    echo -e "${YELLOW}[4/6] ${MSG_PREPARE_STEP_4}${NC}"
-    helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx > /dev/null
-    helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace --wait > /dev/null
-
-    # 5. Kernel Headers
-    echo -e "${YELLOW}[5/6] ${MSG_PREPARE_STEP_5}${NC}"
-    # Check if we have sudo
-    if command -v sudo > /dev/null; then
-        sudo apt update && sudo apt install linux-headers-$(uname -r) -y
-    else
-        echo -e "${RED}${MSG_PREPARE_SUDO_FAIL}${NC}"
+        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
     fi
 
-    # 6. Verification
-    echo -e "${YELLOW}[6/6] ${MSG_PREPARE_STEP_6}${NC}"
+    # 6. Ingress-Nginx
+    if confirm_step "Ingress-Nginx" "$MSG_PREPARE_WHY_INGRESS_TITLE" "$MSG_PREPARE_WHY_INGRESS_DESC" "$UNATTENDED"; then
+        echo -ne "   ${ICON_GEAR} $MSG_PREPARE_STEP_4... "
+        helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx &> /dev/null
+        helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx --create-namespace \
+            --set "commonLabels.provisioned-by=kcspoc" \
+            --wait &> /dev/null
+        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+    fi
+
+    # 7. Kernel Headers
+    if confirm_step "Kernel Headers" "$MSG_PREPARE_WHY_HEADERS_TITLE" "$MSG_PREPARE_WHY_HEADERS_DESC" "$UNATTENDED"; then
+        echo -ne "   ${ICON_GEAR} $MSG_PREPARE_STEP_5... "
+        if command -v sudo > /dev/null; then
+            sudo apt update &> /dev/null && sudo apt install linux-headers-$(uname -r) -y &> /dev/null
+            echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+        else
+            echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
+            echo -e "      ${RED}${MSG_PREPARE_SUDO_FAIL}${NC}"
+        fi
+    fi
+
+    # 8. Verification
+    ui_section "$MSG_PREPARE_STEP_6"
     sleep 5
-    INGRESS_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    INGRESS_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "Pending...")
 
     echo -e "${GREEN}${ICON_OK} ${MSG_PREPARE_COMPLETED}${NC}"
-    echo -e "${MSG_PREPARE_INGRESS_IP}: $INGRESS_IP"
-    echo -e "${MSG_PREPARE_HOSTS_HINT}: $INGRESS_IP $DOMAIN"
+    echo -e "   ${MSG_PREPARE_INGRESS_IP}: ${BOLD}${BLUE}$INGRESS_IP${NC}"
+    echo -e "   ${MSG_PREPARE_HOSTS_HINT}: ${BOLD}${YELLOW}$INGRESS_IP $DOMAIN${NC}"
+    echo ""
 }

@@ -160,6 +160,30 @@ MSG_PREPARE_STEP_6="Verificação Final..."
 MSG_PREPARE_COMPLETED="Configuração Concluída!"
 MSG_PREPARE_INGRESS_IP="IP do Ingress"
 MSG_PREPARE_HOSTS_HINT="Adicione isto ao seu /etc/hosts"
+MSG_PREPARE_LABEL_INFO="Recursos serão marcados com a label"
+MSG_PREPARE_CHECKLIST="Checklist de Instalação"
+MSG_PREPARE_UNATTENDED_RUN="Executando em Modo Não-Interativo..."
+MSG_PREPARE_INTERACTIVE_WARN="A ferramenta instalará diversos componentes de infraestrutura. Você será questionado antes da instalação de cada um deles."
+
+MSG_PREPARE_PROMPT_INSTALL="Instalar %s? [s/N] "
+
+MSG_PREPARE_WHY_CERT_TITLE="Por que o Cert-Manager?"
+MSG_PREPARE_WHY_CERT_DESC="O KCS exige HTTPS para o Admission Controller. O Cert-Manager automatiza certificados para mTLS interno e para a Console Web."
+
+MSG_PREPARE_WHY_STORAGE_TITLE="Por que o Local Path Storage?"
+MSG_PREPARE_WHY_STORAGE_DESC="Os bancos de dados do KCS (Postgres/Clickhouse) precisam de persistência. Este provisionador cria volumes usando os discos locais dos nós."
+
+MSG_PREPARE_WHY_METRICS_TITLE="Por que o Metrics Server?"
+MSG_PREPARE_WHY_METRICS_DESC="Fornece dados de uso de CPU/RAM para a API do Kubernetes. O dashboard do KCS usa isso para exibir a saúde dos containers e nós."
+
+MSG_PREPARE_WHY_METALLB_TITLE="Por que o MetalLB?"
+MSG_PREPARE_WHY_METALLB_DESC="Em ambientes On-Premise, o Kubernetes não fornece IPs externos. O MetalLB atribui um IP real à Console do KCS."
+
+MSG_PREPARE_WHY_INGRESS_TITLE="Por que o Ingress-Nginx?"
+MSG_PREPARE_WHY_INGRESS_DESC="Atua como o gateway de entrada. Recebe conexões HTTPS e as encaminha para os serviços internos do KCS."
+
+MSG_PREPARE_WHY_HEADERS_TITLE="Por que Kernel Headers?"
+MSG_PREPARE_WHY_HEADERS_DESC="A Segurança de Runtime (eBPF) do KCS precisa dos headers para compilar/carregar módulos no sistema hospedeiro."
 
 # --- Destroy Command ---
 MSG_DESTROY_TITLE="Remoção do KCS (Limpeza Profunda)"
