@@ -27,9 +27,21 @@ VERSION="0.3.0"
 
 # --- LOCALE & I18N ---
 load_locale() {
-    # Detect System Language
-    # Priorities: LC_ALL > LC_MESSAGES > LANG
-    local SYS_LANG="${LC_ALL:-${LC_MESSAGES:-$LANG}}"
+    # 1. Try Configured Language
+    local CFG_LANG=""
+    if [ -f "$CONFIG_FILE" ]; then
+        # Extract PREFERRED_LANG safely without sourcing entire file if we want to be strict,
+        # but sourcing is standard for this tool.
+        # We'll detect it by grep to not accidentally overwrite other vars if called early?
+        # Actually, just sourcing is easiest/safest given we control the file format.
+        # However, let's just grep it to avoid side effects during early init.
+        CFG_LANG=$(grep "^PREFERRED_LANG=" "$CONFIG_FILE" | cut -d'"' -f2)
+    fi
+
+    # 2. Detect System Language (Fallback)
+    # Priorities: Config > LC_ALL > LC_MESSAGES > LANG
+    local SYS_LANG="${CFG_LANG:-${LC_ALL:-${LC_MESSAGES:-$LANG}}}"
+    
     # Extract language code (e.g., pt_BR, en_US)
     local LANG_CODE=$(echo "$SYS_LANG" | cut -d. -f1)
     

@@ -9,7 +9,7 @@ cmd_config() {
     mkdir -p "$CONFIG_DIR"
     
     # Load existing config to show as "Current"
-    local CUR_NS="" CUR_DOMAIN="" CUR_REG_SRV="" CUR_REG_USER="" CUR_REG_EMAIL="" CUR_IP_RANGE="" CUR_DEEP="" CUR_VER=""
+    local CUR_NS="" CUR_DOMAIN="" CUR_REG_SRV="" CUR_REG_USER="" CUR_REG_EMAIL="" CUR_IP_RANGE="" CUR_DEEP="" CUR_VER="" CUR_LANG=""
     
     if [ -f "$CONFIG_FILE" ]; then
         source "$CONFIG_FILE"
@@ -21,21 +21,61 @@ cmd_config() {
         CUR_IP_RANGE="$IP_RANGE"
         CUR_DEEP="$ENABLE_DEEP_CHECK"
         CUR_VER="$KCS_VERSION"
+        CUR_LANG="$PREFERRED_LANG"
         echo -e "${GREEN}${ICON_OK} $MSG_CONFIG_LOADED${NC}"
     fi
 
+    local TOTAL_STEPS=7
+
+    # 0. Language (Step 1 effectively)
+    ui_step 1 $TOTAL_STEPS "$MSG_STEP_LANG" "$MSG_STEP_LANG_DESC"
+    
+    # List available
+    # We find .sh files in locales/ and strip path/extension
+    AVAIL_LOCALES=$(ls "$SCRIPT_DIR/locales/"*.sh 2>/dev/null | xargs -n 1 basename | sed 's/\.sh//')
+    # Format list
+    AVAIL_STR=$(echo "$AVAIL_LOCALES" | tr '\n' ' ')
+    echo -e "   ${DIM}${MSG_LANG_AVAILABLE}: [ $AVAIL_STR]${NC}"
+
+    # Determine default for prompt: Current Config > System/Detected (from load_locale scope)
+    # common.sh calculates LANG_CODE, but local scope might not see it if not exported.
+    # Re-detect roughly or rely on what load_locale did?
+    # load_locale set vars but didn't export LANG_CODE.
+    # Let's re-calculate simple default if CUR_LANG is empty.
+    
+    local DEF_LANG="en_US"
+    if [ -n "$CUR_LANG" ]; then
+        DEF_LANG="$CUR_LANG"
+    elif [ -n "$LC_ALL" ] || [ -n "$LANG" ]; then
+         # Try to match detected system lang to available list?
+         # Simplified: Defaults to en_US for the prompt if no config. 
+         # Or we can grep what load_locale found.
+         # Let's just default to 'en_US' if not configured, or if the user is seeing this in Portuguese, 
+         # it means load_locale worked.
+         # So we should default to the CURRENTLY LOADED language code.
+         # We can infer it by checking which file was loaded? No.
+         # Let's iterate available and check if MSG_USAGE is defined? No.
+         : # No-op
+    fi
+   
+    # If we are here, we are already speaking some language.
+    # Let's assume en_US as the visual default prompt if nothing is saved.
+    
+    ui_input "$MSG_INPUT_LANG" "en_US" "$CUR_LANG"
+    PREFERRED_LANG="$RET_VAL"
+
     # 1. Namespace
-    ui_step 1 6 "$MSG_STEP_NS" "$MSG_STEP_NS_DESC"
+    ui_step 2 $TOTAL_STEPS "$MSG_STEP_NS" "$MSG_STEP_NS_DESC"
     ui_input "$MSG_INPUT_NS" "kcs" "$CUR_NS"
     NAMESPACE="$RET_VAL"
 
     # 2. Domain
-    ui_step 2 6 "$MSG_STEP_DOMAIN" "$MSG_STEP_DOMAIN_DESC"
+    ui_step 3 $TOTAL_STEPS "$MSG_STEP_DOMAIN" "$MSG_STEP_DOMAIN_DESC"
     ui_input "$MSG_INPUT_DOMAIN" "kcs.cluster.lab" "$CUR_DOMAIN"
     DOMAIN="$RET_VAL"
 
     # 3. Registry
-    ui_step 3 6 "$MSG_STEP_REG" "$MSG_STEP_REG_DESC"
+    ui_step 4 $TOTAL_STEPS "$MSG_STEP_REG" "$MSG_STEP_REG_DESC"
     
     ui_input "$MSG_INPUT_REG_URL" "repo.kcs.kaspersky.com" "$CUR_REG_SRV"
     REGISTRY_SERVER="$RET_VAL"
@@ -55,17 +95,17 @@ cmd_config() {
     REGISTRY_EMAIL="$RET_VAL"
 
     # 4. MetalLB
-    ui_step 4 6 "$MSG_STEP_METALLB" "$MSG_STEP_METALLB_DESC"
+    ui_step 5 $TOTAL_STEPS "$MSG_STEP_METALLB" "$MSG_STEP_METALLB_DESC"
     ui_input "$MSG_INPUT_IP_RANGE" "" "$CUR_IP_RANGE"
     IP_RANGE="$RET_VAL"
 
     # 5. Deep Check
-    ui_step 5 6 "$MSG_STEP_DEEP" "$MSG_STEP_DEEP_DESC"
+    ui_step 6 $TOTAL_STEPS "$MSG_STEP_DEEP" "$MSG_STEP_DEEP_DESC"
     ui_input "$MSG_INPUT_DEEP" "false" "$CUR_DEEP"
     ENABLE_DEEP_CHECK="$RET_VAL"
 
     # 6. Version
-    ui_step 6 6 "$MSG_STEP_VERSION" "$MSG_STEP_VERSION_DESC"
+    ui_step 7 $TOTAL_STEPS "$MSG_STEP_VERSION" "$MSG_STEP_VERSION_DESC"
     ui_input "$MSG_INPUT_VERSION" "latest" "$CUR_VER"
     KCS_VERSION="$RET_VAL"
 
@@ -73,6 +113,9 @@ cmd_config() {
     cat > "$CONFIG_FILE" <<EOF
 # KCS PoC Configuration
 # Generated on $(date)
+
+# Localization
+PREFERRED_LANG="$PREFERRED_LANG"
 
 NAMESPACE="$NAMESPACE"
 DOMAIN="$DOMAIN"
