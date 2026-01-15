@@ -2,8 +2,8 @@
 
 cmd_config() {
     ui_banner
-    ui_section "Configuration Wizard"
-    echo -e "This wizard generates the ${YELLOW}~/.kcspoc/config${NC} file."
+    ui_section "$MSG_CONFIG_WIZARD_TITLE"
+    echo -e "$MSG_CONFIG_WIZARD_DESC"
     echo ""
 
     mkdir -p "$CONFIG_DIR"
@@ -21,29 +21,29 @@ cmd_config() {
         CUR_IP_RANGE="$IP_RANGE"
         CUR_DEEP="$ENABLE_DEEP_CHECK"
         CUR_VER="$KCS_VERSION"
-        echo -e "${GREEN}${ICON_OK} Loaded existing configuration.${NC}"
+        echo -e "${GREEN}${ICON_OK} $MSG_CONFIG_LOADED${NC}"
     fi
 
     # 1. Namespace
-    ui_step 1 6 "Kubernetes Namespace" "Where KCS resources will be created."
-    ui_input "Namespace" "kcs" "$CUR_NS"
+    ui_step 1 6 "$MSG_STEP_NS" "$MSG_STEP_NS_DESC"
+    ui_input "$MSG_INPUT_NS" "kcs" "$CUR_NS"
     NAMESPACE="$RET_VAL"
 
     # 2. Domain
-    ui_step 2 6 "Base Domain" "Domain for KCS console/services (e.g. kcs.lab)."
-    ui_input "Domain" "kcs.cluster.lab" "$CUR_DOMAIN"
+    ui_step 2 6 "$MSG_STEP_DOMAIN" "$MSG_STEP_DOMAIN_DESC"
+    ui_input "$MSG_INPUT_DOMAIN" "kcs.cluster.lab" "$CUR_DOMAIN"
     DOMAIN="$RET_VAL"
 
     # 3. Registry
-    ui_step 3 6 "Registry Credentials" "Access to KCS container images."
+    ui_step 3 6 "$MSG_STEP_REG" "$MSG_STEP_REG_DESC"
     
-    ui_input "Server URL" "repo.kcs.kaspersky.com" "$CUR_REG_SRV"
+    ui_input "$MSG_INPUT_REG_URL" "repo.kcs.kaspersky.com" "$CUR_REG_SRV"
     REGISTRY_SERVER="$RET_VAL"
     
-    ui_input "Username" "" "$CUR_REG_USER"
+    ui_input "$MSG_INPUT_REG_USER" "" "$CUR_REG_USER"
     REGISTRY_USER="$RET_VAL"
     
-    ui_input "Password" "" "****" "yes"
+    ui_input "$MSG_INPUT_REG_PASS" "" "****" "yes"
     # If user hit enter (empty) and we had a previous password (**** aka set), keep old param
     if [ "$RET_VAL" == "****" ]; then
          REGISTRY_PASS="$REGISTRY_PASS" # Keep existing global variable
@@ -51,22 +51,22 @@ cmd_config() {
          REGISTRY_PASS="$RET_VAL"
     fi
     
-    ui_input "Email" "" "$CUR_REG_EMAIL"
+    ui_input "$MSG_INPUT_REG_EMAIL" "" "$CUR_REG_EMAIL"
     REGISTRY_EMAIL="$RET_VAL"
 
     # 4. MetalLB
-    ui_step 4 6 "MetalLB IP Range" "Range for LoadBalancer (e.g. 172.16.0.10-172.16.0.20)"
-    ui_input "IP Range" "" "$CUR_IP_RANGE"
+    ui_step 4 6 "$MSG_STEP_METALLB" "$MSG_STEP_METALLB_DESC"
+    ui_input "$MSG_INPUT_IP_RANGE" "" "$CUR_IP_RANGE"
     IP_RANGE="$RET_VAL"
 
     # 5. Deep Check
-    ui_step 5 6 "Deep Node Inspection" "Run privileged pods to check disk/headers?"
-    ui_input "Enable Deep Check? (true/false)" "false" "$CUR_DEEP"
+    ui_step 5 6 "$MSG_STEP_DEEP" "$MSG_STEP_DEEP_DESC"
+    ui_input "$MSG_INPUT_DEEP" "false" "$CUR_DEEP"
     ENABLE_DEEP_CHECK="$RET_VAL"
 
     # 6. Version
-    ui_step 6 6 "KCS Version" "Target version to install."
-    ui_input "Version" "latest" "$CUR_VER"
+    ui_step 6 6 "$MSG_STEP_VERSION" "$MSG_STEP_VERSION_DESC"
+    ui_input "$MSG_INPUT_VERSION" "latest" "$CUR_VER"
     KCS_VERSION="$RET_VAL"
 
     # Save
@@ -93,6 +93,6 @@ KCS_VERSION="$KCS_VERSION"
 ENABLE_DEEP_CHECK="$ENABLE_DEEP_CHECK"
 EOF
     
-    echo -e "\n${GREEN}${ICON_OK} Configuration saved to $CONFIG_FILE${NC}"
-    echo -e "${DIM}You can now run 'kcspoc pull' or 'kcspoc check'.${NC}"
+    echo -e "\n${GREEN}${ICON_OK} $MSG_CONFIG_SAVED $CONFIG_FILE${NC}"
+    echo -e "${DIM}${MSG_CONFIG_NEXT_STEPS}${NC}"
 }

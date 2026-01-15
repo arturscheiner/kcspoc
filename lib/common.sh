@@ -25,6 +25,40 @@ CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
 VERSION="0.2.0"
 
+# --- LOCALE & I18N ---
+load_locale() {
+    # Detect System Language
+    # Priorities: LC_ALL > LC_MESSAGES > LANG
+    local SYS_LANG="${LC_ALL:-${LC_MESSAGES:-$LANG}}"
+    # Extract language code (e.g., pt_BR, en_US)
+    local LANG_CODE=$(echo "$SYS_LANG" | cut -d. -f1)
+    
+    # Default to en_US if empty
+    if [ -z "$LANG_CODE" ]; then
+        LANG_CODE="en_US"
+    fi
+    
+    # Check if we have a file for this locale
+    local LOCALE_FILE="$SCRIPT_DIR/locales/${LANG_CODE}.sh"
+    
+    # If not found, try generic language check (e.g. pt_PT -> pt_BR mapping if needed, or default)
+    # For now, if exact match fails, fallback to en_US
+    if [ ! -f "$LOCALE_FILE" ]; then
+        LOCALE_FILE="$SCRIPT_DIR/locales/en_US.sh"
+    fi
+    
+    # Load it
+    if [ -f "$LOCALE_FILE" ]; then
+        source "$LOCALE_FILE"
+    else
+        # Critical Fallback if en_US is missing (should not happen in dist)
+        echo "Error: Locale file not found and en_US fallback missing."
+        exit 1
+    fi
+}
+# Call it immediately when common is sourced
+load_locale
+
 # --- HELPER FUNCTIONS ---
 
 ui_banner() {
@@ -39,7 +73,7 @@ ui_banner() {
     echo -e "${DIM}  Kaspersky Container Security - Proof of Concept Tool${NC}"
     echo -e "${BLUE}  ====================================================${NC}"
     echo -e "${DIM}  Version: ${VERSION}${NC}"
-    echo -e "${DIM}  Author: Artur Scheiner${NC}"
+    echo -e "${DIM}  ${MSG_AUTHOR}: Artur Scheiner${NC}"
     echo ""
 }
 
@@ -69,7 +103,7 @@ ui_input() {
     echo -ne "   ${ICON_ARROW} ${label}"
     
     if [ -n "$default_val" ]; then
-        echo -ne " ${DIM}(Default: ${default_val})${NC}"
+        echo -ne " ${DIM}(${MSG_DEFAULT}: ${default_val})${NC}"
     fi
     
     local prompt_val="${current_val:-$default_val}"

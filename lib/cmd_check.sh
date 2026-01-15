@@ -2,12 +2,12 @@
 
 cmd_check() {
     ui_banner
-    ui_section "Environment Check"
+    ui_section "$MSG_CHECK_TITLE"
     
     local ERROR=0
 
     # Check 1: Tools
-    echo -ne "Checking CLI tools... "
+    echo -ne "$MSG_CHECK_TOOLS "
     MISSING_TOOLS=""
     for tool in kubectl helm; do
         if ! command -v $tool &> /dev/null; then
@@ -16,53 +16,53 @@ cmd_check() {
     done
 
     if [ -n "$MISSING_TOOLS" ]; then
-        echo -e "${RED}FAIL${NC}"
-        echo -e "${RED}Missing required tools:$MISSING_TOOLS${NC}"
+        echo -e "${RED}${MSG_CHECK_FAIL}${NC}"
+        echo -e "${RED}${MSG_CHECK_TOOLS_FAIL}:$MISSING_TOOLS${NC}"
         ERROR=1
     else
         echo -e "${GREEN}OK${NC}"
     fi
 
     # Check 2: Config
-    echo -ne "Checking Configuration... "
+    echo -ne "$MSG_CHECK_CONFIG "
     if load_config; then
         if [ -z "$NAMESPACE" ] || [ -z "$IP_RANGE" ] || [ -z "$REGISTRY_USER" ]; then
-             echo -e "${RED}FAIL (Missing variables in config)${NC}"
-             echo "Run 'kcspoc config' to fix this."
+             echo -e "${RED}${MSG_CHECK_CONFIG_FAIL}${NC}"
+             echo "$MSG_CHECK_CONFIG_FIX"
              ERROR=1
         else
             echo -e "${GREEN}OK${NC} (Loaded)"
         fi
     else
-        echo -e "${RED}FAIL (Config file not found)${NC}"
-        echo "Run 'kcspoc config' to create it."
+        echo -e "${RED}${MSG_CHECK_CONFIG_FAIL} (Config file not found)${NC}"
+        echo "$MSG_CHECK_CONFIG_CREATE"
         ERROR=1
     fi
 
     # Check 3: Cluster Context & Connectivity
-    echo -ne "Checking Cluster Connectivity... "
+    echo -ne "$MSG_CHECK_CONN "
     
     if command -v kubectl &> /dev/null; then
         CURRENT_CTX=$(kubectl config current-context 2>/dev/null || echo "None")
-        echo -e "\n${BLUE}Target Cluster Context: ${YELLOW}${CURRENT_CTX}${NC}"
-        echo -e "The KCS installation will target this cluster."
+        echo -e "\n${BLUE}${MSG_CHECK_CTX}: ${YELLOW}${CURRENT_CTX}${NC}"
+        echo -e "$MSG_CHECK_CTX_DESC"
     fi
 
-    echo -ne "Verifying connectivity... "
+    echo -ne "$MSG_CHECK_VERIFY_CONN "
     if kubectl get nodes &> /dev/null; then
         echo -e "${GREEN}OK${NC}"
     else
-        echo -e "${RED}FAIL${NC}"
-        echo -e "Could not connect to Kubernetes cluster ${YELLOW}${CURRENT_CTX}${NC}."
+        echo -e "${RED}${MSG_CHECK_FAIL}${NC}"
+        echo -e "${MSG_CHECK_CONN_FAIL} ${YELLOW}${CURRENT_CTX}${NC}."
         ERROR=1
         return 1
     fi
 
     # Check 4: Cluster Resources & Topology
-    echo -e "\n${YELLOW}=== Cluster Resources & Topology ===${NC}"
+    echo -e "\n${YELLOW}${MSG_CHECK_RESOURCES_TITLE}${NC}"
     
     # 4.1 Kubernetes Version Check
-    echo -ne "Checking Kubernetes Version... "
+    echo -ne "$MSG_CHECK_K8S_VER "
     K8S_VER_STR=$(kubectl version -o json 2>/dev/null | grep gitVersion | grep -v Client | head -n 1 | awk -F'"' '{print $4}')
     if [ -z "$K8S_VER_STR" ]; then
         K8S_VER_STR=$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}')
@@ -72,28 +72,28 @@ cmd_check() {
     MINOR=$(echo "$VER_CLEAN" | cut -d. -f2)
 
     if [ "$MAJOR" -eq 1 ] && [ "$MINOR" -ge 25 ] && [ "$MINOR" -le 34 ]; then
-         echo -e "${GREEN}${K8S_VER_STR}${NC} (Pass: 1.25 <= v <= 1.34)"
+         echo -e "${GREEN}${K8S_VER_STR}${NC} (${MSG_CHECK_PASS}: 1.25 <= v <= 1.34)"
     else
-         echo -e "${RED}${K8S_VER_STR}${NC} (FAIL: Supported range 1.25 - 1.34)"
+         echo -e "${RED}${K8S_VER_STR}${NC} (${MSG_CHECK_FAIL}: Supported range 1.25 - 1.34)"
          ERROR=1
     fi
 
     # 4.2 Architecture Check
-    echo -ne "Checking Architecture... "
+    echo -ne "$MSG_CHECK_ARCH "
     ARCH_COUNT=$(kubectl get nodes -o jsonpath='{.items[*].status.nodeInfo.architecture}' | tr ' ' '\n' | sort | uniq -c)
     if echo "$ARCH_COUNT" | grep -q "amd64"; then
          if [ $(echo "$ARCH_COUNT" | wc -l) -eq 1 ]; then
-             echo -e "${GREEN}amd64${NC} (Pass)"
+             echo -e "${GREEN}amd64${NC} (${MSG_CHECK_PASS})"
          else
-             echo -e "${YELLOW}Mixed Architectures detected${NC} (Warning: Core only supports amd64)"
+             echo -e "${YELLOW}${MSG_CHECK_ARCH_MIXED}${NC} (${MSG_CHECK_ARCH_WARN})"
          fi
     else
-         echo -e "${RED}No amd64 nodes found${NC} (FAIL)"
+         echo -e "${RED}${MSG_CHECK_ARCH_NONE}${NC} (${MSG_CHECK_FAIL})"
          ERROR=1
     fi
 
     # 4.3 Container Runtime Check
-    echo -ne "Checking Container Runtime... "
+    echo -ne "$MSG_CHECK_RUNTIME "
     RUNTIMES=$(kubectl get nodes -o jsonpath='{.items[*].status.nodeInfo.containerRuntimeVersion}' | tr ' ' '\n' | sort | uniq)
     echo -e "${BLUE}$RUNTIMES${NC}"
     
@@ -122,31 +122,31 @@ cmd_check() {
                   ERROR=1
              fi
         elif [[ "$RT_NAME" == "docker" ]]; then
-             echo -e "  - docker ${YELLOW}(Warning: Deprecated)${NC}"
+             echo -e "  - docker ${YELLOW}(${MSG_CHECK_RUNTIME_WARN})${NC}"
         else
              echo -e "  - $rt ${YELLOW}(Unknown/Untested)${NC}"
         fi
     done
     
     # 4.4 CNI Plugin Check
-    echo -ne "Checking CNI Plugin... "
+    echo -ne "$MSG_CHECK_CNI "
     CNI_PODS=$(kubectl get pods -A --no-headers | grep -E "calico|flannel|cilium|weave|antrea|kube-proxy" | grep "Running" || true)
     
     if [ -n "$CNI_PODS" ]; then
         CNI_NAMES=$(echo "$CNI_PODS" | awk '{print $2}' | grep -oE "calico|flannel|cilium|weave|antrea" | sort | uniq | tr '\n' ' ')
         if [ -z "$CNI_NAMES" ]; then CNI_NAMES="kube-proxy (Standard)"; fi
-        echo -e "${GREEN}OK${NC} (Detected: $CNI_NAMES)"
+        echo -e "${GREEN}OK${NC} (${MSG_CHECK_CNI_DETECTED}: $CNI_NAMES)"
     else
-        echo -e "${YELLOW}Warning: No common CNI pods detected.${NC}"
+        echo -e "${YELLOW}${MSG_CHECK_CNI_WARN}${NC}"
     fi
 
     # 4.5 Node Resources & Deep Inspection
-    echo -e "\n${BLUE}Node Resources (CPU / RAM / Disk / Kernel Headers / eBPF):${NC}"
+    echo -e "\n${BLUE}${MSG_CHECK_NODE_RES_TITLE}${NC}"
     
     if [[ "$ENABLE_DEEP_CHECK" == "true" ]]; then
-        echo -e "${YELLOW}Running Deep Node Inspection (Privileged Pods)...${NC}"
+        echo -e "${YELLOW}${MSG_CHECK_DEEP_RUN}${NC}"
     else
-        echo -e "${YELLOW}(Deep Check Disabled: Basic info only)${NC}"
+        echo -e "${YELLOW}${MSG_CHECK_DEEP_SKIP}${NC}"
     fi
     
     printf "%-30s %-15s %-10s %-15s %-15s %-10s %-20s\n" "NODE" "ROLE" "CPU" "RAM" "DISK" "eBPF" "HEADERS"
@@ -235,11 +235,11 @@ EOF
     done
 
     # 4.6 Repo Connectivity
-    echo -e "\n${BLUE}Checking Repo Connectivity (repo.kcs.kaspersky.com)...${NC}"
+    echo -e "\n${BLUE}${MSG_CHECK_REPO_CONN} (repo.kcs.kaspersky.com)...${NC}"
     if kubectl run -i --rm --image=curlimages/curl --restart=Never connectivity-test -- curl -m 5 -I https://repo.kcs.kaspersky.com &> /dev/null; then
          echo -e "${GREEN}OK${NC}"
     else
-         echo -e "${RED}FAIL${NC}"
+         echo -e "${RED}${MSG_CHECK_FAIL}${NC}"
          ERROR=1
     fi
 
@@ -248,14 +248,14 @@ EOF
     TOTAL_MEM_KI=$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.capacity.memory}{"\n"}{end}' | sed 's/Ki//g' | awk '{s+=$1} END {print s}')
     TOTAL_MEM_GB=$((TOTAL_MEM_KI / 1024 / 1024))
     
-    echo -e "\n${YELLOW}Global Cluster Totals:${NC}"
-    if [ "$TOTAL_CPU" -ge 4 ]; then echo -e "CPU: ${GREEN}${TOTAL_CPU} vCPUs${NC} (Pass)"; else echo -e "CPU: ${RED}${TOTAL_CPU} vCPUs${NC} (FAIL)"; ERROR=1; fi
-    if [ "$TOTAL_MEM_GB" -ge 8 ]; then echo -e "RAM: ${GREEN}~${TOTAL_MEM_GB} GB${NC} (Pass)"; else echo -e "RAM: ${RED}~${TOTAL_MEM_GB} GB${NC} (FAIL)"; ERROR=1; fi
+    echo -e "\n${YELLOW}${MSG_CHECK_GLOBAL_TOTALS}:${NC}"
+    if [ "$TOTAL_CPU" -ge 4 ]; then echo -e "CPU: ${GREEN}${TOTAL_CPU} vCPUs${NC} (${MSG_CHECK_PASS})"; else echo -e "CPU: ${RED}${TOTAL_CPU} vCPUs${NC} (${MSG_CHECK_FAIL})"; ERROR=1; fi
+    if [ "$TOTAL_MEM_GB" -ge 8 ]; then echo -e "RAM: ${GREEN}~${TOTAL_MEM_GB} GB${NC} (${MSG_CHECK_PASS})"; else echo -e "RAM: ${RED}~${TOTAL_MEM_GB} GB${NC} (${MSG_CHECK_FAIL})"; ERROR=1; fi
 
     if [ $ERROR -eq 0 ]; then
-        echo -e "\n${GREEN}All checks passed.${NC}"
+        echo -e "\n${GREEN}${MSG_CHECK_ALL_PASS}${NC}"
     else
-        echo -e "\n${RED}Checks failed. Please address the issues above.${NC}"
+        echo -e "\n${RED}${MSG_CHECK_FINAL_FAIL}${NC}"
         exit 1
     fi
 }
