@@ -48,6 +48,17 @@ cmd_destroy() {
             exit 1
         fi
         echo ""
+
+        # Optional Infrastructure Removal
+        echo -e "${YELLOW}$MSG_DESTROY_DEPS_PROMPT${NC}"
+        echo -ne "${ICON_QUESTION} > "
+        read -r DEPS_INPUT
+        if [[ "$DEPS_INPUT" =~ ^[Yy]$ ]]; then
+            CLEANUP_DEPS=true
+        else
+            CLEANUP_DEPS=false
+        fi
+        echo ""
     fi
 
     echo -e "${YELLOW}${ICON_GEAR} $MSG_DESTROY_START${NC}"
@@ -115,6 +126,50 @@ cmd_destroy() {
         echo -e "${GREEN}${ICON_OK} MutatingWebhook: $MSG_DESTROY_REMOVED${NC}"
     else
         echo -e "${BLUE}${ICON_INFO} MutatingWebhook: $MSG_DESTROY_NOT_FOUND${NC}"
+    fi
+
+    # 6. Global RBAC
+    echo -e "${YELLOW}[6/7] $MSG_DESTROY_STEP_6${NC}"
+    # Delete ClusterRoles and Bindings containing 'kcs' (broad match)
+    local KCS_CRS=$(kubectl get clusterrole -o name | grep "kcs")
+    local KCS_CRBS=$(kubectl get clusterrolebinding -o name | grep "kcs")
+    
+    if [ -n "$KCS_CRS" ]; then
+        echo "$KCS_CRS" | xargs -I {} kubectl delete {} >/dev/null 2>&1
+        echo -e "${GREEN}${ICON_OK} ClusterRoles: $MSG_DESTROY_REMOVED${NC}"
+    fi
+    if [ -n "$KCS_CRBS" ]; then
+        echo "$KCS_CRBS" | xargs -I {} kubectl delete {} >/dev/null 2>&1
+        echo -e "${GREEN}${ICON_OK} ClusterRoleBindings: $MSG_DESTROY_REMOVED${NC}"
+    fi
+
+    # 7. Infrastructure Dependencies (Optional)
+    if [ "$CLEANUP_DEPS" == "true" ]; then
+         echo -e "\n${RED}${BOLD}=== $MSG_DESTROY_DEPS_TITLE ===${NC}"
+         
+         # Ingress
+         echo -e "${YELLOW}[7.1] $MSG_DESTROY_DEPS_INGRESS${NC}"
+         helm uninstall ingress-nginx -n ingress-nginx 2>/dev/null || true
+         kubectl delete namespace ingress-nginx --wait=false 2>/dev/null || true
+
+         # MetalLB
+         echo -e "${YELLOW}[7.2] $MSG_DESTROY_DEPS_METALLB${NC}"
+         helm uninstall metallb -n metallb-system 2>/dev/null || true
+         kubectl delete namespace metallb-system --wait=false 2>/dev/null || true
+         
+         # Cert-Manager
+         echo -e "${YELLOW}[7.3] $MSG_DESTROY_DEPS_CERT${NC}"
+         helm uninstall cert-manager -n cert-manager 2>/dev/null || true
+         kubectl delete namespace cert-manager --wait=false 2>/dev/null || true
+         
+         # Storage & Metrics
+         echo -e "${YELLOW}[7.4] $MSG_DESTROY_DEPS_STORAGE${NC}"
+         kubectl delete -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.31/deploy/local-path-storage.yaml 2>/dev/null || true
+         kubectl delete deployment metrics-server -n kube-system 2>/dev/null || true
+         
+         echo -e "${GREEN}${ICON_OK} $MSG_DESTROY_REMOVED${NC}"
+    else
+         echo -e "${BLUE}[7/7] $MSG_DESTROY_DEPS_SKIPPED${NC}"
     fi
 
     echo -e "\n${GREEN}${BOLD}${ICON_OK} $MSG_DESTROY_SUCCESS${NC}"
