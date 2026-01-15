@@ -23,7 +23,7 @@ ICON_GEAR="⚙"
 
 CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
-VERSION="0.4.4"
+VERSION="0.4.5"
 
 # --- LOCALE & I18N ---
 load_locale() {

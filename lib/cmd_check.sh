@@ -58,6 +58,12 @@ cmd_check() {
     # Determine Effective Deep Check Status
     local DEEP_ENABLED="${DEEP_OVERRIDE:-$ENABLE_DEEP_CHECK}"
     local TARGET_NS="${NAMESPACE:-default}"
+    local DEEP_NS="kcspoc"
+
+    if [[ "$DEEP_ENABLED" == "true" ]]; then
+        # Create dedicated namespace for deep check isolation
+        kubectl create namespace "$DEEP_NS" --dry-run=client -o yaml | kubectl apply -f - &> /dev/null
+    fi
 
     # --- [2] Cluster Context ---
     ui_section "2. Cluster Context"
@@ -202,9 +208,9 @@ cmd_check() {
     # --- [5] Node Resources & Health ---
     ui_section "5. Node Resources & Health"
     
-    local DEEP_ENABLED="$ENABLE_DEEP_CHECK"
     if [[ "$DEEP_ENABLED" == "true" ]]; then
         echo -e "   ${ICON_GEAR} ${YELLOW}${MSG_CHECK_DEEP_RUN}${NC}"
+        echo -e "      ${DIM}(Using isolated namespace: ${DEEP_NS})${NC}"
     else
         echo -e "   ${ICON_INFO} ${DIM}${MSG_CHECK_DEEP_SKIP}${NC}"
     fi
@@ -262,7 +268,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: debug-node-${name}
-  namespace: ${TARGET_NS}
+  namespace: ${DEEP_NS}
 spec:
   hostPID: true
   hostIPC: true
@@ -286,16 +292,16 @@ spec:
       path: /
   terminationGracePeriodSeconds: 1
 EOF
-            if ! kubectl apply -f "$POD_FILE" 2>/tmp/kcspoc_pod_err.tmp; then
+            if ! kubectl apply -f "$POD_FILE" -n "$DEEP_NS" 2>/dev/null; then
                  ebpf="${RED}ERR (Apply)${NC}"
                  headers="${RED}ERR (Apply)${NC}"
                  disk_disp="${RED}ERR (Apply)${NC}"
                  disk_val=0
             else
                 sleep 2
-                if kubectl wait --for=condition=Ready pod/debug-node-${name} -n ${TARGET_NS} --timeout=15s &> /dev/null; then
+                if kubectl wait --for=condition=Ready pod/debug-node-${name} -n "$DEEP_NS" --timeout=15s &> /dev/null; then
                     # Real Disk (From OS) - Use bytes for precision parsing
-                    local DISK_BLOCK=$(kubectl exec debug-node-${name} -n ${TARGET_NS} -- chroot /host df -B1 / 2>/dev/null | tail -n 1)
+                    local DISK_BLOCK=$(kubectl exec debug-node-${name} -n "$DEEP_NS" -- chroot /host df -B1 / 2>/dev/null | tail -n 1)
                     local BYTES_AVAIL=$(echo "$DISK_BLOCK" | awk '{print $4}')
                     local BYTES_TOTAL=$(echo "$DISK_BLOCK" | awk '{print $2}')
                     
@@ -307,14 +313,14 @@ EOF
                     fi
 
                     # eBPF
-                    if kubectl exec debug-node-${name} -n ${TARGET_NS} -- chroot /host test -f /sys/kernel/btf/vmlinux &> /dev/null; then
+                    if kubectl exec debug-node-${name} -n "$DEEP_NS" -- chroot /host test -f /sys/kernel/btf/vmlinux &> /dev/null; then
                          ebpf="${GREEN}YES${NC}"
                     else
                          ebpf="${RED}NO${NC}"
                     fi
 
                     # Headers
-                    if HEADERS_OUT=$(kubectl exec "debug-node-${name}" -n ${TARGET_NS} -- /bin/bash -c "chroot /host sh -c 'dpkg -l 2>/dev/null | grep -i headers || rpm -qa 2>/dev/null | grep -i headers'" 2>/dev/null); then
+                    if HEADERS_OUT=$(kubectl exec "debug-node-${name}" -n "$DEEP_NS" -- /bin/bash -c "chroot /host sh -c 'dpkg -l 2>/dev/null | grep -i headers || rpm -qa 2>/dev/null | grep -i headers'" 2>/dev/null); then
                          if [ -n "$HEADERS_OUT" ]; then
                              headers="${GREEN}YES${NC}"
                          else
@@ -329,7 +335,7 @@ EOF
                     headers="${RED}ERR (Wait)${NC}"
                     disk_val=0
                 fi
-                kubectl delete pod debug-node-${name} -n ${TARGET_NS} --force --grace-period=0 &> /dev/null
+                kubectl delete pod debug-node-${name} -n "$DEEP_NS" --force --grace-period=0 &> /dev/null
             fi
         fi
 
@@ -338,6 +344,11 @@ EOF
         echo "$name|$role|$cpu_a_m|$cpu_c_m|$mem_a_m|$mem_c_m|$disk_val|$disk_disp|$ebpf|$headers" >> "$NODE_DATA_FILE"
 
     done <<< "$RAW_API"
+
+    if [[ "$DEEP_ENABLED" == "true" ]]; then
+        # Cleanup isolated namespace
+        kubectl delete namespace "$DEEP_NS" --wait=false &> /dev/null
+    fi
 
     # 3. Render Table (Section 5)
     # Header: NODE | ROLE | CPU (A/T) | RAM (A/T) | DISK (A/T) | eBPF | HEADERS
