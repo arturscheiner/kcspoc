@@ -23,7 +23,7 @@ ICON_GEAR="⚙"
 
 CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
-VERSION="0.4.14"
+VERSION="0.4.15"
 
 # Labelling Constants
 POC_LABEL_KEY="provisioned-by"
@@ -162,6 +162,17 @@ ui_input() {
 
 _SPINNER_PID=0
 
+# Ensure spinner is killed on script exit
+_ui_spinner_cleanup() {
+    if [ "$_SPINNER_PID" -ne 0 ]; then
+        kill "$_SPINNER_PID" &>/dev/null
+        wait "$_SPINNER_PID" &>/dev/null
+        _SPINNER_PID=0
+        tput cnorm 2>/dev/null || true
+    fi
+}
+trap _ui_spinner_cleanup EXIT
+
 ui_spinner_start() {
     local msg="$1"
     echo -ne "   ${ICON_GEAR} $msg... "
@@ -170,10 +181,10 @@ ui_spinner_start() {
     tput civis 2>/dev/null || true
     
     (
-        local frames='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+        local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
         while true; do
-            for (( i=0; i<${#frames}; i++ )); do
-                echo -ne "${CYAN}${frames:$i:1}${NC}"
+            for frame in "${frames[@]}"; do
+                echo -ne "${CYAN}${frame}${NC}"
                 sleep 0.1
                 echo -ne "\b"
             done
@@ -194,7 +205,8 @@ ui_spinner_stop() {
     # Show cursor
     tput cnorm 2>/dev/null || true
     
-    echo -ne "\b" # Remove last spin char
+    # Clean last frame and print status
+    echo -ne "\b \b" # Overwrite frame with space then move back
     
     if [ "$status" == "PASS" ]; then
         echo -e "[ ${GREEN}${ICON_OK}${NC} ]"
