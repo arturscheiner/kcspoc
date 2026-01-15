@@ -112,6 +112,12 @@ MSG_CHECK_CLOUD_ZONE="Zona"
 MSG_CHECK_CLOUD_OS="Imagem do SO"
 MSG_CHECK_CLOUD_UNKNOWN="Desconhecido / Bare Metal"
 
+# Status Markers
+MSG_CHECK_LABEL_PASS="[ PASS ]"
+MSG_CHECK_LABEL_FAIL="[ FALHA ]"
+MSG_CHECK_LABEL_WARN="[ AVISO ]"
+MSG_CHECK_LABEL_INFO="[ INFO ]"
+
 # --- Prepare Command ---
 MSG_PREPARE_START="Iniciando Preparação..."
 MSG_PREPARE_USING_NS="Usando Namespace"

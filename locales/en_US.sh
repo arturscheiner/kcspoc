@@ -113,6 +113,12 @@ MSG_CHECK_CLOUD_ZONE="Zone"
 MSG_CHECK_CLOUD_OS="OS Image"
 MSG_CHECK_CLOUD_UNKNOWN="Unknown / Bare Metal"
 
+# Status Markers
+MSG_CHECK_LABEL_PASS="[ PASS ]"
+MSG_CHECK_LABEL_FAIL="[ FAIL ]"
+MSG_CHECK_LABEL_WARN="[ WARN ]"
+MSG_CHECK_LABEL_INFO="[ INFO ]"
+
 # --- Prepare Command ---
 MSG_PREPARE_START="Starting Preparation..."
 MSG_PREPARE_USING_NS="Using Namespace"
