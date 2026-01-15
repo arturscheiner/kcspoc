@@ -28,6 +28,7 @@ source "$LIB_DIR/cmd_config.sh"
 source "$LIB_DIR/cmd_pull.sh"
 source "$LIB_DIR/cmd_check.sh"
 source "$LIB_DIR/cmd_prepare.sh"
+source "$LIB_DIR/cmd_destroy.sh"
 
 cmd_usage() {
     ui_banner
@@ -38,6 +39,7 @@ cmd_usage() {
     echo -e "  ${GREEN}pull${NC}     ${MSG_CMD_PULL_DESC}"
     echo -e "  ${GREEN}check${NC}    ${MSG_CMD_CHECK_DESC}"
     echo -e "  ${GREEN}prepare${NC}  ${MSG_CMD_PREPARE_DESC}"
+    echo -e "  ${GREEN}destroy${NC}  ${MSG_DESTROY_TITLE}"
     echo -e "  ${GREEN}help${NC}     ${MSG_CMD_HELP_DESC}"
     exit 0
 }
@@ -60,6 +62,10 @@ case "$1" in
     prepare)
         shift
         cmd_prepare "$@"
+        ;;
+    destroy)
+        shift
+        cmd_destroy "$@"
         ;;
     help|*)
         cmd_usage
