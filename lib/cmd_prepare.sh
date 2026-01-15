@@ -86,12 +86,15 @@ cmd_prepare() {
         if helm upgrade --install cert-manager jetstack/cert-manager \
             --namespace cert-manager --create-namespace \
             --set crds.enabled=true \
-            --set "commonLabels.provisioned-by=kcspoc" \
             --wait --timeout 300s &> "$HELM_ERR"; then
+            
+            # Label namespace and resources
+            kubectl label namespace cert-manager $POC_LABEL --overwrite &>/dev/null
+            kubectl label deployment -n cert-manager --all $POC_LABEL --overwrite &>/dev/null
             echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
         else
             echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
-            echo -e "      ${RED}$(cat "$HELM_ERR" | head -n 1)${NC}"
+            echo -e "      ${RED}$(cat "$HELM_ERR" | tr '\n' ' ' | cut -c 1-120)...${NC}"
         fi
     fi
 
@@ -123,9 +126,12 @@ cmd_prepare() {
         helm repo add metallb https://metallb.github.io/metallb &> /dev/null
         if helm upgrade --install metallb metallb/metallb \
             --namespace metallb-system --create-namespace \
-            --set "commonLabels.provisioned-by=kcspoc" \
             --wait --timeout 300s &> "$HELM_ERR"; then
             
+            # Label
+            kubectl label namespace metallb-system $POC_LABEL --overwrite &>/dev/null
+            kubectl label deployment -n metallb-system --all $POC_LABEL --overwrite &>/dev/null
+
             sleep 5
             cat <<EOF | kubectl apply -f - &> /dev/null
 apiVersion: metallb.io/v1beta1
@@ -153,7 +159,7 @@ EOF
             echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
         else
             echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
-            echo -e "      ${RED}$(cat "$HELM_ERR" | head -n 1)${NC}"
+            echo -e "      ${RED}$(cat "$HELM_ERR" | tr '\n' ' ' | cut -c 1-120)...${NC}"
         fi
     fi
 
@@ -164,12 +170,15 @@ EOF
         helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx &> /dev/null
         if helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
             --namespace ingress-nginx --create-namespace \
-            --set "commonLabels.provisioned-by=kcspoc" \
             --wait --timeout 300s &> "$HELM_ERR"; then
+            
+            # Label
+            kubectl label namespace ingress-nginx $POC_LABEL --overwrite &>/dev/null
+            kubectl label deployment -n ingress-nginx --all $POC_LABEL --overwrite &>/dev/null
             echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
         else
             echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
-            echo -e "      ${RED}$(cat "$HELM_ERR" | head -n 1)${NC}"
+            echo -e "      ${RED}$(cat "$HELM_ERR" | tr '\n' ' ' | cut -c 1-120)...${NC}"
         fi
     fi
 
