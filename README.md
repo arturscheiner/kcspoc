@@ -1,6 +1,6 @@
 # Kaspersky Container Security PoC Tool (kcspoc)
 
-**Version:** 0.2.0
+**Version:** 0.3.0
 
 `kcspoc` is a CLI tool designed to streamline the Proof of Concept (PoC) deployment of Kaspersky Container Security (KCS). It helps with environment verification, configuration management, chart downloading, and preparation for installation.
 
@@ -11,6 +11,7 @@
 *   **Deep Node Inspection:** Optionally runs privileged pods to verify kernel headers and disk space on each node.
 *   **eBPF Check:** Verifies eBPF/BTF support (`/sys/kernel/btf/vmlinux`).
 *   **Streamlined Workflow:** Modular commands for pulling charts and preparing the cluster.
+*   **Localization (i18n):** Supports multiple languages (Default: English/en_US, Available: Portuguese/pt_BR). Auto-detects based on system locale.
 
 ## Prerequisites
 
@@ -53,7 +54,7 @@ To use `kcspoc` from anywhere, create a symlink in your binary path (e.g., `/usr
     ```bash
     chmod +x kcspoc
     ```
-3.  Create a symbolic link (requires sudo):
+3.  Create a symbolic link (requires sudo). **Ensure you link the main script AND keep the lib/locales folders in place relative to the real path.**
     ```bash
     sudo ln -s "$(pwd)/kcspoc" /usr/local/bin/kcspoc
     ```
@@ -65,6 +66,13 @@ To use `kcspoc` from anywhere, create a symlink in your binary path (e.g., `/usr
 ## Usage
 
 The general workflow is: `config` -> `pull` -> `check` -> `prepare`.
+
+### Localization
+The tool automatically detects your language via `LC_ALL`, `LC_MESSAGES`, or `LANG`.
+To force a specific language (e.g., Portuguese):
+```bash
+LANG=pt_BR.UTF-8 kcspoc help
+```
 
 ### 1. Configuration
 Run the interactive wizard to set up your environment variables (Namespace, Domain, Registry Credentials, etc.).
@@ -93,8 +101,9 @@ kcspoc prepare
 ```
 
 ## Directory Structure
-The tool stores its configuration and downloaded charts in `~/.kcspoc`.
+The tool uses a modular structure:
 
-*   `~/.kcspoc/config`: Configuration file.
-*   `~/.kcspoc/kcs-*.tgz`: Downloaded Helm charts.
-*   `~/.kcspoc/debug-node-*.yaml`: Debug pod manifests generated during checks.
+*   `kcspoc`: Main entrypoint script.
+*   `lib/`: Contains command logic (`cmd_*.sh`) and helpers (`common.sh`).
+*   `locales/`: Localization files (`en_US.sh`, `pt_BR.sh`, etc.).
+*   `~/.kcspoc/`: User configuration and downloaded artifacts.
