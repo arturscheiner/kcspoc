@@ -84,6 +84,7 @@ cmd_prepare() {
         if helm upgrade --install cert-manager jetstack/cert-manager \
             --namespace cert-manager --create-namespace \
             --set crds.enabled=true \
+            --set startupapicheck.enabled=false \
             --wait --timeout 300s &> "$HELM_ERR"; then
             
             # Log successful helm output to debug
