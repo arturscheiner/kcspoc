@@ -191,28 +191,57 @@ cmd_check() {
     fi
     echo ""
     
+    # Pre-fetch all node data for consistency (Shared between Table and Audit)
+    # Format: name|labels|alloc_cpu|alloc_mem|alloc_ephemeral_storage
+    RAW_NODES_DATA=$(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}|{.metadata.labels}|{.status.allocatable.cpu}|{.status.allocatable.memory}|{.status.allocatable.ephemeral-storage}{"\n"}{end}')
+
     # Table Header
     printf "   ${BOLD}%-25s %-12s %-6s %-8s %-10s %-15s %-15s${NC}\n" "NODE" "ROLE" "CPU" "RAM" "DISK" "eBPF" "HEADERS"
     printf "   ${DIM}%s${NC}\n" "--------------------------------------------------------------------------------------------"
 
-    for name in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
-        
-        node_info=$(kubectl get node "$name" -o jsonpath='{.metadata.labels}|{.status.capacity.cpu}|{.status.capacity.memory}')
-        IFS='|' read -r labels cpu mem_raw <<< "$node_info"
-        unset IFS
-        
+    # Store parsed data for Audit section to avoid re-fetching
+    # We will use an associative array simulation or just re-parse the string variable in Section 6.
+    # Since bash arrays are tricky with complex data, re-parsing the RAW_NODES_DATA string is safer and efficient enough.
+
+    # Iterate for Table
+    while IFS='|' read -r name labels cpu_alloc mem_alloc disk_alloc; do
+        if [ -z "$name" ]; then continue; fi
+
+        # Role
         if [[ "$labels" == *"node-role.kubernetes.io/control-plane"* ]] || [[ "$labels" == *"node-role.kubernetes.io/master"* ]]; then
             role="master"
         else
             role="worker"
         fi
         
-        MEM_KB=$(echo "$mem_raw" | sed 's/[^0-9]*//g')
-        if [[ "$mem_raw" == *"Mi"* ]]; then MEM_GB=$((MEM_KB / 1024)); elif [[ "$mem_raw" == *"Gi"* ]]; then MEM_GB=$MEM_KB; else MEM_GB=$((MEM_KB / 1024 / 1024)); fi
-        
-        # Deep inspection if enabled
-        DISK_AVAIL="-"; HAS_EBPF="${DIM}-${NC}"; HAS_HEADERS="${DIM}-${NC}"
+        # Parse Resources (Allocatable) for Table
+        # CPU
+        if [[ "$cpu_alloc" == *m ]]; then cpu_milli=${cpu_alloc%m}; else cpu_milli=$((cpu_alloc * 1000)); fi
+        cpu_disp=$((cpu_milli / 1000)) # Display as integer cores
 
+        # RAM
+        mem_clean=$(echo "$mem_alloc" | sed 's/[^0-9]*//g')
+        if [[ "$mem_alloc" == *Gi ]]; then mem_mib=$((mem_clean * 1024)); 
+        elif [[ "$mem_alloc" == *Mi ]]; then mem_mib=$mem_clean;
+        elif [[ "$mem_alloc" == *Ki ]]; then mem_mib=$((mem_clean / 1024));
+        else mem_mib=$((mem_clean / 1024 / 1024)); fi
+        mem_gb_disp=$((mem_mib / 1024))
+
+        # Disk (Allocatable from API)
+        disk_clean=$(echo "$disk_alloc" | sed 's/[^0-9]*//g')
+        disk_gib=0
+        if [ -n "$disk_alloc" ]; then
+            if [[ "$disk_alloc" == *Gi ]]; then disk_gib=$disk_clean;
+            elif [[ "$disk_alloc" == *Ki ]]; then disk_gib=$((disk_clean / 1024 / 1024));
+            else disk_gib=$((disk_clean / 1024 / 1024 / 1024)); fi
+        fi
+        disk_disp="${disk_gib}G"
+
+        # Content for table columns
+        HAS_EBPF="${DIM}-${NC}"
+        HAS_HEADERS="${DIM}-${NC}"
+
+        # Deep Inspection Logic (Only for EBPF/Headers now)
         if [[ "$ENABLE_DEEP_CHECK" == "true" ]]; then
             POD_FILE="$CONFIG_DIR/debug-node-${name}.yaml"
             cat <<EOF > "$POD_FILE"
@@ -246,12 +275,9 @@ EOF
             
             sleep 2
             if ! kubectl wait --for=condition=Ready pod/debug-node-${name} --timeout=15s &> /dev/null; then
-                DISK_AVAIL="${RED}ERR${NC}"
                 HAS_EBPF="${RED}ERR${NC}"
                 HAS_HEADERS="${RED}ERR${NC}"
             else
-                DISK_AVAIL=$(kubectl exec debug-node-${name} -- chroot /host df -h / 2>/dev/null | tail -n 1 | awk '{print $4}' || echo "N/A")
-                
                 if kubectl exec debug-node-${name} -- chroot /host test -f /sys/kernel/btf/vmlinux &> /dev/null; then
                      HAS_EBPF="${GREEN}YES${NC}"
                 else
@@ -271,8 +297,9 @@ EOF
             kubectl delete pod debug-node-${name} --force --grace-period=0 &> /dev/null
         fi
 
-        printf "   %-25s %-12s %-6s %-8s %-10s %-25b %-25b\n" "$name" "$role" "$cpu" "${MEM_GB}G" "$DISK_AVAIL" "$HAS_EBPF" "$HAS_HEADERS"
-    done
+        printf "   %-25s %-12s %-6s %-8s %-10s %-25b %-25b\n" "$name" "$role" "$cpu_disp" "${mem_gb_disp}G" "$disk_disp" "$HAS_EBPF" "$HAS_HEADERS"
+
+    done <<< "$RAW_NODES_DATA"
 
     # --- [6] Hardware Compliance Audit (Detailed) ---
     ui_section "6. $MSG_AUDIT_TITLE"
@@ -292,59 +319,52 @@ EOF
     echo ""
 
     local CLUSTER_PASS=true
-    local NODE_NAMES=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
-
-    for name in $NODE_NAMES; do
-        # Get allocatable resources. Note: ephemeral-storage might not be present on some nodes/versions
-        local RAW_RES=$(kubectl get node "$name" -o jsonpath='{.status.allocatable.cpu}|{.status.allocatable.memory}|{.status.allocatable.ephemeral-storage}')
+    
+    # Iterate RAW_NODES_DATA again for Audit
+    while IFS='|' read -r name labels cpu_alloc mem_alloc disk_alloc; do
+        if [ -z "$name" ]; then continue; fi
         
-        IFS='|' read -r CPU_ALLOC MEM_ALLOC DISK_ALLOC <<< "$RAW_RES"
-        unset IFS
+        # Parse Resources (Identify Logic)
         
-        # CPU: convert to millicores
-        local CPU_MILLI=0
-        if [[ "$CPU_ALLOC" == *m ]]; then CPU_MILLI=${CPU_ALLOC%m}; else CPU_MILLI=$((CPU_ALLOC * 1000)); fi
+        # CPU
+        if [[ "$cpu_alloc" == *m ]]; then cpu_milli=${cpu_alloc%m}; else cpu_milli=$((cpu_alloc * 1000)); fi
         
-        # RAM: convert to MiB
-        local MEM_CLEAN=$(echo "$MEM_ALLOC" | sed 's/[^0-9]*//g') # Remove units like Ki, Mi, Gi
-        local MEM_MIB=0
-        # Kubectl usually returns Ki for memory. Let's handle Ki, Mi, Gi.
-        if [[ "$MEM_ALLOC" == *Gi ]]; then MEM_MIB=$((MEM_CLEAN * 1024)); 
-        elif [[ "$MEM_ALLOC" == *Mi ]]; then MEM_MIB=$MEM_CLEAN;
-        elif [[ "$MEM_ALLOC" == *Ki ]]; then MEM_MIB=$((MEM_CLEAN / 1024));
-        else MEM_MIB=$((MEM_CLEAN / 1024 / 1024)); fi # bytes
+        # RAM
+        mem_clean=$(echo "$mem_alloc" | sed 's/[^0-9]*//g')
+        if [[ "$mem_alloc" == *Gi ]]; then mem_mib=$((mem_clean * 1024)); 
+        elif [[ "$mem_alloc" == *Mi ]]; then mem_mib=$mem_clean;
+        elif [[ "$mem_alloc" == *Ki ]]; then mem_mib=$((mem_clean / 1024));
+        else mem_mib=$((mem_clean / 1024 / 1024)); fi
         
-        # Disk: convert to GiB. If empty (unreported), treat as 0 or skip? Let's treat as 0 and warn.
-        local DISK_GIB=0
-        local DISK_CLEAN=$(echo "$DISK_ALLOC" | sed 's/[^0-9]*//g')
-        if [ -n "$DISK_ALLOC" ]; then
-            if [[ "$DISK_ALLOC" == *Gi ]]; then DISK_GIB=$DISK_CLEAN;
-            elif [[ "$DISK_ALLOC" == *Ki ]]; then DISK_GIB=$((DISK_CLEAN / 1024 / 1024));
-            else DISK_GIB=$((DISK_CLEAN / 1024 / 1024 / 1024)); fi # bytes
+        # Disk
+        disk_clean=$(echo "$disk_alloc" | sed 's/[^0-9]*//g')
+        disk_gib=0
+        if [ -n "$disk_alloc" ]; then
+            if [[ "$disk_alloc" == *Gi ]]; then disk_gib=$disk_clean;
+            elif [[ "$disk_alloc" == *Ki ]]; then disk_gib=$((disk_clean / 1024 / 1024));
+            else disk_gib=$((disk_clean / 1024 / 1024 / 1024)); fi
         fi
 
         local FAIL_REASONS=""
         
         # Check CPU
-        if [ "$CPU_MILLI" -lt "$MIN_CPU" ]; then
-            FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_CPU" "$((CPU_MILLI/1000))" "4")${NC}\n"
+        if [ "$cpu_milli" -lt "$MIN_CPU" ]; then
+            FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_CPU" "$((cpu_milli/1000))" "4")${NC}\n"
             FAIL_REASONS+="        -> $MSG_AUDIT_CAUSE_CPU\n"
         fi
         
         # Check RAM
-        if [ "$MEM_MIB" -lt "$MIN_RAM" ]; then
-            FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_RAM" "$MEM_MIB" "7680")${NC}\n" # 7680 MiB = ~8GB
+        if [ "$mem_mib" -lt "$MIN_RAM" ]; then
+            FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_RAM" "$mem_mib" "7680")${NC}\n"
             FAIL_REASONS+="        -> $MSG_AUDIT_CAUSE_RAM\n"
         fi
         
         # Check Disk
-        if [ "$DISK_GIB" -lt "$MIN_DISK" ]; then
-             if [ "$DISK_GIB" -eq 0 ]; then
-                 # Disk info missing often implies cloud managed or special config. Warn but maybe don't fail hard if unsure? 
-                 # User script fails hard. I will fail hard too to be safe.
+        if [ "$disk_gib" -lt "$MIN_DISK" ]; then
+             if [ "$disk_gib" -eq 0 ]; then
                  FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_DISK" "0 (Unknown)" "80")${NC}\n"
              else
-                 FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_DISK" "$DISK_GIB" "80")${NC}\n"
+                 FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_DISK" "$disk_gib" "80")${NC}\n"
              fi
              FAIL_REASONS+="        -> $MSG_AUDIT_CAUSE_DISK\n"
         fi
@@ -353,10 +373,10 @@ EOF
             CLUSTER_PASS=false
             echo -e "   ${BOLD}$MSG_AUDIT_NODE_EVAL: $name${NC} ${RED}$MSG_AUDIT_REJECTED${NC}"
             echo -e "$FAIL_REASONS"
-            echo -e "      ${DIM}Recursos: ${CPU_MILLI}m CPU | ${MEM_MIB}Mi RAM | ${DISK_GIB}Gi Disk${NC}"
+            echo -e "      ${DIM}Recursos: ${cpu_milli}m CPU | ${mem_mib}Mi RAM | ${disk_gib}Gi Disk${NC}"
             echo "   ----------------------------------------------------"
         fi
-    done
+    done <<< "$RAW_NODES_DATA"
 
     if [ "$CLUSTER_PASS" = true ]; then
         echo -e "   ${GREEN}$MSG_AUDIT_SUCCESS${NC}"
