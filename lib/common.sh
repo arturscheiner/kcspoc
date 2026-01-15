@@ -23,7 +23,22 @@ ICON_GEAR="⚙"
 
 CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
-VERSION="0.4.11"
+VERSION="0.4.12"
+
+# Debugging Defaults
+DEBUG_OUT="/dev/null"
+KCS_DEBUG=false
+
+setup_debug() {
+    local cmd_name="$1"
+    if [ "$KCS_DEBUG" = true ]; then
+        [ -d "$CONFIG_DIR" ] || mkdir -p "$CONFIG_DIR"
+        DEBUG_OUT="$CONFIG_DIR/debug-${cmd_name}.log"
+        echo "--- KCS DEBUG START: $(date) ---" > "$DEBUG_OUT"
+        echo "Command: $cmd_name" >> "$DEBUG_OUT"
+        echo "--------------------------------" >> "$DEBUG_OUT"
+    fi
+}
 
 # --- LOCALE & I18N ---
 load_locale() {

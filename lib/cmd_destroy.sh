@@ -66,8 +66,8 @@ cmd_destroy() {
 
     # 1. Helm Release
     echo -e "${YELLOW}[1/5] $MSG_DESTROY_STEP_1${NC}"
-    if helm status "$RELEASE_NAME" -n "$TARGET_NS" >/dev/null 2>&1; then
-        helm uninstall "$RELEASE_NAME" -n "$TARGET_NS" >/dev/null 2>&1
+    if helm status "$RELEASE_NAME" -n "$TARGET_NS" &>> "$DEBUG_OUT"; then
+        helm uninstall "$RELEASE_NAME" -n "$TARGET_NS" &>> "$DEBUG_OUT"
         echo -e "${GREEN}${ICON_OK} $RELEASE_NAME: $MSG_DESTROY_REMOVED${NC}"
     else
         echo -e "${BLUE}${ICON_INFO} $RELEASE_NAME: $MSG_DESTROY_NOT_FOUND${NC}"
@@ -75,8 +75,8 @@ cmd_destroy() {
 
     # 2. Namespace
     echo -e "${YELLOW}[2/5] $MSG_DESTROY_STEP_2${NC}"
-    if kubectl get namespace "$TARGET_NS" >/dev/null 2>&1; then
-        kubectl delete namespace "$TARGET_NS" --timeout=60s >/dev/null 2>&1
+    if kubectl get namespace "$TARGET_NS" &>> "$DEBUG_OUT"; then
+        kubectl delete namespace "$TARGET_NS" --timeout=60s &>> "$DEBUG_OUT"
         echo -e "${GREEN}${ICON_OK} $TARGET_NS: $MSG_DESTROY_REMOVED${NC}"
     else
         echo -e "${BLUE}${ICON_INFO} $TARGET_NS: $MSG_DESTROY_NOT_FOUND${NC}"
@@ -86,9 +86,9 @@ cmd_destroy() {
     echo -e "${YELLOW}[3/5] $MSG_DESTROY_STEP_3${NC}"
     # Even if NS is gone, check if any PVCs are stuck (might happen during termination) or if NS deletion failed
     # We use a loop over PVCs in that NS just in case it still exists
-    local RESIDUAL_PVCS=$(kubectl get pvc -n "$TARGET_NS" --no-headers 2>/dev/null | awk '{print $1}')
+    local RESIDUAL_PVCS=$(kubectl get pvc -n "$TARGET_NS" --no-headers 2>> "$DEBUG_OUT" | awk '{print $1}')
     if [ -n "$RESIDUAL_PVCS" ]; then
-        echo "$RESIDUAL_PVCS" | xargs -I {} kubectl delete pvc {} -n "$TARGET_NS" --force --grace-period=0 2>/dev/null || true
+        echo "$RESIDUAL_PVCS" | xargs -I {} kubectl delete pvc {} -n "$TARGET_NS" --force --grace-period=0 &>> "$DEBUG_OUT" || true
         echo -e "${GREEN}${ICON_OK} PVCs: $MSG_DESTROY_REMOVED${NC}"
     else
         echo -e "${BLUE}${ICON_INFO} PVCs: $MSG_DESTROY_NOT_FOUND${NC}"
@@ -97,11 +97,11 @@ cmd_destroy() {
     # 4. PVs (Orphaned)
     echo -e "${YELLOW}[4/5] $MSG_DESTROY_STEP_4${NC}"
     # Filter PVs that have claimRef to our namespace
-    local KCS_PVS=$(kubectl get pv -o json 2>/dev/null | jq -r ".items[] | select(.spec.claimRef.namespace==\"$TARGET_NS\") | .metadata.name")
+    local KCS_PVS=$(kubectl get pv -o json 2>> "$DEBUG_OUT" | jq -r ".items[] | select(.spec.claimRef.namespace==\"$TARGET_NS\") | .metadata.name")
     
     if [ -n "$KCS_PVS" ]; then
         for pv in $KCS_PVS; do
-            kubectl delete pv "$pv" --timeout=30s >/dev/null 2>&1
+            kubectl delete pv "$pv" --timeout=30s &>> "$DEBUG_OUT"
             echo -e "${GREEN}${ICON_OK} PV $pv: $MSG_DESTROY_REMOVED${NC}"
         done
     else
@@ -113,16 +113,16 @@ cmd_destroy() {
     local WEBHOOKS="kcs-admission-controller"
     
     # Validating
-    if kubectl get validatingwebhookconfiguration "$WEBHOOKS" >/dev/null 2>&1; then
-        kubectl delete validatingwebhookconfiguration "$WEBHOOKS" >/dev/null 2>&1
+    if kubectl get validatingwebhookconfiguration "$WEBHOOKS" &>> "$DEBUG_OUT"; then
+        kubectl delete validatingwebhookconfiguration "$WEBHOOKS" &>> "$DEBUG_OUT"
         echo -e "${GREEN}${ICON_OK} ValidatingWebhook: $MSG_DESTROY_REMOVED${NC}"
     else
         echo -e "${BLUE}${ICON_INFO} ValidatingWebhook: $MSG_DESTROY_NOT_FOUND${NC}"
     fi
 
     # Mutating
-    if kubectl get mutatingwebhookconfiguration "$WEBHOOKS" >/dev/null 2>&1; then
-        kubectl delete mutatingwebhookconfiguration "$WEBHOOKS" >/dev/null 2>&1
+    if kubectl get mutatingwebhookconfiguration "$WEBHOOKS" &>> "$DEBUG_OUT"; then
+        kubectl delete mutatingwebhookconfiguration "$WEBHOOKS" &>> "$DEBUG_OUT"
         echo -e "${GREEN}${ICON_OK} MutatingWebhook: $MSG_DESTROY_REMOVED${NC}"
     else
         echo -e "${BLUE}${ICON_INFO} MutatingWebhook: $MSG_DESTROY_NOT_FOUND${NC}"
@@ -131,15 +131,15 @@ cmd_destroy() {
     # 6. Global RBAC
     echo -e "${YELLOW}[6/7] $MSG_DESTROY_STEP_6${NC}"
     # Delete ClusterRoles and Bindings containing 'kcs' (broad match)
-    local KCS_CRS=$(kubectl get clusterrole -o name | grep "kcs")
-    local KCS_CRBS=$(kubectl get clusterrolebinding -o name | grep "kcs")
+    local KCS_CRS=$(kubectl get clusterrole -o name 2>> "$DEBUG_OUT" | grep "kcs")
+    local KCS_CRBS=$(kubectl get clusterrolebinding -o name 2>> "$DEBUG_OUT" | grep "kcs")
     
     if [ -n "$KCS_CRS" ]; then
-        echo "$KCS_CRS" | xargs -I {} kubectl delete {} >/dev/null 2>&1
+        echo "$KCS_CRS" | xargs -I {} kubectl delete {} &>> "$DEBUG_OUT"
         echo -e "${GREEN}${ICON_OK} ClusterRoles: $MSG_DESTROY_REMOVED${NC}"
     fi
     if [ -n "$KCS_CRBS" ]; then
-        echo "$KCS_CRBS" | xargs -I {} kubectl delete {} >/dev/null 2>&1
+        echo "$KCS_CRBS" | xargs -I {} kubectl delete {} &>> "$DEBUG_OUT"
         echo -e "${GREEN}${ICON_OK} ClusterRoleBindings: $MSG_DESTROY_REMOVED${NC}"
     fi
 
@@ -149,23 +149,23 @@ cmd_destroy() {
          
          # Ingress
          echo -e "${YELLOW}[7.1] $MSG_DESTROY_DEPS_INGRESS${NC}"
-         helm uninstall ingress-nginx -n ingress-nginx 2>/dev/null || true
-         kubectl delete namespace ingress-nginx --wait=false 2>/dev/null || true
+         helm uninstall ingress-nginx -n ingress-nginx &>> "$DEBUG_OUT" || true
+         kubectl delete namespace ingress-nginx --wait=false &>> "$DEBUG_OUT" || true
 
          # MetalLB
          echo -e "${YELLOW}[7.2] $MSG_DESTROY_DEPS_METALLB${NC}"
-         helm uninstall metallb -n metallb-system 2>/dev/null || true
-         kubectl delete namespace metallb-system --wait=false 2>/dev/null || true
+         helm uninstall metallb -n metallb-system &>> "$DEBUG_OUT" || true
+         kubectl delete namespace metallb-system --wait=false &>> "$DEBUG_OUT" || true
          
          # Cert-Manager
          echo -e "${YELLOW}[7.3] $MSG_DESTROY_DEPS_CERT${NC}"
-         helm uninstall cert-manager -n cert-manager 2>/dev/null || true
-         kubectl delete namespace cert-manager --wait=false 2>/dev/null || true
+         helm uninstall cert-manager -n cert-manager &>> "$DEBUG_OUT" || true
+         kubectl delete namespace cert-manager --wait=false &>> "$DEBUG_OUT" || true
          
          # Storage & Metrics
          echo -e "${YELLOW}[7.4] $MSG_DESTROY_DEPS_STORAGE${NC}"
-         kubectl delete -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.31/deploy/local-path-storage.yaml 2>/dev/null || true
-         kubectl delete deployment metrics-server -n kube-system 2>/dev/null || true
+         kubectl delete -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.31/deploy/local-path-storage.yaml &>> "$DEBUG_OUT" || true
+         kubectl delete deployment metrics-server -n kube-system &>> "$DEBUG_OUT" || true
          
          echo -e "${GREEN}${ICON_OK} $MSG_DESTROY_REMOVED${NC}"
     else

@@ -23,11 +23,11 @@ cmd_pull() {
 
     # 1. Registry Login
     echo -e "${YELLOW}${ICON_GEAR} ${MSG_PULL_AUTH} ($REGISTRY_SERVER)...${NC}"
-    if echo "$REGISTRY_PASS" | helm registry login "$REGISTRY_SERVER/v2/" --username "$REGISTRY_USER" --password-stdin; then
+    if echo "$REGISTRY_PASS" | helm registry login "$REGISTRY_SERVER/v2/" --username "$REGISTRY_USER" --password-stdin 2>&1 | tee -a "$DEBUG_OUT" > /dev/null; then
         echo -e "${GREEN}${ICON_OK} ${MSG_PULL_LOGIN_OK}${NC}"
     else
         echo -e "${RED}${ICON_FAIL} ${MSG_PULL_LOGIN_FAIL}${NC} (Trying fallback to root path...)"
-        if echo "$REGISTRY_PASS" | helm registry login "$REGISTRY_SERVER" --username "$REGISTRY_USER" --password-stdin; then
+        if echo "$REGISTRY_PASS" | helm registry login "$REGISTRY_SERVER" --username "$REGISTRY_USER" --password-stdin 2>&1 | tee -a "$DEBUG_OUT" > /dev/null; then
              echo -e "${GREEN}${ICON_OK} ${MSG_PULL_LOGIN_OK}${NC}"
         else
              echo -e "${RED}${ICON_FAIL} ${MSG_PULL_LOGIN_ERR}${NC}"
@@ -59,7 +59,7 @@ cmd_pull() {
     echo -e "\n${BLUE}${ICON_ARROW} ${MSG_PULL_DOWNLOADING}${NC}"
     
     # Using explicit repo URL as requested
-    if helm pull oci://repo.kcs.kaspersky.com/charts/kcs $HELM_ARGS; then
+    if helm pull oci://repo.kcs.kaspersky.com/charts/kcs $HELM_ARGS 2>&1 | tee -a "$DEBUG_OUT"; then
         echo -e "${GREEN}${ICON_OK} ${MSG_PULL_SUCCESS}${NC}"
         
         # 4. Extract
@@ -67,11 +67,11 @@ cmd_pull() {
         
         if [ -f "$TGZ_FILE" ]; then
             echo "   ${MSG_PULL_EXTRACTING} $TGZ_FILE..."
-            tar -xzf "$TGZ_FILE"
+            tar -xzf "$TGZ_FILE" &>> "$DEBUG_OUT"
             echo -e "${GREEN}${ICON_OK} ${MSG_PULL_EXTRACTED} $CONFIG_DIR${NC}"
         else
-             echo -e "${RED}${ICON_FAIL} ${MSG_PULL_ERR_FILE}${NC}"
-             exit 1
+            echo -e "${RED}${ICON_FAIL} ${MSG_PULL_ERR_FILE}${NC}"
+            exit 1
         fi
     else
         echo -e "${RED}${ICON_FAIL} ${MSG_PULL_ERR_FAIL}${NC}"

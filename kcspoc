@@ -44,28 +44,59 @@ cmd_usage() {
     exit 0
 }
 
-# --- MAIN ---
+# --- CLI Logic ---
+
+# 1. Detect Global Debug Flag
+ARGS=()
+for arg in "$@"; do
+    if [[ "$arg" == "--debug" ]]; then
+        KCS_DEBUG=true
+    else
+        ARGS+=("$arg")
+    fi
+done
+
+# Restores the args without --debug
+set -- "${ARGS[@]}"
+
+# Helper for final debug message
+finish_debug() {
+    if [ "$KCS_DEBUG" = true ]; then
+        echo ""
+        echo -e "${BLUE}${ICON_INFO} Debug logs saved to: ${BOLD}$DEBUG_OUT${NC}"
+    fi
+}
 
 case "$1" in
     config)
         shift
+        setup_debug "config"
         cmd_config "$@"
+        finish_debug
         ;;
     pull)
         shift
+        setup_debug "pull"
         cmd_pull "$@"
+        finish_debug
         ;;
     check)
         shift
+        setup_debug "check"
         cmd_check "$@"
+        finish_debug
         ;;
     prepare)
         shift
+        setup_debug "prepare"
         cmd_prepare "$@"
+        finish_debug
         ;;
     destroy)
         shift
+        setup_debug "destroy"
         cmd_destroy "$@"
+        finish_debug
         ;;
     help|*)
         cmd_usage

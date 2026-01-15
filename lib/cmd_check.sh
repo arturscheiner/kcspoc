@@ -26,7 +26,7 @@ cmd_check() {
     echo -ne "   ${ICON_GEAR} $MSG_CHECK_TOOLS "
     MISSING_TOOLS=""
     for tool in kubectl helm; do
-        if ! command -v $tool &> /dev/null; then
+        if ! command -v $tool &>> "$DEBUG_OUT"; then
             MISSING_TOOLS="$MISSING_TOOLS $tool"
         fi
     done
@@ -61,7 +61,7 @@ cmd_check() {
     local DEEP_NS="kcspoc"
 
     # Create dedicated namespace for kcspoc check operations (isolation)
-    kubectl create namespace "$DEEP_NS" --dry-run=client -o yaml | kubectl apply -f - &> /dev/null
+    kubectl create namespace "$DEEP_NS" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
 
     # --- [2] Cluster Context ---
     ui_section "2. Cluster Context"
@@ -77,7 +77,7 @@ cmd_check() {
     fi
 
     echo -ne "   ${ICON_GEAR} $MSG_CHECK_VERIFY_CONN "
-    if kubectl get nodes &> /dev/null; then
+    if kubectl get nodes &>> "$DEBUG_OUT"; then
         echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
     else
         echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
@@ -297,9 +297,9 @@ EOF
                  disk_val=0
             else
                 sleep 2
-                if kubectl wait --for=condition=Ready pod/kcspoc-deep-check-${name} -n "$DEEP_NS" --timeout=15s &> /dev/null; then
+                if kubectl wait --for=condition=Ready pod/kcspoc-deep-check-${name} -n "$DEEP_NS" --timeout=15s &>> "$DEBUG_OUT"; then
                     # Real Disk (From OS) - Use bytes for precision parsing
-                    local DISK_BLOCK=$(kubectl exec kcspoc-deep-check-${name} -n "$DEEP_NS" -- chroot /host df -B1 / 2>/dev/null | tail -n 1)
+                    local DISK_BLOCK=$(kubectl exec kcspoc-deep-check-${name} -n "$DEEP_NS" -- chroot /host df -B1 / 2>> "$DEBUG_OUT" | tail -n 1)
                     local BYTES_AVAIL=$(echo "$DISK_BLOCK" | awk '{print $4}')
                     local BYTES_TOTAL=$(echo "$DISK_BLOCK" | awk '{print $2}')
                     
@@ -311,7 +311,7 @@ EOF
                     fi
 
                     #   eBPF
-                    if kubectl exec kcspoc-deep-check-${name} -n "$DEEP_NS" -- chroot /host test -f /sys/kernel/btf/vmlinux &> /dev/null; then
+                    if kubectl exec kcspoc-deep-check-${name} -n "$DEEP_NS" -- chroot /host test -f /sys/kernel/btf/vmlinux &>> "$DEBUG_OUT"; then
                          ebpf="${GREEN}YES${NC}"
                     else
                          ebpf="${RED}NO${NC}"
@@ -333,7 +333,7 @@ EOF
                     headers="${RED}ERR (Wait)${NC}"
                     disk_val=0
                 fi
-                kubectl delete pod kcspoc-deep-check-${name} -n "$DEEP_NS" --force --grace-period=0 &> /dev/null
+                kubectl delete pod kcspoc-deep-check-${name} -n "$DEEP_NS" --force --grace-period=0 &>> "$DEBUG_OUT"
             fi
         fi
 
@@ -428,7 +428,7 @@ EOF
     ui_section "7. Repository Connectivity"
     
     echo -ne "   ${ICON_GEAR} $MSG_CHECK_REPO_CONN... "
-    if kubectl run -i --rm --image=curlimages/curl --restart=Never kcspoc-repo-connectivity-test -n "$DEEP_NS" -- curl -m 5 -I https://repo.kcs.kaspersky.com &> /dev/null; then
+    if kubectl run -i --rm --image=curlimages/curl --restart=Never kcspoc-repo-connectivity-test -n "$DEEP_NS" -- curl -m 5 -I https://repo.kcs.kaspersky.com &>> "$DEBUG_OUT"; then
          echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
     else
          echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
@@ -456,7 +456,7 @@ EOF
     
     # Final Cleanup of isolated namespace
     echo -ne "   ${ICON_GEAR} Cleaning residue... "
-    kubectl delete namespace "$DEEP_NS" --wait=false &> /dev/null
+    kubectl delete namespace "$DEEP_NS" --wait=false &>> "$DEBUG_OUT"
     echo -e "${DIM}Done${NC}"
 
     if [ $ERROR -eq 0 ]; then
