@@ -23,7 +23,7 @@ ICON_GEAR="⚙"
 
 CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
-VERSION="0.4.15"
+VERSION="0.4.16"
 
 # Labelling Constants
 POC_LABEL_KEY="provisioned-by"
@@ -164,11 +164,17 @@ _SPINNER_PID=0
 
 # Ensure spinner is killed on script exit
 _ui_spinner_cleanup() {
+    local exit_code=$?
     if [ "$_SPINNER_PID" -ne 0 ]; then
-        kill "$_SPINNER_PID" &>/dev/null
-        wait "$_SPINNER_PID" &>/dev/null
+        kill "$_SPINNER_PID" &>/dev/null || true
+        wait "$_SPINNER_PID" &>/dev/null || true
         _SPINNER_PID=0
         tput cnorm 2>/dev/null || true
+        echo ""
+        # If we are cleaning up deeply (on crash), show fail
+        if [ $exit_code -ne 0 ]; then
+             echo -e "[ ${RED}${ICON_FAIL}${NC} ] (Script Interrupted)"
+        fi
     fi
 }
 trap _ui_spinner_cleanup EXIT
@@ -197,8 +203,8 @@ ui_spinner_stop() {
     local status="$1" # PASS or FAIL
     
     if [ "$_SPINNER_PID" -ne 0 ]; then
-        kill "$_SPINNER_PID" &>/dev/null
-        wait "$_SPINNER_PID" &>/dev/null
+        kill "$_SPINNER_PID" &>/dev/null || true
+        wait "$_SPINNER_PID" &>/dev/null || true
         _SPINNER_PID=0
     fi
     
@@ -208,7 +214,7 @@ ui_spinner_stop() {
     # Clean last frame and print status
     echo -ne "\b \b" # Overwrite frame with space then move back
     
-    if [ "$status" == "PASS" ]; then
+    if [ "$status" = "PASS" ]; then
         echo -e "[ ${GREEN}${ICON_OK}${NC} ]"
     else
         echo -e "[ ${RED}${ICON_FAIL}${NC} ]"
