@@ -1,6 +1,20 @@
 #!/bin/bash
 
 cmd_check() {
+    # --- Parse Arguments ---
+    local DEEP_OVERRIDE=""
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -d|--deep)
+                DEEP_OVERRIDE="true"
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
     ui_banner
     
     # --- [1] Prerequisites ---
@@ -40,6 +54,10 @@ cmd_check() {
         echo -e "      ${YELLOW}$MSG_CHECK_CONFIG_CREATE${NC}"
         ERROR=1
     fi
+
+    # Determine Effective Deep Check Status
+    local DEEP_ENABLED="${DEEP_OVERRIDE:-$ENABLE_DEEP_CHECK}"
+    local TARGET_NS="${NAMESPACE:-default}"
 
     # --- [2] Cluster Context ---
     ui_section "2. Cluster Context"
@@ -244,13 +262,15 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: debug-node-${name}
-  namespace: default
+  namespace: ${TARGET_NS}
 spec:
   hostPID: true
   hostIPC: true
   hostNetwork: true
   nodeName: ${name}
   restartPolicy: Never
+  tolerations:
+  - operator: "Exists"
   containers:
   - name: debug-container
     image: ubuntu:latest
@@ -266,46 +286,51 @@ spec:
       path: /
   terminationGracePeriodSeconds: 1
 EOF
-            kubectl apply -f "$POD_FILE" &> /dev/null
-            
-            sleep 2
-            if kubectl wait --for=condition=Ready pod/debug-node-${name} --timeout=15s &> /dev/null; then
-                # Real Disk (From OS) - Use bytes for precision parsing
-                local DISK_BLOCK=$(kubectl exec debug-node-${name} -- chroot /host df -B1 / 2>/dev/null | tail -n 1)
-                local BYTES_AVAIL=$(echo "$DISK_BLOCK" | awk '{print $4}')
-                local BYTES_TOTAL=$(echo "$DISK_BLOCK" | awk '{print $2}')
-                
-                if [ -n "$BYTES_AVAIL" ] && [ -n "$BYTES_TOTAL" ]; then
-                    local g_avail=$((BYTES_AVAIL / 1024 / 1024 / 1024))
-                    local g_total=$((BYTES_TOTAL / 1024 / 1024 / 1024))
-                    disk_val=$g_avail
-                    disk_disp="${BOLD}${GREEN}${g_avail}${NC}/${g_total}G"
-                fi
-
-                # eBPF
-                if kubectl exec debug-node-${name} -- chroot /host test -f /sys/kernel/btf/vmlinux &> /dev/null; then
-                     ebpf="${GREEN}YES${NC}"
-                else
-                     ebpf="${RED}NO${NC}"
-                fi
-
-                # Headers
-                if HEADERS_OUT=$(kubectl exec "debug-node-${name}" -- /bin/bash -c "chroot /host sh -c 'dpkg -l 2>/dev/null | grep -i headers || rpm -qa 2>/dev/null | grep -i headers'" 2>/dev/null); then
-                     if [ -n "$HEADERS_OUT" ]; then
-                         headers="${GREEN}YES${NC}"
-                     else
-                         headers="${RED}NO${NC}"
-                     fi
-                else
-                     headers="${RED}ERR${NC}"
-                fi
+            if ! kubectl apply -f "$POD_FILE" 2>/tmp/kcspoc_pod_err.tmp; then
+                 ebpf="${RED}ERR (Apply)${NC}"
+                 headers="${RED}ERR (Apply)${NC}"
+                 disk_disp="${RED}ERR (Apply)${NC}"
+                 disk_val=0
             else
-                disk_disp="${RED}ERR${NC}"
-                ebpf="${RED}ERR${NC}"
-                headers="${RED}ERR${NC}"
-                disk_val=0
+                sleep 2
+                if kubectl wait --for=condition=Ready pod/debug-node-${name} -n ${TARGET_NS} --timeout=15s &> /dev/null; then
+                    # Real Disk (From OS) - Use bytes for precision parsing
+                    local DISK_BLOCK=$(kubectl exec debug-node-${name} -n ${TARGET_NS} -- chroot /host df -B1 / 2>/dev/null | tail -n 1)
+                    local BYTES_AVAIL=$(echo "$DISK_BLOCK" | awk '{print $4}')
+                    local BYTES_TOTAL=$(echo "$DISK_BLOCK" | awk '{print $2}')
+                    
+                    if [ -n "$BYTES_AVAIL" ] && [ -n "$BYTES_TOTAL" ]; then
+                        local g_avail=$((BYTES_AVAIL / 1024 / 1024 / 1024))
+                        local g_total=$((BYTES_TOTAL / 1024 / 1024 / 1024))
+                        disk_val=$g_avail
+                        disk_disp="${BOLD}${GREEN}${g_avail}${NC}/${g_total}G"
+                    fi
+
+                    # eBPF
+                    if kubectl exec debug-node-${name} -n ${TARGET_NS} -- chroot /host test -f /sys/kernel/btf/vmlinux &> /dev/null; then
+                         ebpf="${GREEN}YES${NC}"
+                    else
+                         ebpf="${RED}NO${NC}"
+                    fi
+
+                    # Headers
+                    if HEADERS_OUT=$(kubectl exec "debug-node-${name}" -n ${TARGET_NS} -- /bin/bash -c "chroot /host sh -c 'dpkg -l 2>/dev/null | grep -i headers || rpm -qa 2>/dev/null | grep -i headers'" 2>/dev/null); then
+                         if [ -n "$HEADERS_OUT" ]; then
+                             headers="${GREEN}YES${NC}"
+                         else
+                             headers="${RED}NO${NC}"
+                         fi
+                    else
+                         headers="${RED}ERR${NC}"
+                    fi
+                else
+                    disk_disp="${RED}ERR (Wait)${NC}"
+                    ebpf="${RED}ERR (Wait)${NC}"
+                    headers="${RED}ERR (Wait)${NC}"
+                    disk_val=0
+                fi
+                kubectl delete pod debug-node-${name} -n ${TARGET_NS} --force --grace-period=0 &> /dev/null
             fi
-            kubectl delete pod debug-node-${name} --force --grace-period=0 &> /dev/null
         fi
 
         # Write to consistent data store

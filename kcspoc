@@ -46,17 +46,20 @@ cmd_usage() {
 
 case "$1" in
     config)
-        cmd_config
+        shift
+        cmd_config "$@"
         ;;
     pull)
-        shift # Remove 'pull' (so $1 becomes --version if present)
+        shift
         cmd_pull "$@"
         ;;
     check)
-        cmd_check
+        shift
+        cmd_check "$@"
         ;;
     prepare)
-        cmd_prepare
+        shift
+        cmd_prepare "$@"
         ;;
     help|*)
         cmd_usage
