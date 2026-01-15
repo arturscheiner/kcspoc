@@ -60,10 +60,8 @@ cmd_check() {
     local TARGET_NS="${NAMESPACE:-default}"
     local DEEP_NS="kcspoc"
 
-    if [[ "$DEEP_ENABLED" == "true" ]]; then
-        # Create dedicated namespace for deep check isolation
-        kubectl create namespace "$DEEP_NS" --dry-run=client -o yaml | kubectl apply -f - &> /dev/null
-    fi
+    # Create dedicated namespace for kcspoc check operations (isolation)
+    kubectl create namespace "$DEEP_NS" --dry-run=client -o yaml | kubectl apply -f - &> /dev/null
 
     # --- [2] Cluster Context ---
     ui_section "2. Cluster Context"
@@ -262,12 +260,12 @@ cmd_check() {
 
         # 2. Deep Inspection (If enabled) - Update values with real OS data
         if [[ "$DEEP_ENABLED" == "true" ]]; then
-            POD_FILE="$CONFIG_DIR/debug-node-${name}.yaml"
+            POD_FILE="$CONFIG_DIR/kcspoc-deep-check-${name}.yaml"
             cat <<EOF > "$POD_FILE"
 apiVersion: v1
 kind: Pod
 metadata:
-  name: debug-node-${name}
+  name: kcspoc-deep-check-${name}
   namespace: ${DEEP_NS}
 spec:
   hostPID: true
@@ -299,9 +297,9 @@ EOF
                  disk_val=0
             else
                 sleep 2
-                if kubectl wait --for=condition=Ready pod/debug-node-${name} -n "$DEEP_NS" --timeout=15s &> /dev/null; then
+                if kubectl wait --for=condition=Ready pod/kcspoc-deep-check-${name} -n "$DEEP_NS" --timeout=15s &> /dev/null; then
                     # Real Disk (From OS) - Use bytes for precision parsing
-                    local DISK_BLOCK=$(kubectl exec debug-node-${name} -n "$DEEP_NS" -- chroot /host df -B1 / 2>/dev/null | tail -n 1)
+                    local DISK_BLOCK=$(kubectl exec kcspoc-deep-check-${name} -n "$DEEP_NS" -- chroot /host df -B1 / 2>/dev/null | tail -n 1)
                     local BYTES_AVAIL=$(echo "$DISK_BLOCK" | awk '{print $4}')
                     local BYTES_TOTAL=$(echo "$DISK_BLOCK" | awk '{print $2}')
                     
@@ -312,15 +310,15 @@ EOF
                         disk_disp="${BOLD}${GREEN}${g_avail}${NC}/${g_total}G"
                     fi
 
-                    # eBPF
-                    if kubectl exec debug-node-${name} -n "$DEEP_NS" -- chroot /host test -f /sys/kernel/btf/vmlinux &> /dev/null; then
+                    #   eBPF
+                    if kubectl exec kcspoc-deep-check-${name} -n "$DEEP_NS" -- chroot /host test -f /sys/kernel/btf/vmlinux &> /dev/null; then
                          ebpf="${GREEN}YES${NC}"
                     else
                          ebpf="${RED}NO${NC}"
                     fi
 
-                    # Headers
-                    if HEADERS_OUT=$(kubectl exec "debug-node-${name}" -n "$DEEP_NS" -- /bin/bash -c "chroot /host sh -c 'dpkg -l 2>/dev/null | grep -i headers || rpm -qa 2>/dev/null | grep -i headers'" 2>/dev/null); then
+                    #   Headers
+                    if HEADERS_OUT=$(kubectl exec "kcspoc-deep-check-${name}" -n "$DEEP_NS" -- /bin/bash -c "chroot /host sh -c 'dpkg -l 2>/dev/null | grep -i headers || rpm -qa 2>/dev/null | grep -i headers'" 2>/dev/null); then
                          if [ -n "$HEADERS_OUT" ]; then
                              headers="${GREEN}YES${NC}"
                          else
@@ -335,7 +333,7 @@ EOF
                     headers="${RED}ERR (Wait)${NC}"
                     disk_val=0
                 fi
-                kubectl delete pod debug-node-${name} -n "$DEEP_NS" --force --grace-period=0 &> /dev/null
+                kubectl delete pod kcspoc-deep-check-${name} -n "$DEEP_NS" --force --grace-period=0 &> /dev/null
             fi
         fi
 
@@ -345,10 +343,6 @@ EOF
 
     done <<< "$RAW_API"
 
-    if [[ "$DEEP_ENABLED" == "true" ]]; then
-        # Cleanup isolated namespace
-        kubectl delete namespace "$DEEP_NS" --wait=false &> /dev/null
-    fi
 
     # 3. Render Table (Section 5)
     # Header: NODE | ROLE | CPU (A/T) | RAM (A/T) | DISK (A/T) | eBPF | HEADERS
@@ -434,7 +428,7 @@ EOF
     ui_section "7. Repository Connectivity"
     
     echo -ne "   ${ICON_GEAR} $MSG_CHECK_REPO_CONN... "
-    if kubectl run -i --rm --image=curlimages/curl --restart=Never kcspoc-repo-connectivity-test -- curl -m 5 -I https://repo.kcs.kaspersky.com &> /dev/null; then
+    if kubectl run -i --rm --image=curlimages/curl --restart=Never kcspoc-repo-connectivity-test -n "$DEEP_NS" -- curl -m 5 -I https://repo.kcs.kaspersky.com &> /dev/null; then
          echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
     else
          echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
@@ -459,6 +453,12 @@ EOF
     fi
 
     echo ""
+    
+    # Final Cleanup of isolated namespace
+    echo -ne "   ${ICON_GEAR} Cleaning residue... "
+    kubectl delete namespace "$DEEP_NS" --wait=false &> /dev/null
+    echo -e "${DIM}Done${NC}"
+
     if [ $ERROR -eq 0 ]; then
         echo -e "${GREEN}${BOLD}${ICON_OK} $MSG_CHECK_ALL_PASS${NC}"
         echo -e "${DIM}Your cluster is ready for Kaspersky Container Security installation.${NC}"
