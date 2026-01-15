@@ -105,6 +105,13 @@ MSG_CHECK_GLOBAL_TOTALS="Totais Globais do Cluster"
 MSG_CHECK_ALL_PASS="Todas as verificações passaram."
 MSG_CHECK_FINAL_FAIL="Verificações falharam. Por favor corrija os problemas acima."
 
+MSG_CHECK_CLOUD_TITLE="Provedor de Nuvem & Topologia"
+MSG_CHECK_CLOUD_PROVIDER="Provedor"
+MSG_CHECK_CLOUD_REGION="Região"
+MSG_CHECK_CLOUD_ZONE="Zona"
+MSG_CHECK_CLOUD_OS="Imagem do SO"
+MSG_CHECK_CLOUD_UNKNOWN="Desconhecido / Bare Metal"
+
 # --- Prepare Command ---
 MSG_PREPARE_START="Iniciando Preparação..."
 MSG_PREPARE_USING_NS="Usando Namespace"

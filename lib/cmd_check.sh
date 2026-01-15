@@ -140,7 +140,43 @@ cmd_check() {
         echo -e "${YELLOW}${MSG_CHECK_CNI_WARN}${NC}"
     fi
 
-    # 4.5 Node Resources & Deep Inspection
+    # 4.6 Cloud Provider & Topology (Enhanced)
+    echo -e "\n${YELLOW}${MSG_CHECK_CLOUD_TITLE}${NC}"
+    
+    # Get raw data for the first node (assuming homogeneous cluster for provider)
+    # Fields: providerID, Region, Zone, OSImage
+    # Note: escape dots in jsonpath keys for labels
+    RAW_CLOUD=$(kubectl get nodes -o jsonpath='{.items[0].spec.providerID}|{.items[0].metadata.labels.topology\.kubernetes\.io/region}|{.items[0].metadata.labels.topology\.kubernetes\.io/zone}|{.items[0].status.nodeInfo.osImage}' 2>/dev/null)
+    
+    IFS='|' read -r PROV_ID REGION ZONE OS_IMG <<< "$RAW_CLOUD"
+    unset IFS
+
+    # Detect Provider
+    PROVIDER_NAME="$MSG_CHECK_CLOUD_UNKNOWN"
+    
+    if [[ "$PROV_ID" == *"aws"* ]] || [[ "$OS_IMG" == *"aws"* ]]; then
+        PROVIDER_NAME="AWS (EKS)"
+    elif [[ "$PROV_ID" == *"azure"* ]] || [[ "$OS_IMG" == *"azure"* ]]; then
+        PROVIDER_NAME="Azure (AKS)"
+    elif [[ "$PROV_ID" == *"gce"* ]] || [[ "$OS_IMG" == *"g1"* ]]; then
+        PROVIDER_NAME="Google (GKE)"
+    elif [[ "$PROV_ID" == *"oci"* ]]; then
+        PROVIDER_NAME="Oracle (OKE)"
+    elif [[ "$PROV_ID" == *"digitalocean"* ]]; then
+        PROVIDER_NAME="DigitalOcean"
+    elif [[ "$PROV_ID" == *"huawei"* ]]; then
+        PROVIDER_NAME="Huawei (CCE)"
+    elif [[ "$PROV_ID" == *"kind"* ]]; then
+        PROVIDER_NAME="Kind (Local)"
+    fi
+    
+    echo -e "${BLUE}${MSG_CHECK_CLOUD_PROVIDER}:${NC} ${GREEN}${PROVIDER_NAME}${NC}"
+    echo -e "  - ProviderID: ${DIM}${PROV_ID:-N/A}${NC}"
+    echo -e "  - ${MSG_CHECK_CLOUD_REGION}: ${GREEN}${REGION:-N/A}${NC}"
+    echo -e "  - ${MSG_CHECK_CLOUD_ZONE}:   ${GREEN}${ZONE:-N/A}${NC}"
+    echo -e "  - ${MSG_CHECK_CLOUD_OS}:     ${DIM}${OS_IMG:-N/A}${NC}"
+
+    # 4.7 Node Resources Table (Renumbered)
     echo -e "\n${BLUE}${MSG_CHECK_NODE_RES_TITLE}${NC}"
     
     if [[ "$ENABLE_DEEP_CHECK" == "true" ]]; then

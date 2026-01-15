@@ -103,7 +103,15 @@ MSG_CHECK_DEEP_SKIP="(Deep Check Disabled: Basic info only)"
 MSG_CHECK_REPO_CONN="Checking Repo Connectivity"
 MSG_CHECK_GLOBAL_TOTALS="Global Cluster Totals"
 MSG_CHECK_ALL_PASS="All checks passed."
+MSG_CHECK_ALL_PASS="All checks passed."
 MSG_CHECK_FINAL_FAIL="Checks failed. Please address the issues above."
+
+MSG_CHECK_CLOUD_TITLE="Cloud Provider & Topology"
+MSG_CHECK_CLOUD_PROVIDER="Provider"
+MSG_CHECK_CLOUD_REGION="Region"
+MSG_CHECK_CLOUD_ZONE="Zone"
+MSG_CHECK_CLOUD_OS="OS Image"
+MSG_CHECK_CLOUD_UNKNOWN="Unknown / Bare Metal"
 
 # --- Prepare Command ---
 MSG_PREPARE_START="Starting Preparation..."
