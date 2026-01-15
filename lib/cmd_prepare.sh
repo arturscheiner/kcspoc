@@ -81,13 +81,18 @@ cmd_prepare() {
     # 2. Cert-Manager
     if confirm_step "Cert-Manager" "$MSG_PREPARE_WHY_CERT_TITLE" "$MSG_PREPARE_WHY_CERT_DESC" "$UNATTENDED"; then
         echo -ne "   ${ICON_GEAR} $MSG_PREPARE_INSTALL_CERT... "
+        local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
         helm repo add jetstack https://charts.jetstack.io --force-update &> /dev/null
-        helm upgrade --install cert-manager jetstack/cert-manager \
+        if helm upgrade --install cert-manager jetstack/cert-manager \
             --namespace cert-manager --create-namespace \
             --set crds.enabled=true \
             --set "commonLabels.provisioned-by=kcspoc" \
-            --wait &> /dev/null
-        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+            --wait --timeout 300s &> "$HELM_ERR"; then
+            echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+        else
+            echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
+            echo -e "      ${RED}$(cat "$HELM_ERR" | head -n 1)${NC}"
+        fi
     fi
 
     # 3. Local Path Storage
@@ -114,14 +119,15 @@ cmd_prepare() {
     # 5. MetalLB
     if confirm_step "MetalLB" "$MSG_PREPARE_WHY_METALLB_TITLE" "$MSG_PREPARE_WHY_METALLB_DESC" "$UNATTENDED"; then
         echo -ne "   ${ICON_GEAR} $MSG_PREPARE_STEP_3... "
+        local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
         helm repo add metallb https://metallb.github.io/metallb &> /dev/null
-        helm upgrade --install metallb metallb/metallb \
+        if helm upgrade --install metallb metallb/metallb \
             --namespace metallb-system --create-namespace \
             --set "commonLabels.provisioned-by=kcspoc" \
-            --wait &> /dev/null
-        
-        sleep 5
-        cat <<EOF | kubectl apply -f - &> /dev/null
+            --wait --timeout 300s &> "$HELM_ERR"; then
+            
+            sleep 5
+            cat <<EOF | kubectl apply -f - &> /dev/null
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
 metadata:
@@ -144,18 +150,27 @@ spec:
   ipAddressPools:
   - first-pool
 EOF
-        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+            echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+        else
+            echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
+            echo -e "      ${RED}$(cat "$HELM_ERR" | head -n 1)${NC}"
+        fi
     fi
 
     # 6. Ingress-Nginx
     if confirm_step "Ingress-Nginx" "$MSG_PREPARE_WHY_INGRESS_TITLE" "$MSG_PREPARE_WHY_INGRESS_DESC" "$UNATTENDED"; then
         echo -ne "   ${ICON_GEAR} $MSG_PREPARE_STEP_4... "
+        local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
         helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx &> /dev/null
-        helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+        if helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
             --namespace ingress-nginx --create-namespace \
             --set "commonLabels.provisioned-by=kcspoc" \
-            --wait &> /dev/null
-        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+            --wait --timeout 300s &> "$HELM_ERR"; then
+            echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+        else
+            echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
+            echo -e "      ${RED}$(cat "$HELM_ERR" | head -n 1)${NC}"
+        fi
     fi
 
     # 7. Kernel Headers
