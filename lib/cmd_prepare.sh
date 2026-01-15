@@ -1,7 +1,5 @@
-#!/bin/bash
 
-# Labelling Constant
-POC_LABEL="provisioned-by=kcspoc"
+#!/bin/bash
 
 confirm_step() {
     local step_name="$1"
@@ -146,7 +144,7 @@ metadata:
   name: first-pool
   namespace: metallb-system
   labels:
-    $POC_LABEL
+    $POC_LABEL_KEY: "$POC_LABEL_VAL"
 spec:
   addresses:
   - $IP_RANGE
@@ -157,7 +155,7 @@ metadata:
   name: l2-adv
   namespace: metallb-system
   labels:
-    $POC_LABEL
+    $POC_LABEL_KEY: "$POC_LABEL_VAL"
 spec:
   ipAddressPools:
   - first-pool

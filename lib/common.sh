@@ -23,7 +23,12 @@ ICON_GEAR="⚙"
 
 CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
-VERSION="0.4.12"
+VERSION="0.4.13"
+
+# Labelling Constants
+POC_LABEL_KEY="provisioned-by"
+POC_LABEL_VAL="kcspoc"
+POC_LABEL="${POC_LABEL_KEY}=${POC_LABEL_VAL}"
 
 # Debugging Defaults
 DEBUG_OUT="/dev/null"
