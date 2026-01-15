@@ -64,6 +64,15 @@ cmd_config() {
     ui_input "$MSG_INPUT_LANG" "en_US" "$CUR_LANG"
     PREFERRED_LANG="$RET_VAL"
 
+    # --- HOT-SWAP LOCALE ---
+    # If user selected a new language, load it immediately so next steps use it.
+    NEW_LOCALE_FILE="$SCRIPT_DIR/locales/${PREFERRED_LANG}.sh"
+    if [ -f "$NEW_LOCALE_FILE" ]; then
+        source "$NEW_LOCALE_FILE"
+        # Optional: update visual confirmation if needed, but the next step title will be enough proof.
+    fi
+    # -----------------------
+
     # 1. Namespace
     ui_step 2 $TOTAL_STEPS "$MSG_STEP_NS" "$MSG_STEP_NS_DESC"
     ui_input "$MSG_INPUT_NS" "kcs" "$CUR_NS"
