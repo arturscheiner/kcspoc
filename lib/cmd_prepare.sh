@@ -62,7 +62,7 @@ cmd_prepare() {
 
     # 1. Namespace & Secret
     if confirm_step "Namespace & Secret" "$MSG_PREPARE_STEP_1" "Setup of $NAMESPACE and credentials." "$UNATTENDED"; then
-        echo -ne "   ${ICON_GEAR} $MSG_PREPARE_STEP_1... "
+        ui_spinner_start "$MSG_PREPARE_STEP_1"
         kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
         kubectl label namespace "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT"
         
@@ -73,12 +73,12 @@ cmd_prepare() {
           --docker-email="$REGISTRY_EMAIL" \
           -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
         kubectl label secret kcs-registry-secret -n "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT"
-        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+        ui_spinner_stop "PASS"
     fi
 
     # 2. Cert-Manager
     if confirm_step "Cert-Manager" "$MSG_PREPARE_WHY_CERT_TITLE" "$MSG_PREPARE_WHY_CERT_DESC" "$UNATTENDED"; then
-        echo -ne "   ${ICON_GEAR} $MSG_PREPARE_INSTALL_CERT... "
+        ui_spinner_start "$MSG_PREPARE_INSTALL_CERT"
         local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
         helm repo add jetstack https://charts.jetstack.io --force-update &>> "$DEBUG_OUT"
         if helm upgrade --install cert-manager jetstack/cert-manager \
@@ -92,38 +92,38 @@ cmd_prepare() {
             # Label namespace and resources
             kubectl label namespace cert-manager $POC_LABEL --overwrite &>> "$DEBUG_OUT"
             kubectl label deployment -n cert-manager --all $POC_LABEL --overwrite &>> "$DEBUG_OUT"
-            echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+            ui_spinner_stop "PASS"
         else
             cat "$HELM_ERR" >> "$DEBUG_OUT"
-            echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
+            ui_spinner_stop "FAIL"
             echo -e "      ${RED}$(cat "$HELM_ERR" | tr '\n' ' ' | cut -c 1-120)...${NC}"
         fi
     fi
 
     # 3. Local Path Storage
     if confirm_step "Local Path Storage" "$MSG_PREPARE_WHY_STORAGE_TITLE" "$MSG_PREPARE_WHY_STORAGE_DESC" "$UNATTENDED"; then
-        echo -ne "   ${ICON_GEAR} $MSG_PREPARE_INSTALL_LOCAL... "
+        ui_spinner_start "$MSG_PREPARE_INSTALL_LOCAL"
         kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.31/deploy/local-path-storage.yaml &>> "$DEBUG_OUT"
         kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' &>> "$DEBUG_OUT"
         kubectl label sc local-path $POC_LABEL --overwrite &>> "$DEBUG_OUT"
-        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+        ui_spinner_stop "PASS"
     fi
 
     # 4. Metrics Server
     if confirm_step "Metrics Server" "$MSG_PREPARE_WHY_METRICS_TITLE" "$MSG_PREPARE_WHY_METRICS_DESC" "$UNATTENDED"; then
-        echo -ne "   ${ICON_GEAR} $MSG_PREPARE_INSTALL_METRICS... "
+        ui_spinner_start "$MSG_PREPARE_INSTALL_METRICS"
         kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml &>> "$DEBUG_OUT"
         kubectl patch deployment metrics-server -n kube-system --type='json' -p='[
           {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"},
           {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-preferred-address-types=InternalIP"}
         ]' &>> "$DEBUG_OUT"
         kubectl label deployment metrics-server -n kube-system $POC_LABEL --overwrite &>> "$DEBUG_OUT"
-        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+        ui_spinner_stop "PASS"
     fi
 
     # 5. MetalLB
     if confirm_step "MetalLB" "$MSG_PREPARE_WHY_METALLB_TITLE" "$MSG_PREPARE_WHY_METALLB_DESC" "$UNATTENDED"; then
-        echo -ne "   ${ICON_GEAR} $MSG_PREPARE_STEP_3... "
+        ui_spinner_start "$MSG_PREPARE_STEP_3"
         local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
         helm repo add metallb https://metallb.github.io/metallb &>> "$DEBUG_OUT"
         if helm upgrade --install metallb metallb/metallb \
@@ -160,17 +160,17 @@ spec:
   ipAddressPools:
   - first-pool
 EOF
-            echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+            ui_spinner_stop "PASS"
         else
             cat "$HELM_ERR" >> "$DEBUG_OUT"
-            echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
+            ui_spinner_stop "FAIL"
             echo -e "      ${RED}$(cat "$HELM_ERR" | tr '\n' ' ' | cut -c 1-120)...${NC}"
         fi
     fi
 
     # 6. Ingress-Nginx
     if confirm_step "Ingress-Nginx" "$MSG_PREPARE_WHY_INGRESS_TITLE" "$MSG_PREPARE_WHY_INGRESS_DESC" "$UNATTENDED"; then
-        echo -ne "   ${ICON_GEAR} $MSG_PREPARE_STEP_4... "
+        ui_spinner_start "$MSG_PREPARE_STEP_4"
         local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
         helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx &>> "$DEBUG_OUT"
         if helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
@@ -182,22 +182,22 @@ EOF
             # Label
             kubectl label namespace ingress-nginx $POC_LABEL --overwrite &>> "$DEBUG_OUT"
             kubectl label deployment -n ingress-nginx --all $POC_LABEL --overwrite &>> "$DEBUG_OUT"
-            echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+            ui_spinner_stop "PASS"
         else
             cat "$HELM_ERR" >> "$DEBUG_OUT"
-            echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
+            ui_spinner_stop "FAIL"
             echo -e "      ${RED}$(cat "$HELM_ERR" | tr '\n' ' ' | cut -c 1-120)...${NC}"
         fi
     fi
 
     # 7. Kernel Headers
     if confirm_step "Kernel Headers" "$MSG_PREPARE_WHY_HEADERS_TITLE" "$MSG_PREPARE_WHY_HEADERS_DESC" "$UNATTENDED"; then
-        echo -ne "   ${ICON_GEAR} $MSG_PREPARE_STEP_5... "
+        ui_spinner_start "$MSG_PREPARE_STEP_5"
         if command -v sudo &>> "$DEBUG_OUT"; then
             sudo apt update &>> "$DEBUG_OUT" && sudo apt install linux-headers-$(uname -r) -y &>> "$DEBUG_OUT"
-            echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+            ui_spinner_stop "PASS"
         else
-            echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
+            ui_spinner_stop "FAIL"
             echo -e "      ${RED}${MSG_PREPARE_SUDO_FAIL}${NC}"
         fi
     fi

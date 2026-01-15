@@ -207,12 +207,12 @@ cmd_check() {
     ui_section "5. Node Resources & Health"
     
     if [[ "$DEEP_ENABLED" == "true" ]]; then
-        echo -e "   ${ICON_GEAR} ${YELLOW}${MSG_CHECK_DEEP_RUN}${NC}"
+        ui_spinner_start "${MSG_CHECK_DEEP_RUN}"
         echo -e "      ${DIM}(Using isolated namespace: ${DEEP_NS})${NC}"
     else
         echo -e "   ${ICON_INFO} ${DIM}${MSG_CHECK_DEEP_SKIP}${NC}"
+        echo ""
     fi
-    echo ""
     
     # 1. Fetch Baseline Node Data (API)
     # Format: name|role|cpu_a_m|cpu_c_m|mem_a_m|mem_c_m|disk_a_g|disk_c_g|ebpf|headers|disk_disp|disk_val
@@ -342,6 +342,11 @@ EOF
         echo "$name|$role|$cpu_a_m|$cpu_c_m|$mem_a_m|$mem_c_m|$disk_val|$disk_disp|$ebpf|$headers" >> "$NODE_DATA_FILE"
 
     done <<< "$RAW_API"
+    
+    if [[ "$DEEP_ENABLED" == "true" ]]; then
+        ui_spinner_stop "PASS"
+        echo ""
+    fi
 
 
     # 3. Render Table (Section 5)
@@ -427,11 +432,11 @@ EOF
     # --- [7] Connectivity Test ---
     ui_section "7. Repository Connectivity"
     
-    echo -ne "   ${ICON_GEAR} $MSG_CHECK_REPO_CONN... "
+    ui_spinner_start "$MSG_CHECK_REPO_CONN"
     if kubectl run -i --rm --image=curlimages/curl --restart=Never kcspoc-repo-connectivity-test -n "$DEEP_NS" -- curl -m 5 -I https://repo.kcs.kaspersky.com &>> "$DEBUG_OUT"; then
-         echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+         ui_spinner_stop "PASS"
     else
-         echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
+         ui_spinner_stop "FAIL"
          ERROR=1
     fi
 

@@ -23,7 +23,7 @@ ICON_GEAR="⚙"
 
 CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
-VERSION="0.4.13"
+VERSION="0.4.14"
 
 # Labelling Constants
 POC_LABEL_KEY="provisioned-by"
@@ -155,6 +155,51 @@ ui_input() {
         RET_VAL="$prompt_val"
     else
         RET_VAL="$user_in"
+    fi
+}
+
+# --- UI SPINNER ---
+
+_SPINNER_PID=0
+
+ui_spinner_start() {
+    local msg="$1"
+    echo -ne "   ${ICON_GEAR} $msg... "
+    
+    # Hide cursor
+    tput civis 2>/dev/null || true
+    
+    (
+        local frames='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+        while true; do
+            for (( i=0; i<${#frames}; i++ )); do
+                echo -ne "${CYAN}${frames:$i:1}${NC}"
+                sleep 0.1
+                echo -ne "\b"
+            done
+        done
+    ) &
+    _SPINNER_PID=$!
+}
+
+ui_spinner_stop() {
+    local status="$1" # PASS or FAIL
+    
+    if [ "$_SPINNER_PID" -ne 0 ]; then
+        kill "$_SPINNER_PID" &>/dev/null
+        wait "$_SPINNER_PID" &>/dev/null
+        _SPINNER_PID=0
+    fi
+    
+    # Show cursor
+    tput cnorm 2>/dev/null || true
+    
+    echo -ne "\b" # Remove last spin char
+    
+    if [ "$status" == "PASS" ]; then
+        echo -e "[ ${GREEN}${ICON_OK}${NC} ]"
+    else
+        echo -e "[ ${RED}${ICON_FAIL}${NC} ]"
     fi
 }
 

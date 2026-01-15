@@ -22,15 +22,18 @@ cmd_pull() {
     ui_section "$MSG_PULL_TITLE"
 
     # 1. Registry Login
-    echo -e "${YELLOW}${ICON_GEAR} ${MSG_PULL_AUTH} ($REGISTRY_SERVER)...${NC}"
+    ui_spinner_start "${MSG_PULL_AUTH}"
     if echo "$REGISTRY_PASS" | helm registry login "$REGISTRY_SERVER/v2/" --username "$REGISTRY_USER" --password-stdin 2>&1 | tee -a "$DEBUG_OUT" > /dev/null; then
-        echo -e "${GREEN}${ICON_OK} ${MSG_PULL_LOGIN_OK}${NC}"
+        ui_spinner_stop "PASS"
     else
-        echo -e "${RED}${ICON_FAIL} ${MSG_PULL_LOGIN_FAIL}${NC} (Trying fallback to root path...)"
+        ui_spinner_stop "FAIL"
+        echo -e "      ${YELLOW}${ICON_INFO} $MSG_PULL_LOGIN_FAIL ($REGISTRY_SERVER)...${NC}"
+        ui_spinner_start "${MSG_PULL_AUTH} (Fallback)"
         if echo "$REGISTRY_PASS" | helm registry login "$REGISTRY_SERVER" --username "$REGISTRY_USER" --password-stdin 2>&1 | tee -a "$DEBUG_OUT" > /dev/null; then
-             echo -e "${GREEN}${ICON_OK} ${MSG_PULL_LOGIN_OK}${NC}"
+             ui_spinner_stop "PASS"
         else
-             echo -e "${RED}${ICON_FAIL} ${MSG_PULL_LOGIN_ERR}${NC}"
+             ui_spinner_stop "FAIL"
+             echo -e "      ${RED}${ICON_FAIL} ${MSG_PULL_LOGIN_ERR}${NC}"
              exit 1
         fi
     fi
@@ -56,25 +59,27 @@ cmd_pull() {
 
     # 3. Helm Pull
     cd "$CONFIG_DIR" || exit 1
-    echo -e "\n${BLUE}${ICON_ARROW} ${MSG_PULL_DOWNLOADING}${NC}"
+    ui_spinner_start "$MSG_PULL_DOWNLOADING"
     
     # Using explicit repo URL as requested
-    if helm pull oci://repo.kcs.kaspersky.com/charts/kcs $HELM_ARGS 2>&1 | tee -a "$DEBUG_OUT"; then
-        echo -e "${GREEN}${ICON_OK} ${MSG_PULL_SUCCESS}${NC}"
+    if helm pull oci://repo.kcs.kaspersky.com/charts/kcs $HELM_ARGS 2>&1 | tee -a "$DEBUG_OUT" > /dev/null; then
+        ui_spinner_stop "PASS"
         
         # 4. Extract
         TGZ_FILE=$(ls -t kcs-*.tgz 2>/dev/null | head -n 1)
         
         if [ -f "$TGZ_FILE" ]; then
-            echo "   ${MSG_PULL_EXTRACTING} $TGZ_FILE..."
+            echo -ne "      ${ICON_GEAR} ${MSG_PULL_EXTRACTING}... "
             tar -xzf "$TGZ_FILE" &>> "$DEBUG_OUT"
-            echo -e "${GREEN}${ICON_OK} ${MSG_PULL_EXTRACTED} $CONFIG_DIR${NC}"
+            echo -e "${GREEN}${ICON_OK}${NC}"
+            echo -e "      ${DIM}${MSG_PULL_EXTRACTED}: $CONFIG_DIR${NC}"
         else
-            echo -e "${RED}${ICON_FAIL} ${MSG_PULL_ERR_FILE}${NC}"
+            echo -e "      ${RED}${ICON_FAIL} ${MSG_PULL_ERR_FILE}${NC}"
             exit 1
         fi
     else
-        echo -e "${RED}${ICON_FAIL} ${MSG_PULL_ERR_FAIL}${NC}"
+        ui_spinner_stop "FAIL"
+        echo -e "      ${RED}${ICON_FAIL} ${MSG_PULL_ERR_FAIL}${NC}"
         exit 1
     fi
 }
