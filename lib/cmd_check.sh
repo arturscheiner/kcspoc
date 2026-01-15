@@ -184,26 +184,22 @@ cmd_check() {
     # --- [5] Node Resources & Health ---
     ui_section "5. Node Resources & Health"
     
-    if [[ "$ENABLE_DEEP_CHECK" == "true" ]]; then
+    local DEEP_ENABLED="$ENABLE_DEEP_CHECK"
+    if [[ "$DEEP_ENABLED" == "true" ]]; then
         echo -e "   ${ICON_GEAR} ${YELLOW}${MSG_CHECK_DEEP_RUN}${NC}"
     else
         echo -e "   ${ICON_INFO} ${DIM}${MSG_CHECK_DEEP_SKIP}${NC}"
     fi
     echo ""
     
-    # Pre-fetch all node data for consistency (Shared between Table and Audit)
-    # Format: name|labels|alloc_cpu|alloc_mem|alloc_ephemeral_storage
-    RAW_NODES_DATA=$(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}|{.metadata.labels}|{.status.allocatable.cpu}|{.status.allocatable.memory}|{.status.allocatable.ephemeral-storage}{"\n"}{end}')
+    # 1. Fetch Baseline Node Data (API)
+    # Format: name|role|cpu_milli|mem_mib|disk_api_gib|ebpf|headers|disk_real_disp
+    # Initial ebpf/headers/disk_real_disp are placeholders '-'
+    local NODE_DATA_FILE="/tmp/kcspoc_nodes.tmp"
+    > "$NODE_DATA_FILE"
 
-    # Table Header
-    printf "   ${BOLD}%-25s %-12s %-6s %-8s %-10s %-15s %-15s${NC}\n" "NODE" "ROLE" "CPU" "RAM" "DISK" "eBPF" "HEADERS"
-    printf "   ${DIM}%s${NC}\n" "--------------------------------------------------------------------------------------------"
+    local RAW_API=$(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}|{.metadata.labels}|{.status.allocatable.cpu}|{.status.allocatable.memory}|{.status.allocatable.ephemeral-storage}{"\n"}{end}')
 
-    # Store parsed data for Audit section to avoid re-fetching
-    # We will use an associative array simulation or just re-parse the string variable in Section 6.
-    # Since bash arrays are tricky with complex data, re-parsing the RAW_NODES_DATA string is safer and efficient enough.
-
-    # Iterate for Table
     while IFS='|' read -r name labels cpu_alloc mem_alloc disk_alloc; do
         if [ -z "$name" ]; then continue; fi
 
@@ -214,35 +210,33 @@ cmd_check() {
             role="worker"
         fi
         
-        # Parse Resources (Allocatable) for Table
-        # CPU
-        if [[ "$cpu_alloc" == *m ]]; then cpu_milli=${cpu_alloc%m}; else cpu_milli=$((cpu_alloc * 1000)); fi
-        cpu_disp=$((cpu_milli / 1000)) # Display as integer cores
+        # CPU (Milli)
+        if [[ "$cpu_alloc" == *m ]]; then cpu_m=${cpu_alloc%m}; else cpu_m=$((cpu_alloc * 1000)); fi
+        
+        # RAM (MiB)
+        mem_c=$(echo "$mem_alloc" | sed 's/[^0-9]*//g')
+        if [[ "$mem_alloc" == *Gi ]]; then mem_m=$((mem_c * 1024)); 
+        elif [[ "$mem_alloc" == *Mi ]]; then mem_m=$mem_c;
+        elif [[ "$mem_alloc" == *Ki ]]; then mem_m=$((mem_c / 1024));
+        else mem_m=$((mem_c / 1024 / 1024)); fi
 
-        # RAM
-        mem_clean=$(echo "$mem_alloc" | sed 's/[^0-9]*//g')
-        if [[ "$mem_alloc" == *Gi ]]; then mem_mib=$((mem_clean * 1024)); 
-        elif [[ "$mem_alloc" == *Mi ]]; then mem_mib=$mem_clean;
-        elif [[ "$mem_alloc" == *Ki ]]; then mem_mib=$((mem_clean / 1024));
-        else mem_mib=$((mem_clean / 1024 / 1024)); fi
-        mem_gb_disp=$((mem_mib / 1024))
-
-        # Disk (Allocatable from API)
-        disk_clean=$(echo "$disk_alloc" | sed 's/[^0-9]*//g')
-        disk_gib=0
+        # DISK (API GiB)
+        disk_c=$(echo "$disk_alloc" | sed 's/[^0-9]*//g')
+        disk_g=0
         if [ -n "$disk_alloc" ]; then
-            if [[ "$disk_alloc" == *Gi ]]; then disk_gib=$disk_clean;
-            elif [[ "$disk_alloc" == *Ki ]]; then disk_gib=$((disk_clean / 1024 / 1024));
-            else disk_gib=$((disk_clean / 1024 / 1024 / 1024)); fi
+            if [[ "$disk_alloc" == *Gi ]]; then disk_g=$disk_c;
+            elif [[ "$disk_alloc" == *Ki ]]; then disk_g=$((disk_c / 1024 / 1024));
+            else disk_g=$((disk_c / 1024 / 1024 / 1024)); fi
         fi
-        disk_disp="${disk_gib}G"
+        
+        # Initial values for deep inspection fields
+        local ebpf="-"
+        local headers="-"
+        local disk_disp="${disk_g}G" # Baseline is API value
+        local disk_val=$disk_g       # Value used for audit
 
-        # Content for table columns
-        HAS_EBPF="${DIM}-${NC}"
-        HAS_HEADERS="${DIM}-${NC}"
-
-        # Deep Inspection Logic (Only for EBPF/Headers now)
-        if [[ "$ENABLE_DEEP_CHECK" == "true" ]]; then
+        # 2. Deep Inspection (If enabled) - Update values
+        if [[ "$DEEP_ENABLED" == "true" ]]; then
             POD_FILE="$CONFIG_DIR/debug-node-${name}.yaml"
             cat <<EOF > "$POD_FILE"
 apiVersion: v1
@@ -274,32 +268,63 @@ EOF
             kubectl apply -f "$POD_FILE" &> /dev/null
             
             sleep 2
-            if ! kubectl wait --for=condition=Ready pod/debug-node-${name} --timeout=15s &> /dev/null; then
-                HAS_EBPF="${RED}ERR${NC}"
-                HAS_HEADERS="${RED}ERR${NC}"
-            else
-                if kubectl exec debug-node-${name} -- chroot /host test -f /sys/kernel/btf/vmlinux &> /dev/null; then
-                     HAS_EBPF="${GREEN}YES${NC}"
-                else
-                     HAS_EBPF="${RED}NO${NC}"
+            if kubectl wait --for=condition=Ready pod/debug-node-${name} --timeout=15s &> /dev/null; then
+                # Real Disk (From OS)
+                # Note: We want the value for Audit too. df -h / returns something like '15G'.
+                # We need to parse it to a numeric GiB for Section 6.
+                local REAL_DISK_STR=$(kubectl exec debug-node-${name} -- chroot /host df -h / 2>/dev/null | tail -n 1 | awk '{print $4}')
+                if [ -n "$REAL_DISK_STR" ]; then
+                    disk_disp="${BOLD}${GREEN}${REAL_DISK_STR}${NC}"
+                    # Convert REAL_DISK_STR to GiB for audit (rough estimate)
+                    local val=$(echo "$REAL_DISK_STR" | sed 's/[^0-9]*//g')
+                    if [[ "$REAL_DISK_STR" == *T ]]; then disk_val=$((val * 1024));
+                    elif [[ "$REAL_DISK_STR" == *G ]]; then disk_val=$val;
+                    elif [[ "$REAL_DISK_STR" == *M ]]; then disk_val=$((val / 1024));
+                    else disk_val=0; fi
                 fi
 
+                # eBPF
+                if kubectl exec debug-node-${name} -- chroot /host test -f /sys/kernel/btf/vmlinux &> /dev/null; then
+                     ebpf="${GREEN}YES${NC}"
+                else
+                     ebpf="${RED}NO${NC}"
+                fi
+
+                # Headers
                 if HEADERS_OUT=$(kubectl exec "debug-node-${name}" -- /bin/bash -c "chroot /host sh -c 'dpkg -l 2>/dev/null | grep -i headers || rpm -qa 2>/dev/null | grep -i headers'" 2>/dev/null); then
                      if [ -n "$HEADERS_OUT" ]; then
-                         HAS_HEADERS="${GREEN}YES${NC}"
+                         headers="${GREEN}YES${NC}"
                      else
-                         HAS_HEADERS="${RED}NO${NC}"
+                         headers="${RED}NO${NC}"
                      fi
                 else
-                     HAS_HEADERS="${RED}ERR${NC}"
+                     headers="${RED}ERR${NC}"
                 fi
+            else
+                disk_disp="${RED}ERR${NC}"
+                ebpf="${RED}ERR${NC}"
+                headers="${RED}ERR${NC}"
+                disk_val=0
             fi
             kubectl delete pod debug-node-${name} --force --grace-period=0 &> /dev/null
         fi
 
-        printf "   %-25s %-12s %-6s %-8s %-10s %-25b %-25b\n" "$name" "$role" "$cpu_disp" "${mem_gb_disp}G" "$disk_disp" "$HAS_EBPF" "$HAS_HEADERS"
+        # Write to consistent data store
+        # name | role | cpu_m | mem_m | disk_val | disk_disp | ebpf | headers
+        echo "$name|$role|$cpu_m|$mem_m|$disk_val|$disk_disp|$ebpf|$headers" >> "$NODE_DATA_FILE"
 
-    done <<< "$RAW_NODES_DATA"
+    done <<< "$RAW_API"
+
+    # 3. Render Table (Section 5)
+    printf "   ${BOLD}%-25s %-12s %-6s %-8s %-10s %-25b %-25b${NC}\n" "NODE" "ROLE" "CPU" "RAM" "DISK" "eBPF" "HEADERS"
+    printf "   ${DIM}%s${NC}\n" "--------------------------------------------------------------------------------------------"
+
+    while IFS='|' read -r name role cpu_m mem_m disk_val disk_disp ebpf headers; do
+        if [ -z "$name" ]; then continue; fi
+        local cpu_cores=$((cpu_m / 1000))
+        local ram_gb=$((mem_m / 1024))
+        printf "   %-25s %-12s %-6s %-8s %-10b %-25b %-25b\n" "$name" "$role" "$cpu_cores" "${ram_gb}G" "$disk_disp" "$ebpf" "$headers"
+    done < "$NODE_DATA_FILE"
 
     # --- [6] Hardware Compliance Audit (Detailed) ---
     ui_section "6. $MSG_AUDIT_TITLE"
@@ -320,52 +345,29 @@ EOF
 
     local CLUSTER_PASS=true
     
-    # Iterate RAW_NODES_DATA again for Audit
-    while IFS='|' read -r name labels cpu_alloc mem_alloc disk_alloc; do
+    # Iterate consistent data for Audit
+    while IFS='|' read -r name role cpu_m mem_m disk_val disk_disp ebpf headers; do
         if [ -z "$name" ]; then continue; fi
         
-        # Parse Resources (Identify Logic)
-        
-        # CPU
-        if [[ "$cpu_alloc" == *m ]]; then cpu_milli=${cpu_alloc%m}; else cpu_milli=$((cpu_alloc * 1000)); fi
-        
-        # RAM
-        mem_clean=$(echo "$mem_alloc" | sed 's/[^0-9]*//g')
-        if [[ "$mem_alloc" == *Gi ]]; then mem_mib=$((mem_clean * 1024)); 
-        elif [[ "$mem_alloc" == *Mi ]]; then mem_mib=$mem_clean;
-        elif [[ "$mem_alloc" == *Ki ]]; then mem_mib=$((mem_clean / 1024));
-        else mem_mib=$((mem_clean / 1024 / 1024)); fi
-        
-        # Disk
-        disk_clean=$(echo "$disk_alloc" | sed 's/[^0-9]*//g')
-        disk_gib=0
-        if [ -n "$disk_alloc" ]; then
-            if [[ "$disk_alloc" == *Gi ]]; then disk_gib=$disk_clean;
-            elif [[ "$disk_alloc" == *Ki ]]; then disk_gib=$((disk_clean / 1024 / 1024));
-            else disk_gib=$((disk_clean / 1024 / 1024 / 1024)); fi
-        fi
-
         local FAIL_REASONS=""
         
         # Check CPU
-        if [ "$cpu_milli" -lt "$MIN_CPU" ]; then
-            FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_CPU" "$((cpu_milli/1000))" "4")${NC}\n"
+        if [ "$cpu_m" -lt "$MIN_CPU" ]; then
+            FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_CPU" "$((cpu_m/1000))" "4")${NC}\n"
             FAIL_REASONS+="        -> $MSG_AUDIT_CAUSE_CPU\n"
         fi
         
         # Check RAM
-        if [ "$mem_mib" -lt "$MIN_RAM" ]; then
-            FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_RAM" "$mem_mib" "7680")${NC}\n"
+        if [ "$mem_m" -lt "$MIN_RAM" ]; then
+            FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_RAM" "$mem_m" "7680")${NC}\n"
             FAIL_REASONS+="        -> $MSG_AUDIT_CAUSE_RAM\n"
         fi
         
-        # Check Disk
-        if [ "$disk_gib" -lt "$MIN_DISK" ]; then
-             if [ "$disk_gib" -eq 0 ]; then
-                 FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_DISK" "0 (Unknown)" "80")${NC}\n"
-             else
-                 FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_DISK" "$disk_gib" "80")${NC}\n"
-             fi
+        # Check Disk (Using the value determined in Section 5)
+        if [ "$disk_val" -lt "$MIN_DISK" ]; then
+             local d_val_str="$disk_val"
+             if [ "$disk_val" -eq 0 ]; then d_val_str="0 (Unknown)"; fi
+             FAIL_REASONS+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_DISK" "$d_val_str" "80")${NC}\n"
              FAIL_REASONS+="        -> $MSG_AUDIT_CAUSE_DISK\n"
         fi
 
@@ -373,10 +375,12 @@ EOF
             CLUSTER_PASS=false
             echo -e "   ${BOLD}$MSG_AUDIT_NODE_EVAL: $name${NC} ${RED}$MSG_AUDIT_REJECTED${NC}"
             echo -e "$FAIL_REASONS"
-            echo -e "      ${DIM}Recursos: ${cpu_milli}m CPU | ${mem_mib}Mi RAM | ${disk_gib}Gi Disk${NC}"
+            echo -e "      ${DIM}Recursos: ${cpu_m}m CPU | ${mem_m}Mi RAM | ${disk_val}Gi Disk${NC}"
             echo "   ----------------------------------------------------"
         fi
-    done <<< "$RAW_NODES_DATA"
+    done < "$NODE_DATA_FILE"
+
+    rm -f "$NODE_DATA_FILE"
 
     if [ "$CLUSTER_PASS" = true ]; then
         echo -e "   ${GREEN}$MSG_AUDIT_SUCCESS${NC}"
