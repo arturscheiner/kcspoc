@@ -23,6 +23,11 @@ MSG_CONFIG_LOADED="Configuração existente carregada."
 MSG_CONFIG_SAVED="Configuração salva em"
 MSG_CONFIG_NEXT_STEPS="Você agora pode executar 'kcspoc pull' ou 'kcspoc check'."
 
+MSG_STEP_LANG="Idioma Preferido"
+MSG_STEP_LANG_DESC="Selecione o idioma da interface."
+MSG_INPUT_LANG="Idioma (en_US, pt_BR, etc)"
+MSG_LANG_AVAILABLE="Disponível"
+
 MSG_STEP_NS="Namespace Kubernetes"
 MSG_STEP_NS_DESC="Onde os recursos do KCS serão criados."
 MSG_INPUT_NS="Namespace"
