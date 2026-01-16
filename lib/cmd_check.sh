@@ -99,8 +99,12 @@ cmd_check() {
     else
         ui_spinner_stop "FAIL"
         echo -e "      ${RED}${BOLD}${MSG_CHECK_CONN_ERR}:${NC}"
-        # Extract the most relevant part of the error
-        local ERR_MSG=$(cat "$CONN_ERR" | tr '\n' ' ' | sed 's/  */ /g')
+        # Filter out noisy internal kubectl logs (memcache.go etc) and show last relevant lines
+        local ERR_MSG=$(grep -v "memcache.go" "$CONN_ERR" | grep -v "^E[0-9]\{4\}" | tail -n 2)
+        if [ -z "$ERR_MSG" ]; then
+            # Fallback to the last line if filter removed everything
+            ERR_MSG=$(tail -n 1 "$CONN_ERR")
+        fi
         echo -e "      ${RED}${ERR_MSG}${NC}"
         cat "$CONN_ERR" >> "$DEBUG_OUT"
         return 1
