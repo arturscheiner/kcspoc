@@ -238,6 +238,7 @@ MSG_DEPLOY_POD_STATUS="Verificando Ciclo de Vida do Pod"
 MSG_DEPLOY_BOOTSTRAP_OK="Implantação do Core aceita. Inicialização em progresso..."
 MSG_DEPLOY_SUCCESS="Implantação do KCS iniciada com sucesso."
 MSG_DEPLOY_BOOTSTRAP_HINT="Para acompanhar o progresso em tempo real, execute:"
+MSG_DEPLOY_CONFIRM="KCS não detectado no cluster. Deseja prosseguir com a instalação do core versão"
 
 # --- Help System ---
 MSG_HELP_DESCRIPTION="Descrição"

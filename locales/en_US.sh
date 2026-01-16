@@ -240,6 +240,7 @@ MSG_DEPLOY_POD_STATUS="Verifying Pod Lifecycle"
 MSG_DEPLOY_BOOTSTRAP_OK="Core deployment accepted. Bootstrap in progress..."
 MSG_DEPLOY_SUCCESS="KCS deployment initiated successfully."
 MSG_DEPLOY_BOOTSTRAP_HINT="To watch the real-time progress, run:"
+MSG_DEPLOY_CONFIRM="KCS is not detected in the cluster. Do you want to proceed with the core installation of version"
 
 # --- Help System ---
 MSG_HELP_DESCRIPTION="Description"

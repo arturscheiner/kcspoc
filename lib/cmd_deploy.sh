@@ -39,6 +39,18 @@ cmd_deploy() {
 
     # --- 1. CORE INSTALLATION ---
     if [ "$INSTALL_CORE" == "true" ]; then
+        # Check if KCS is already running
+        local target_ver="${KCS_VERSION:-latest}"
+        if ! _check_kcs_exists "$NAMESPACE"; then
+             ui_banner
+             echo -e "   ${YELLOW}${ICON_INFO} ${MSG_DEPLOY_CONFIRM} ${BOLD}${target_ver}${NC}? [y/N]"
+             read -p "   > " confirm
+             if [[ ! "$confirm" =~ ^[yY]$ ]]; then
+                 echo -e "   ${DIM}Deployment cancelled by user.${NC}"
+                 return 0
+             fi
+        fi
+
         ui_section "$MSG_DEPLOY_CORE"
         
         # 1.1 Namespace Setup
@@ -208,4 +220,17 @@ _verify_deploy_bootstrap() {
     fi
     
     echo -e "\n  ${GREEN}${ICON_OK} ${MSG_DEPLOY_BOOTSTRAP_OK}${NC}"
+}
+
+_check_kcs_exists() {
+    local ns="$1"
+    # Check helm releases
+    if helm list -n "$ns" -q | grep -q "^kcs$"; then
+        return 0
+    fi
+    # Check for any pods in namespace as fallback
+    if kubectl get pods -n "$ns" --no-headers 2>/dev/null | grep -q "."; then
+        return 0
+    fi
+    return 1
 }
