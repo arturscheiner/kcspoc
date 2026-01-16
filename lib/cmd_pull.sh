@@ -41,17 +41,15 @@ cmd_pull() {
             local versions=$(ls -F "$kcs_artifact_base" | grep "/" | sed 's|/||g' | sort -V)
 
             if [ -n "$versions" ]; then
-                # Header with proper color interpretation and fixed padding
-                local h_ver=$(printf "%-15s" "$MSG_PULL_TABLE_VER")
-                local h_date=$(printf "%-20s" "$MSG_PULL_TABLE_DATE")
-                local h_path=$(printf "%-40s" "$MSG_PULL_TABLE_PATH")
-                echo -e "   ${BOLD}${h_ver}${NC} | ${BOLD}${h_date}${NC} | ${BOLD}${h_path}${NC}"
-                echo -e "   ----------------|----------------------|-------------------------------------"
+                # Header using the log-style (no pipes, specific spacing)
+                printf "   ${BOLD}%-15s %-20s %-40s${NC}\n" "$MSG_PULL_TABLE_VER" "$MSG_PULL_TABLE_DATE" "$MSG_PULL_TABLE_PATH"
+                printf "   ${DIM}%s${NC}\n" "--------------------------------------------------------------------------------"
+                
                 for ver in $versions; do
                     local date_file="$kcs_artifact_base/$ver/.downloaded"
                     local ddate="---"
                     [ -f "$date_file" ] && ddate=$(cat "$date_file")
-                    printf "   %-15s | %-20s | %-40s\n" "$ver" "$ddate" "$kcs_artifact_base/$ver"
+                    printf "   %-15s %-20s %-40s\n" "$ver" "$ddate" "$kcs_artifact_base/$ver"
                 done
             else
                 echo -e "   ${YELLOW}${ICON_INFO} ${MSG_PULL_LOCAL_EMPTY}${NC}"
