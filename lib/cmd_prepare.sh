@@ -73,34 +73,45 @@ cmd_prepare() {
     echo "   ${MSG_PREPARE_USING_DOMAIN}: $DOMAIN"
     echo "   ${MSG_PREPARE_USING_IP}: $IP_RANGE"
     echo "   ----------------------------"
+    
+    local PREPARE_ERROR=0
 
     # 1. Namespace
     if confirm_step "Namespace" "$MSG_PREPARE_STEP_1_A" "Setup of $NAMESPACE." "$UNATTENDED" "Create Namespace $NAMESPACE? [y/N] "; then
         ui_spinner_start "$MSG_PREPARE_STEP_1_A"
         force_delete_ns "$NAMESPACE"
-        kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
-        kubectl label namespace "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT"
-        ui_spinner_stop "PASS"
-        check_k8s_label "namespace" "$NAMESPACE"
+        if kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT" && \
+           kubectl label namespace "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT"; then
+            ui_spinner_stop "PASS"
+            check_k8s_label "namespace" "$NAMESPACE"
+        else
+            ui_spinner_stop "FAIL"
+            PREPARE_ERROR=1
+        fi
     fi
 
     # 1.1 Registry Auth
     if confirm_step "Registry Auth" "$MSG_PREPARE_STEP_1_B" "Setup of Docker Registry credentials." "$UNATTENDED"; then
         ui_spinner_start "$MSG_PREPARE_STEP_1_B"
-        kubectl create secret docker-registry kcs-registry-secret \
+        if kubectl create secret docker-registry kcs-registry-secret \
           --docker-server="$REGISTRY_SERVER" \
           --docker-username="$REGISTRY_USER" \
           --docker-password="$REGISTRY_PASS" \
           --docker-email="$REGISTRY_EMAIL" \
-          -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
-        kubectl label secret kcs-registry-secret -n "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT"
-        ui_spinner_stop "PASS"
-        check_k8s_label "secret" "kcs-registry-secret" "$NAMESPACE"
+          -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT" && \
+          kubectl label secret kcs-registry-secret -n "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT"; then
+            ui_spinner_stop "PASS"
+            check_k8s_label "secret" "kcs-registry-secret" "$NAMESPACE"
+        else
+            ui_spinner_stop "FAIL"
+            PREPARE_ERROR=1
+        fi
     fi
 
     # 2. Cert-Manager
     if confirm_step "Cert-Manager" "$MSG_PREPARE_WHY_CERT_TITLE" "$MSG_PREPARE_WHY_CERT_DESC" "$UNATTENDED"; then
         ui_spinner_start "$MSG_PREPARE_INSTALL_CERT"
+        force_delete_ns "cert-manager"
         local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
         helm repo add jetstack https://charts.jetstack.io --force-update &>> "$DEBUG_OUT"
         if helm upgrade --install cert-manager jetstack/cert-manager \
@@ -121,6 +132,7 @@ cmd_prepare() {
             cat "$HELM_ERR" >> "$DEBUG_OUT"
             ui_spinner_stop "FAIL"
             echo -e "      ${RED}$(cat "$HELM_ERR" | tr '\n' ' ' | cut -c 1-120)...${NC}"
+            PREPARE_ERROR=1
         fi
     fi
 
@@ -129,6 +141,7 @@ cmd_prepare() {
         download_artifact "local-path-provisioner" "https://github.com/rancher/local-path-provisioner.git"
         
         ui_spinner_start "$MSG_PREPARE_INSTALL_LOCAL"
+        force_delete_ns "local-path-storage"
         local CHART_PATH="$ARTIFACTS_DIR/local-path-provisioner/deploy/chart/local-path-provisioner"
         
         if helm upgrade --install local-path-storage "$CHART_PATH" \
@@ -141,6 +154,7 @@ cmd_prepare() {
         else
             ui_spinner_stop "FAIL"
             echo -e "      ${RED}Helm install failed. Check logs.${NC}"
+            PREPARE_ERROR=1
         fi
     fi
 
@@ -150,19 +164,24 @@ cmd_prepare() {
         download_artifact "metrics-server" "$MANIFEST_URL"
         
         ui_spinner_start "$MSG_PREPARE_INSTALL_METRICS"
-        kubectl apply -f "$ARTIFACTS_DIR/metrics-server/components.yaml" &>> "$DEBUG_OUT"
-        kubectl patch deployment metrics-server -n kube-system --type='json' -p='[
-          {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"},
-          {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-preferred-address-types=InternalIP"}
-        ]' &>> "$DEBUG_OUT"
-        kubectl label deployment metrics-server -n kube-system $POC_LABEL --overwrite &>> "$DEBUG_OUT"
-        ui_spinner_stop "PASS"
-        check_k8s_label "deployment" "metrics-server" "kube-system"
+        if kubectl apply -f "$ARTIFACTS_DIR/metrics-server/components.yaml" &>> "$DEBUG_OUT" && \
+           kubectl patch deployment metrics-server -n kube-system --type='json' -p='[
+             {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"},
+             {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-preferred-address-types=InternalIP"}
+           ]' &>> "$DEBUG_OUT" && \
+           kubectl label deployment metrics-server -n kube-system $POC_LABEL --overwrite &>> "$DEBUG_OUT"; then
+            ui_spinner_stop "PASS"
+            check_k8s_label "deployment" "metrics-server" "kube-system"
+        else
+            ui_spinner_stop "FAIL"
+            PREPARE_ERROR=1
+        fi
     fi
 
     # 5. MetalLB
     if confirm_step "MetalLB" "$MSG_PREPARE_WHY_METALLB_TITLE" "$MSG_PREPARE_WHY_METALLB_DESC" "$UNATTENDED"; then
         ui_spinner_start "$MSG_PREPARE_STEP_3"
+        force_delete_ns "metallb-system"
         local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
         helm repo add metallb https://metallb.github.io/metallb &>> "$DEBUG_OUT"
         if helm upgrade --install metallb metallb/metallb \
@@ -174,7 +193,7 @@ cmd_prepare() {
             # Label
             kubectl label namespace metallb-system $POC_LABEL --overwrite &>> "$DEBUG_OUT"
             kubectl label deployment -n metallb-system --all $POC_LABEL --overwrite &>> "$DEBUG_OUT"
-
+ 
             sleep 5
             cat <<EOF | kubectl apply -f - &>> "$DEBUG_OUT"
 apiVersion: metallb.io/v1beta1
@@ -205,12 +224,14 @@ EOF
             cat "$HELM_ERR" >> "$DEBUG_OUT"
             ui_spinner_stop "FAIL"
             echo -e "      ${RED}$(cat "$HELM_ERR" | tr '\n' ' ' | cut -c 1-120)...${NC}"
+            PREPARE_ERROR=1
         fi
     fi
 
     # 6. Ingress-Nginx
     if confirm_step "Ingress-Nginx" "$MSG_PREPARE_WHY_INGRESS_TITLE" "$MSG_PREPARE_WHY_INGRESS_DESC" "$UNATTENDED"; then
         ui_spinner_start "$MSG_PREPARE_STEP_4"
+        force_delete_ns "ingress-nginx"
         local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
         helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx &>> "$DEBUG_OUT"
         if helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
@@ -228,6 +249,7 @@ EOF
             cat "$HELM_ERR" >> "$DEBUG_OUT"
             ui_spinner_stop "FAIL"
             echo -e "      ${RED}$(cat "$HELM_ERR" | tr '\n' ' ' | cut -c 1-120)...${NC}"
+            PREPARE_ERROR=1
         fi
     fi
 
@@ -235,11 +257,16 @@ EOF
     if confirm_step "Kernel Headers" "$MSG_PREPARE_WHY_HEADERS_TITLE" "$MSG_PREPARE_WHY_HEADERS_DESC" "$UNATTENDED"; then
         ui_spinner_start "$MSG_PREPARE_STEP_5"
         if command -v sudo &>> "$DEBUG_OUT"; then
-            sudo apt update &>> "$DEBUG_OUT" && sudo apt install linux-headers-$(uname -r) -y &>> "$DEBUG_OUT"
-            ui_spinner_stop "PASS"
+            if sudo apt update &>> "$DEBUG_OUT" && sudo apt install linux-headers-$(uname -r) -y &>> "$DEBUG_OUT"; then
+                ui_spinner_stop "PASS"
+            else
+                ui_spinner_stop "FAIL"
+                PREPARE_ERROR=1
+            fi
         else
             ui_spinner_stop "FAIL"
             echo -e "      ${RED}${MSG_PREPARE_SUDO_FAIL}${NC}"
+            PREPARE_ERROR=1
         fi
     fi
 
@@ -248,8 +275,14 @@ EOF
     sleep 5
     INGRESS_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>> "$DEBUG_OUT" || echo "Pending...")
 
-    echo -e "${GREEN}${ICON_OK} ${MSG_PREPARE_COMPLETED}${NC}"
-    echo -e "   ${MSG_PREPARE_INGRESS_IP}: ${BOLD}${BLUE}$INGRESS_IP${NC}"
-    echo -e "   ${MSG_PREPARE_HOSTS_HINT}: ${BOLD}${YELLOW}$INGRESS_IP $DOMAIN${NC}"
+    if [ "$PREPARE_ERROR" -eq 1 ]; then
+        echo -e "${RED}${BOLD}${ICON_FAIL} ${MSG_PREPARE_COMPLETED}${NC} (With errors)"
+        echo -e "   ${MSG_ERROR_CONFIG_NOT_FOUND}" # Fallback generic error msg
+        exit 1
+    else
+        echo -e "${GREEN}${ICON_OK} ${MSG_PREPARE_COMPLETED}${NC}"
+        echo -e "   ${MSG_PREPARE_INGRESS_IP}: ${BOLD}${BLUE}$INGRESS_IP${NC}"
+        echo -e "   ${MSG_PREPARE_HOSTS_HINT}: ${BOLD}${YELLOW}$INGRESS_IP $DOMAIN${NC}"
+    fi
     echo ""
 }
