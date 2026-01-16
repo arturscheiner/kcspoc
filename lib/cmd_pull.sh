@@ -49,7 +49,14 @@ cmd_pull() {
                     local date_file="$kcs_artifact_base/$ver/.downloaded"
                     local ddate="---"
                     [ -f "$date_file" ] && ddate=$(cat "$date_file")
-                    printf "   %-15s %-20s %-40s\n" "$ver" "$ddate" "$kcs_artifact_base/$ver"
+                    
+                    local active_tag=""
+                    if [ "$ver" == "$KCS_VERSION" ]; then
+                        active_tag=" ${GREEN}${MSG_PULL_ACTIVE_MARKER}${NC}"
+                    fi
+                    
+                    # Align Version with potential active tag
+                    printf "   %-15s %-20s %-40s\n" "${ver}${active_tag}" "$ddate" "$kcs_artifact_base/$ver"
                 done
             else
                 echo -e "   ${YELLOW}${ICON_INFO} ${MSG_PULL_LOCAL_EMPTY}${NC}"

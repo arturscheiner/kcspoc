@@ -22,7 +22,8 @@ MSG_CONFIG_WIZARD_TITLE="Assistente de Configuração"
 MSG_CONFIG_WIZARD_DESC="Este assistente gera o arquivo ~/.kcspoc/config."
 MSG_CONFIG_LOADED="Configuração existente carregada."
 MSG_CONFIG_SAVED="Configuração salva em"
-MSG_CONFIG_NEXT_STEPS="Você agora pode executar 'kcspoc pull' ou 'kcspoc check'."
+MSG_CONFIG_VER_UPDATED="Versão do KCS definida para"
+MSG_CONFIG_NEXT_STEPS="Próximos passos: execute 'kcspoc check' para verificar seu ambiente."
 
 MSG_STEP_LANG="Idioma Preferido"
 MSG_STEP_LANG_DESC="Selecione o idioma da interface."
@@ -76,6 +77,7 @@ MSG_PULL_LOCAL_EMPTY="Nenhum artefato local encontrado."
 MSG_PULL_TABLE_VER="Versão"
 MSG_PULL_TABLE_DATE="Baixado em"
 MSG_PULL_TABLE_PATH="Caminho"
+MSG_PULL_ACTIVE_MARKER="(*) ativo"
 
 # --- Check Command ---
 MSG_CHECK_TITLE="Verificação de Ambiente"
@@ -244,8 +246,8 @@ MSG_HELP_EXAMPLES="Exemplos"
 
 # Config Help
 MSG_HELP_CONFIG_DESC="Inicia o assistente de configuração interativo para configurar ou atualizar suas variáveis de ambiente em ~/.kcspoc/config."
-MSG_HELP_CONFIG_OPTS=""
-MSG_HELP_CONFIG_EX="kcspoc config"
+MSG_HELP_CONFIG_OPTS="--set-version <ver>|Atualiza rapidamente a versão ativa do KCS sem entrar no assistente."
+MSG_HELP_CONFIG_EX="kcspoc config\nkcspoc config --set-version 2.3.0"
 
 # Pull Help
 MSG_HELP_PULL_DESC="Baixa o chart Helm do Kaspersky Container Security do registro oficial. Autentica usando as credenciais da sua configuração."

@@ -2,21 +2,35 @@
 
 cmd_config() {
     # Args Parsing
+    local SET_VER=""
     while [[ "$#" -gt 0 ]]; do
         case $1 in
+            --set-version) SET_VER="$2"; shift ;;
             --help|help)
                 ui_help "config" "$MSG_HELP_CONFIG_DESC" "$MSG_HELP_CONFIG_OPTS" "$MSG_HELP_CONFIG_EX"
                 return 0
                 ;;
             *)
-                # If we don't expect args, but get some, show help or ignore?
-                # Usually config is just run alone. Let's show help if any unknown arg.
                 ui_help "config" "$MSG_HELP_CONFIG_DESC" "$MSG_HELP_CONFIG_OPTS" "$MSG_HELP_CONFIG_EX"
                 return 1
                 ;;
         esac
         shift
     done
+
+    # Handle --set-version early
+    if [ -n "$SET_VER" ]; then
+        if [ ! -f "$CONFIG_FILE" ]; then
+             echo -e "${RED}${ICON_FAIL} ${MSG_ERROR_CONFIG_NOT_FOUND}${NC}"
+             exit 1
+        fi
+        
+        # Load, modify and save
+        source "$CONFIG_FILE"
+        sed -i "s|KCS_VERSION=.*|KCS_VERSION=\"$SET_VER\"|g" "$CONFIG_FILE"
+        echo -e "${GREEN}${ICON_OK} ${MSG_CONFIG_VER_UPDATED}: ${BOLD}${SET_VER}${NC}"
+        return 0
+    fi
 
     ui_banner
     ui_section "$MSG_CONFIG_WIZARD_TITLE"
