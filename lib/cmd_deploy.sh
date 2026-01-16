@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cmd_install() {
+cmd_deploy() {
     # --- Parse Arguments ---
     local INSTALL_CORE=""
     local INSTALL_AGENTS=""
@@ -16,11 +16,11 @@ cmd_install() {
                 shift
                 ;;
             --help|help)
-                ui_help "install" "$MSG_HELP_INSTALL_DESC" "$MSG_HELP_INSTALL_OPTS" "$MSG_HELP_INSTALL_EX"
+                ui_help "deploy" "$MSG_HELP_DEPLOY_DESC" "$MSG_HELP_DEPLOY_OPTS" "$MSG_HELP_DEPLOY_EX"
                 return 0
                 ;;
             *)
-                ui_help "install" "$MSG_HELP_INSTALL_DESC" "$MSG_HELP_INSTALL_OPTS" "$MSG_HELP_INSTALL_EX"
+                ui_help "deploy" "$MSG_HELP_DEPLOY_DESC" "$MSG_HELP_DEPLOY_OPTS" "$MSG_HELP_DEPLOY_EX"
                 return 1
                 ;;
         esac
@@ -39,7 +39,7 @@ cmd_install() {
 
     # --- 1. CORE INSTALLATION ---
     if [ "$INSTALL_CORE" == "true" ]; then
-        ui_section "$MSG_INSTALL_CORE_STEP"
+        ui_section "$MSG_DEPLOY_TITLE"_STEP"
         
         # 1.1 Namespace Setup
         ui_spinner_start "$MSG_PREPARE_STEP_1_A"
@@ -118,7 +118,7 @@ cmd_install() {
                 if eval "$HELM_CMD" &>> "$DEBUG_OUT"; then
                     ui_spinner_stop "PASS"
                     # Run health check if Helm deployment was accepted
-                    _verify_install_bootstrap "$NAMESPACE"
+                    _verify_deploy_bootstrap "$NAMESPACE"
                 else
                     ui_spinner_stop "FAIL"
                     INSTALL_ERROR=1
@@ -130,8 +130,8 @@ cmd_install() {
     # --- 2. AGENTS INSTALLATION (Placeholder) ---
     if [ "$INSTALL_AGENTS" == "true" ]; then
         ui_section "$MSG_INSTALL_AGENTS_STEP"
-        echo -e "   ${YELLOW}${ICON_INFO} Agents installation logic is being finalized.${NC}"
-        echo -e "      ${DIM}Manual install: ./kcspoc pull --version X && helm install agents...${NC}"
+        echo -e "   ${YELLOW}${ICON_INFO} Agents deployment logic is being finalized.${NC}"
+        echo -e "      ${DIM}Manual deploy: ./kcspoc pull --version X && helm install agents...${NC}"
     fi
 
     echo ""
@@ -150,7 +150,7 @@ cmd_install() {
 
 # --- Helpers ---
 
-_verify_install_bootstrap() {
+_verify_deploy_bootstrap() {
     local ns="$1"
     
     echo -e "\n  ${BOLD}${ICON_GEAR} ${MSG_INSTALL_HEALTH_CHECK}${NC}"

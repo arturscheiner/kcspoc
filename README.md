@@ -1,6 +1,6 @@
 # Kaspersky Container Security PoC Tool (kcspoc)
 
-**Version:** 0.4.47
+**Version:** 0.4.48
 
 `kcspoc` is a CLI tool designed to streamline the Proof of Concept (PoC) deployment of Kaspersky Container Security (KCS). It helps with environment verification, configuration management, chart downloading, and preparation for installation.
 
@@ -37,9 +37,9 @@ You can run `kcspoc` directly from the source directory or install it system-wid
     ```bash
     chmod +x kcspoc
     ```
-4.  Run the tool:
+4.  Deploy KCS:
     ```bash
-    ./kcspoc help
+    ./kcspoc deploy --core
     ```
 
 ### Option 2: System-wide Installation (Recommended)

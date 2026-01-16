@@ -8,7 +8,7 @@ MSG_CMD_CONFIG_DESC="Run interactive configuration wizard"
 MSG_CMD_PULL_DESC="Download KCS chart (usage: pull [--version X.X.X])"
 MSG_CMD_CHECK_DESC="Verify environment and prerequisites"
 MSG_CMD_PREPARE_DESC="Run the installation preparation (requires config)"
-MSG_CMD_INSTALL_DESC="Install Kaspersky Container Security components"
+MSG_CMD_DEPLOY_DESC="Launch the KCS deployment process"
 MSG_CMD_HELP_DESC="Show this help message"
 MSG_VERSION="Version"
 MSG_AUTHOR="Author"
@@ -54,7 +54,7 @@ MSG_STEP_DEEP_DESC="Run privileged pods to check disk/headers?"
 MSG_INPUT_DEEP="Enable Deep Check? (true/false)"
 
 MSG_STEP_VERSION="KCS Version"
-MSG_STEP_VERSION_DESC="Target version to install."
+MSG_STEP_VERSION_DESC="Target version to deploy."
 MSG_INPUT_VERSION="Version"
 
 # --- Pull Command ---
@@ -230,17 +230,22 @@ MSG_DESTROY_SUCCESS="KCS has been completely removed from the cluster."
 MSG_DESTROY_HINT="Dependencies (MetalLB, Cert-Manager) were preserved."
 
 # --- Install Command ---
-MSG_INSTALL_TITLE="Installing Kaspersky Container Security"
-MSG_INSTALL_CORE_STEP="Installing KCS Core components"
-MSG_INSTALL_AGENTS_STEP="Installing KCS Discovery & Runtime Agents"
+MSG_INSTALL_TITLE="Install Kaspersky Container Security"
+MSG_INSTALL_CORE_STEP="Install KCS Core components"
+MSG_INSTALL_AGENTS_STEP="Install KCS Discovery & Runtime Agents"
 MSG_INSTALL_VALUES_NOT_FOUND="Error: values-final-211.yaml not found in current directory or ~/.kcspoc"
-MSG_INSTALL_SUCCESS="KCS installation initiated successfully."
-MSG_INSTALL_HEALTH_CHECK="Running Post-Install Pre-flight Checks"
-MSG_INSTALL_PVC_STATUS="Verifying Persistent Storage (PVCs)"
-MSG_INSTALL_LABEL_CHECK="Verifying Resource Labelling"
-MSG_INSTALL_POD_STATUS="Monitoring Pod Bootstrap"
-MSG_INSTALL_BOOTSTRAP_OK="Pre-flight checks passed! KCS is bootstrapping correctly."
-MSG_INSTALL_BOOTSTRAP_HINT="To watch the real-time progress, run:"
+
+# --- Deploy Command ---
+MSG_DEPLOY_TITLE="Deployment of Kaspersky Container Security"
+MSG_DEPLOY_CORE="KCS Core"
+MSG_DEPLOY_AGENTS="KCS Agents"
+MSG_DEPLOY_HEALTH_CHECK="Post-Deployment Health Check"
+MSG_DEPLOY_PVC_STATUS="Verifying Storage (PVCs)"
+MSG_DEPLOY_LABEL_CHECK="Verifying Labels"
+MSG_DEPLOY_POD_STATUS="Verifying Pod Lifecycle"
+MSG_DEPLOY_BOOTSTRAP_OK="Core deployment accepted. Bootstrap in progress..."
+MSG_DEPLOY_SUCCESS="KCS deployment initiated successfully."
+MSG_DEPLOY_BOOTSTRAP_HINT="To watch the real-time progress, run:"
 
 # --- Help System ---
 MSG_HELP_DESCRIPTION="Description"
@@ -277,7 +282,7 @@ MSG_HELP_LOGS_DESC="Manage the execution logs of the kcspoc tool. Allows viewing
 MSG_HELP_LOGS_OPTS="--list [cmd]|Show last 10 logs (optionally filtered by command)\n--show <hash>|View the full debug output for a specific execution ID\n--cleanup|Delete all stored logs from ~/.kcspoc/logs"
 MSG_HELP_LOGS_EX="kcspoc logs --list\nkcspoc logs --list prepare\nkcspoc logs --show A1B2C3\nkcspoc logs --cleanup"
 
-# Install Help
-MSG_HELP_INSTALL_DESC="Installs Kaspersky Container Security components using Helm. Requires prior 'config' and 'pull'."
-MSG_HELP_INSTALL_OPTS="--core|Install the KCS Core (Backend, Console, Databases)\n--agents|Install the Discovery and Runtime Protection agents"
-MSG_HELP_INSTALL_EX="kcspoc install --core\nkcspoc install --agents"
+# Deploy Help
+MSG_HELP_DEPLOY_DESC="Deploys the Kaspersky Container Security components (Core and Agents) to your cluster."
+MSG_HELP_DEPLOY_OPTS="--core|Deploy the main KCS management console and backend.\n--agents|Deploy the security agents to your nodes (Finalizing)."
+MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --agents"
