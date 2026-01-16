@@ -20,15 +20,18 @@ cmd_config() {
 
     # Handle --set-version early
     if [ -n "$SET_VER" ]; then
+        ui_banner
+        ui_section "$MSG_CONFIG_VER_UPDATED"
+        
         if [ ! -f "$CONFIG_FILE" ]; then
-             echo -e "${RED}${ICON_FAIL} ${MSG_ERROR_CONFIG_NOT_FOUND}${NC}"
+             echo -e "   ${RED}${ICON_FAIL} ${MSG_ERROR_CONFIG_NOT_FOUND}${NC}"
              exit 1
         fi
         
         # Load, modify and save
         source "$CONFIG_FILE"
         sed -i "s|KCS_VERSION=.*|KCS_VERSION=\"$SET_VER\"|g" "$CONFIG_FILE"
-        echo -e "${GREEN}${ICON_OK} ${MSG_CONFIG_VER_UPDATED}: ${BOLD}${SET_VER}${NC}"
+        echo -e "   ${GREEN}${ICON_OK} ${MSG_CONFIG_VER_UPDATED}: ${BOLD}${SET_VER}${NC}\n"
         return 0
     fi
 

@@ -55,8 +55,8 @@ cmd_pull() {
                         active_tag=" ${GREEN}${MSG_PULL_ACTIVE_MARKER}${NC}"
                     fi
                     
-                    # Align Version with potential active tag
-                    printf "   %-15s %-20s %-40s\n" "${ver}${active_tag}" "$ddate" "$kcs_artifact_base/$ver"
+                    # Use echo -e with fixed-width printfs for perfect alignment and color interpretation
+                    echo -e "   $(printf "%-15s" "$ver")${active_tag} $(printf "%-20s" "$ddate") $(printf "%-40s" "$kcs_artifact_base/$ver")"
                 done
             else
                 echo -e "   ${YELLOW}${ICON_INFO} ${MSG_PULL_LOCAL_EMPTY}${NC}"

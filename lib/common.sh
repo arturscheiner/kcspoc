@@ -25,7 +25,7 @@ CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
 ARTIFACTS_DIR="$CONFIG_DIR/artifacts"
 LOGS_DIR="$CONFIG_DIR/logs"
-VERSION="0.4.44"
+VERSION="0.4.45"
 
 # Execution Globals
 EXEC_HASH=""
