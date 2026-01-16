@@ -78,7 +78,7 @@ MSG_PULL_TABLE_ACTIVE="Active"
 MSG_PULL_TABLE_VER="Version"
 MSG_PULL_TABLE_DATE="Downloaded"
 MSG_PULL_TABLE_PATH="Path"
-MSG_PULL_ACTIVE_MARKER="(*) active"
+MSG_PULL_ACTIVE_MARKER="*"
 
 # --- Check Command ---
 MSG_CHECK_TITLE="Environment Check"

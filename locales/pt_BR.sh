@@ -78,7 +78,7 @@ MSG_PULL_TABLE_ACTIVE="Ativo"
 MSG_PULL_TABLE_VER="Versão"
 MSG_PULL_TABLE_DATE="Baixado em"
 MSG_PULL_TABLE_PATH="Caminho"
-MSG_PULL_ACTIVE_MARKER="(*) ativo"
+MSG_PULL_ACTIVE_MARKER="*"
 
 # --- Check Command ---
 MSG_CHECK_TITLE="Verificação de Ambiente"
