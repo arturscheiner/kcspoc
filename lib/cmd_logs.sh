@@ -8,8 +8,14 @@ cmd_logs() {
         case $1 in
             --list)
                 ACTION="list"
-                TARGET="$2"
-                shift 2
+                # If next arg is not another flag, use it as target
+                if [[ "$2" != --* ]] && [[ -n "$2" ]]; then
+                    TARGET="$2"
+                    shift 2
+                else
+                    TARGET=""
+                    shift 1
+                fi
                 ;;
             --show)
                 ACTION="show"
@@ -27,25 +33,28 @@ cmd_logs() {
     ui_banner
 
     if [ "$ACTION" == "list" ]; then
-        if [ -z "$TARGET" ]; then
-            echo -e "${RED}Error: Command name required for --list (e.g., --list prepare)${NC}"
-            return 1
+        local search_pattern=""
+        if [ -n "$TARGET" ]; then
+            search_pattern="$LOGS_DIR/$TARGET"
+            if [ ! -d "$search_pattern" ]; then
+                echo -e "${YELLOW}No logs found for command: $TARGET${NC}"
+                return 0
+            fi
+            ui_section "Logs for '$TARGET'"
+            printf "   ${BOLD}%-20s %-10s %-15s %-10s${NC}\n" "DATE/TIME" "HASH" "STATUS" "VERSION"
+            printf "   ${DIM}%s${NC}\n" "---------------------------------------------------------"
+        else
+            search_pattern="$LOGS_DIR"
+            ui_section "Global Log History (Latest 10)"
+            printf "   ${BOLD}%-20s %-12s %-10s %-15s %-10s${NC}\n" "DATE/TIME" "COMMAND" "HASH" "STATUS" "VERSION"
+            printf "   ${DIM}%s${NC}\n" "----------------------------------------------------------------------"
         fi
-        
-        local log_dir="$LOGS_DIR/$TARGET"
-        if [ ! -d "$log_dir" ]; then
-            echo -e "${YELLOW}No logs found for command: $TARGET${NC}"
-            return 0
-        fi
-        
-        ui_section "Logs for '$TARGET'"
-        printf "   ${BOLD}%-20s %-10s %-15s %-10s${NC}\n" "DATE/TIME" "HASH" "STATUS" "VERSION"
-        printf "   ${DIM}%s${NC}\n" "---------------------------------------------------------"
 
-        # List last 10 logs, sorted by reverse name (descending timestamp)
-        local count=0
-        ls -r "$log_dir"/*.log 2>/dev/null | head -n 10 | while read -r log_file; do
+        # Find logs, sort by reverse timestamp (filename based), take top 10
+        find "$search_pattern" -name "*.log" 2>/dev/null | sort -r | head -n 10 | while read -r log_file; do
             local filename=$(basename "$log_file")
+            local cmd_from_path=$(basename "$(dirname "$log_file")")
+            
             # Filename: YYYYMMDD-HHMMSS-HASH.log
             local date_part=$(echo "$filename" | cut -d'-' -f1)
             local time_part=$(echo "$filename" | cut -d'-' -f2)
@@ -61,7 +70,11 @@ cmd_logs() {
             if [ "$status" == "SUCCESS" ]; then color=$GREEN; 
             elif [ "$status" == "UNKNOWN" ]; then color=$DIM; fi
 
-            printf "   %-20s %-10s ${color}%-15s${NC} %-10s\n" "$fmt_date" "$hash_part" "$status" "$version"
+            if [ -n "$TARGET" ]; then
+                printf "   %-20s %-10s ${color}%-15s${NC} %-10s\n" "$fmt_date" "$hash_part" "$status" "$version"
+            else
+                printf "   %-20s %-12s %-10s ${color}%-15s${NC} %-10s\n" "$fmt_date" "$cmd_from_path" "$hash_part" "$status" "$version"
+            fi
         done
         echo ""
 
