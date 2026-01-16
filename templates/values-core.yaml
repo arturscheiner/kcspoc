@@ -21,7 +21,10 @@ default:
     ingressControllerNamespaces:
       - ingress-nginx
 
-  certSource: helm
+  certSource: cert-manager
+  internalTLS:
+    enabled: true
+    certSource: cert-manager
 
   ## RECURSOS OTIMIZADOS PARA LAB / POC REDUZIDA
   postgresql:

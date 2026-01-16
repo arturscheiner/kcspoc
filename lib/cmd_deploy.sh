@@ -41,6 +41,10 @@ cmd_deploy() {
     if [ "$INSTALL_CORE" == "true" ]; then
         # Check if KCS is already running
         local target_ver="${KCS_VERSION:-latest}"
+        
+        # Log version and source info
+        echo -e "      ${DIM}Target Version: $target_ver${NC}" >> "$DEBUG_OUT"
+        
         if ! _check_kcs_exists "$NAMESPACE"; then
              ui_banner
              echo -e "   ${YELLOW}${ICON_INFO} ${MSG_DEPLOY_CONFIRM} ${BOLD}${target_ver}${NC}? [y/N]"
@@ -113,6 +117,8 @@ cmd_deploy() {
                 
                 # Check if we have the extracted artifact folder
                 if [ -d "$CHART_PATH" ] && [ -f "$BASE_VALUES" ]; then
+                    # Log source
+                    echo -e "      ${DIM}Source: Local Artifact ($CHART_PATH)${NC}" >> "$DEBUG_OUT"
                     # Use extracted chart, base values and our processed dynamic overrides
                     HELM_CMD="helm upgrade --install kcs \"$CHART_PATH\" \
                       -n \"$NAMESPACE\" \
@@ -120,9 +126,10 @@ cmd_deploy() {
                       -f \"$PROCESSED_VALUES\""
                 else
                     # Fallback to OCI
-                    echo -e "      ${YELLOW}${ICON_INFO} Local artifact not found for $TARGET_VER. Falling back to OCI...${NC}" >> "$DEBUG_OUT"
+                    echo -e "      ${DIM}Source: OCI Registry (oci://$REGISTRY_SERVER/charts/kcs)${NC}" >> "$DEBUG_OUT"
+                    echo -e "      ${YELLOW}${ICON_INFO} Local artifact not found for $target_ver. Falling back to OCI...${NC}" >> "$DEBUG_OUT"
                     HELM_CMD="helm upgrade --install kcs oci://$REGISTRY_SERVER/charts/kcs \
-                      --version $TARGET_VER \
+                      --version $target_ver \
                       -n \"$NAMESPACE\" \
                       -f \"$PROCESSED_VALUES\""
                 fi
