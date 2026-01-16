@@ -74,6 +74,7 @@ MSG_PULL_ERR_FAIL="Helm pull failed."
 MSG_PULL_LOCAL_TITLE="Locally Available KCS Versions"
 MSG_PULL_LOCAL_EMPTY="No local artifacts found."
 MSG_PULL_TABLE_VER="Version"
+MSG_PULL_TABLE_DATE="Downloaded"
 MSG_PULL_TABLE_PATH="Path"
 
 # --- Check Command ---
@@ -250,7 +251,7 @@ MSG_HELP_CONFIG_EX="kcspoc config"
 
 # Pull Help
 MSG_HELP_PULL_DESC="Downloads the Kaspersky Container Security Helm chart from the official registry. Authenticates using your config credentials."
-MSG_HELP_PULL_OPTS="--version <ver>|Specifically target a chart version (e.g., 2.3.0)\n--local|List all chart versions already pulled and available locally."
+MSG_HELP_PULL_OPTS="--version <ver>|Specifically target a chart version (e.g., 2.3.0)\n--list-local|List all chart versions already pulled and available locally."
 MSG_HELP_PULL_EX="kcspoc pull\nkcspoc pull --version 2.2.0"
 
 # Check Help
