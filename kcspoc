@@ -29,6 +29,7 @@ source "$LIB_DIR/cmd_pull.sh"
 source "$LIB_DIR/cmd_check.sh"
 source "$LIB_DIR/cmd_prepare.sh"
 source "$LIB_DIR/cmd_destroy.sh"
+source "$LIB_DIR/cmd_logs.sh"
 
 cmd_usage() {
     ui_banner
@@ -40,63 +41,46 @@ cmd_usage() {
     echo -e "  ${GREEN}check${NC}    ${MSG_CMD_CHECK_DESC}"
     echo -e "  ${GREEN}prepare${NC}  ${MSG_CMD_PREPARE_DESC}"
     echo -e "  ${GREEN}destroy${NC}  ${MSG_DESTROY_TITLE}"
+    echo -e "  ${GREEN}logs${NC}     Manage execution logs (--list, --show)"
     echo -e "  ${GREEN}help${NC}     ${MSG_CMD_HELP_DESC}"
     exit 0
 }
 
 # --- CLI Logic ---
 
-# 1. Detect Global Debug Flag
-ARGS=()
-for arg in "$@"; do
-    if [[ "$arg" == "--debug" ]]; then
-        KCS_DEBUG=true
-    else
-        ARGS+=("$arg")
-    fi
-done
-
-# Restores the args without --debug
-set -- "${ARGS[@]}"
-
-# Helper for final debug message
-finish_debug() {
-    if [ "$KCS_DEBUG" = true ]; then
-        echo ""
-        echo -e "${BLUE}${ICON_INFO} Debug logs saved to: ${BOLD}$DEBUG_OUT${NC}"
-    fi
-}
+# Global Debug is now ALWAYS ON by default (handled by init_logging)
+KCS_DEBUG=true
 
 case "$1" in
     config)
         shift
-        setup_debug "config"
+        init_logging "config"
         cmd_config "$@"
-        finish_debug
         ;;
     pull)
         shift
-        setup_debug "pull"
+        init_logging "pull"
         cmd_pull "$@"
-        finish_debug
         ;;
     check)
         shift
-        setup_debug "check"
+        init_logging "check"
         cmd_check "$@"
-        finish_debug
         ;;
     prepare)
         shift
-        setup_debug "prepare"
+        init_logging "prepare"
         cmd_prepare "$@"
-        finish_debug
         ;;
     destroy)
         shift
-        setup_debug "destroy"
+        init_logging "destroy"
         cmd_destroy "$@"
-        finish_debug
+        ;;
+    logs)
+        shift
+        # No logging for the logs command itself
+        cmd_logs "$@"
         ;;
     help|*)
         cmd_usage

@@ -24,7 +24,53 @@ ICON_GEAR="⚙"
 CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
 ARTIFACTS_DIR="$CONFIG_DIR/artifacts"
-VERSION="0.4.22"
+LOGS_DIR="$CONFIG_DIR/logs"
+VERSION="0.4.23"
+
+# Execution Globals
+EXEC_HASH=""
+EXEC_LOG_FILE=""
+EXEC_CMD=""
+EXEC_STATUS="UNKNOWN"
+
+init_logging() {
+    local cmd_name="$1"
+    EXEC_CMD="$cmd_name"
+    
+    # Generate random 6-char hash
+    EXEC_HASH=$(cat /dev/urandom | tr -dc 'A-Z0-9' | fold -w 6 | head -n 1)
+    
+    # Setup Log Dir
+    local cmd_log_dir="$LOGS_DIR/$cmd_name"
+    [ -d "$cmd_log_dir" ] || mkdir -p "$cmd_log_dir"
+
+    # Define Log File: YYYYMMDD-HHMMSS-HASH.log
+    local timestamp=$(date +'%Y%m%d-%H%M%S')
+    EXEC_LOG_FILE="$cmd_log_dir/${timestamp}-${EXEC_HASH}.log"
+
+    # Global Debug Output override
+    DEBUG_OUT="$EXEC_LOG_FILE"
+    
+    # Init Log Header
+    {
+        echo "--- KCS EXECUTION LOG ---"
+        echo "Date: $(date)"
+        echo "Command: $cmd_name"
+        echo "Hash: $EXEC_HASH"
+        echo "Version: $VERSION"
+        echo "-------------------------"
+    } > "$EXEC_LOG_FILE"
+}
+
+save_log_status() {
+    local status="$1" # SUCCESS or FAIL
+    echo "--- EXECUTION FINISHED: $status ---" >> "$EXEC_LOG_FILE"
+    # Rename file to include status for easy listing? 
+    # Or just grep it. Grep is safer against partial writes.
+    # Let's verify requirement: "list should bring information if ended up successful or not"
+    # We can parse the last line.
+}
+
 
 # Labelling Constants
 POC_LABEL_KEY="provisioned-by"
@@ -96,14 +142,18 @@ load_locale
 
 ui_banner() {
     clear
-    echo -e "${CYAN}${BOLD}"
-    echo "  _  __ _____ ____  ____   ___   _____"
-    echo " | |/ // ____/ ___||  _ \ / _ \ / ____|"
-    echo " | ' /| |    \___ \| |_) | | | | |     "
-    echo " |  < | |     ___) |  __/| |_| | |     "
-    echo " |_|\_\\_____|____/|_|    \___/ \_____|"
+    echo -e "${GREEN}${BOLD}"
+    echo "  _   __  ________  ____  ____  ____  "
+    echo " | | / / / ___/ _ \/ __ \/ __ \/ __ \ "
+    echo " | |/ / / /__/  __/ /_/ / /_/ / /_/ / "
+    echo " |___/  \___/\___/ .___/\____/\____/  "
+    echo "                /_/                   "
     echo -e "${NC}"
-    echo -e "${DIM}  Kaspersky Container Security - Proof of Concept Tool${NC}"
+    echo -e "   Kaspersky Container Security PoC Tool - v${VERSION}"
+    if [ -n "$EXEC_HASH" ]; then
+        echo -e "   ${DIM}Execution ID: ${BOLD}${EXEC_HASH}${NC}"
+    fi
+    echo ""
     echo -e "${BLUE}  ====================================================${NC}"
     echo -e "${DIM}  Version: ${VERSION}${NC}"
     echo -e "${DIM}  ${MSG_AUTHOR}: Artur Scheiner${NC}"
@@ -164,18 +214,34 @@ ui_input() {
 _SPINNER_PID=0
 
 # Ensure spinner is killed on script exit
+# Ensure spinner is killed on script exit
 _ui_spinner_cleanup() {
     local exit_code=$?
+    
+    # 1. Spinner Cleanup
     if [ "$_SPINNER_PID" -ne 0 ]; then
         kill "$_SPINNER_PID" &>/dev/null || true
         wait "$_SPINNER_PID" &>/dev/null || true
         _SPINNER_PID=0
         tput cnorm 2>/dev/null || true
         echo ""
-        # If we are cleaning up deeply (on crash), show fail
+        # If we are cleaning up deeply (on crash), show fail in UI
         if [ $exit_code -ne 0 ]; then
              echo -e "[ ${RED}${ICON_FAIL}${NC} ] (Script Interrupted)"
         fi
+    fi
+
+    # 2. Log Finalization (If logging was active)
+    if [ -n "$EXEC_LOG_FILE" ]; then
+        local status="SUCCESS"
+        if [ $exit_code -ne 0 ]; then
+            status="FAIL"
+        fi
+        
+        save_log_status "$status"
+        
+        echo -e "\n${DIM}${ICON_INFO} Log saved (Hash: ${BOLD}$EXEC_HASH${DIM}). View with:${NC}"
+        echo -e "${DIM}   ./kcspoc logs --show $EXEC_HASH${NC}\n"
     fi
 }
 trap _ui_spinner_cleanup EXIT
