@@ -66,30 +66,40 @@ cmd_usage() {
 # Global Debug is now ALWAYS ON by default (handled by init_logging)
 KCS_DEBUG=true
 
+# Helper to check if help is requested (to avoid creating log files)
+cmd_needs_logging() {
+    for arg in "$@"; do
+        if [[ "$arg" == "help" ]] || [[ "$arg" == "--help" ]] || [[ "$arg" == "-h" ]]; then
+            return 1
+        fi
+    done
+    return 0
+}
+
 case "$1" in
     config)
         shift
-        init_logging "config"
+        cmd_needs_logging "$@" && init_logging "config"
         cmd_config "$@"
         ;;
     pull)
         shift
-        init_logging "pull"
+        cmd_needs_logging "$@" && init_logging "pull"
         cmd_pull "$@"
         ;;
     check)
         shift
-        init_logging "check"
+        cmd_needs_logging "$@" && init_logging "check"
         cmd_check "$@"
         ;;
     prepare)
         shift
-        init_logging "prepare"
+        cmd_needs_logging "$@" && init_logging "prepare"
         cmd_prepare "$@"
         ;;
     destroy)
         shift
-        init_logging "destroy"
+        cmd_needs_logging "$@" && init_logging "destroy"
         cmd_destroy "$@"
         ;;
     logs)
