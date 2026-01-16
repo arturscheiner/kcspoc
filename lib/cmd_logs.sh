@@ -22,15 +22,32 @@ cmd_logs() {
                 TARGET="$2"
                 shift 2
                 ;;
+            --cleanup)
+                ACTION="cleanup"
+                shift 1
+                ;;
             *)
                 echo "Unknown option: $1"
-                echo "Usage: kcspoc logs --list [command] | --show [hash]"
+                echo "Usage: kcspoc logs --list [command] | --show [hash] | --cleanup"
                 return 1
                 ;;
         esac
     done
 
     ui_banner
+
+    if [ "$ACTION" == "cleanup" ]; then
+        ui_spinner_start "Cleaning all log files"
+        if [ -d "$LOGS_DIR" ]; then
+            rm -rf "${LOGS_DIR:?}"/* &>> "$DEBUG_OUT"
+            ui_spinner_stop "PASS"
+            echo -e "      ${GREEN}${ICON_OK} All logs have been cleared.${NC}"
+        else
+            ui_spinner_stop "PASS"
+            echo -e "      ${DIM}No logs found to clean.${NC}"
+        fi
+        return 0
+    fi
 
     if [ "$ACTION" == "list" ]; then
         local search_pattern=""
