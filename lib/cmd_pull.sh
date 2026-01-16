@@ -5,9 +5,11 @@ cmd_pull() {
     
     # Args Parsing
     local FORCE_VERSION=""
+    local LIST_LOCAL=""
     while [[ "$#" -gt 0 ]]; do
         case $1 in
             --version) FORCE_VERSION="$2"; shift ;;
+            --local) LIST_LOCAL="true" ;;
             --help|help)
                 ui_help "pull" "$MSG_HELP_PULL_DESC" "$MSG_HELP_PULL_OPTS" "$MSG_HELP_PULL_EX"
                 return 0
@@ -27,6 +29,32 @@ cmd_pull() {
     fi
     
     ui_section "$MSG_PULL_TITLE"
+
+    # Handle --local early
+    if [ "$LIST_LOCAL" == "true" ]; then
+        echo -e "   ${BOLD}${MSG_PULL_LOCAL_TITLE}${NC}"
+        echo -e "   ${DIM}------------------------------------------------------${NC}"
+        
+        local kcs_artifact_base="$ARTIFACTS_DIR/kcs"
+        if [ -d "$kcs_artifact_base" ]; then
+            # Sort version numbers naturally
+            local versions=$(ls -F "$kcs_artifact_base" | grep "/" | sed 's|/||g' | sort -V)
+            
+            if [ -n "$versions" ]; then
+                printf "   %-15s | %-40s\n" "${BOLD}$MSG_PULL_TABLE_VER${NC}" "${BOLD}$MSG_PULL_TABLE_PATH${NC}"
+                echo -e "   ----------------|-------------------------------------"
+                for ver in $versions; do
+                    printf "   %-15s | %-40s\n" "$ver" "$kcs_artifact_base/$ver"
+                done
+            else
+                echo -e "   ${YELLOW}${ICON_INFO} ${MSG_PULL_LOCAL_EMPTY}${NC}"
+            fi
+        else
+            echo -e "   ${YELLOW}${ICON_INFO} ${MSG_PULL_LOCAL_EMPTY}${NC}"
+        fi
+        echo ""
+        return 0
+    fi
 
     # 1. Registry Login
     ui_spinner_start "${MSG_PULL_AUTH}"
