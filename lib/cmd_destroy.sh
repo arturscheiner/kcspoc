@@ -77,6 +77,7 @@ cmd_destroy() {
     if kubectl get namespace "$TARGET_NS" &>> "$DEBUG_OUT"; then
         ui_spinner_start "[2/5] $MSG_DESTROY_STEP_2"
         kubectl delete namespace "$TARGET_NS" --timeout=60s &>> "$DEBUG_OUT"
+        wait_and_force_delete_ns "$TARGET_NS" 5
         ui_spinner_stop "PASS"
     else
         echo -e "   ${BLUE}${ICON_INFO} [2/5] $TARGET_NS: $MSG_DESTROY_NOT_FOUND${NC}"
@@ -137,18 +138,21 @@ cmd_destroy() {
          ui_spinner_start "$MSG_DESTROY_DEPS_INGRESS"
          helm uninstall ingress-nginx -n ingress-nginx &>> "$DEBUG_OUT" || true
          kubectl delete namespace ingress-nginx --wait=false &>> "$DEBUG_OUT" || true
+         wait_and_force_delete_ns "ingress-nginx" 3
          ui_spinner_stop "PASS"
  
          # MetalLB
          ui_spinner_start "$MSG_DESTROY_DEPS_METALLB"
          helm uninstall metallb -n metallb-system &>> "$DEBUG_OUT" || true
          kubectl delete namespace metallb-system --wait=false &>> "$DEBUG_OUT" || true
+         wait_and_force_delete_ns "metallb-system" 3
          ui_spinner_stop "PASS"
          
          # Cert-Manager
          ui_spinner_start "$MSG_DESTROY_DEPS_CERT"
          helm uninstall cert-manager -n cert-manager &>> "$DEBUG_OUT" || true
          kubectl delete namespace cert-manager --wait=false &>> "$DEBUG_OUT" || true
+         wait_and_force_delete_ns "cert-manager" 3
          ui_spinner_stop "PASS"
          
          # Storage & Metrics

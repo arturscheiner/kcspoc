@@ -72,6 +72,7 @@ cmd_prepare() {
     # 1. Namespace
     if confirm_step "Namespace" "$MSG_PREPARE_STEP_1_A" "Setup of $NAMESPACE." "$UNATTENDED" "Create Namespace $NAMESPACE? [y/N] "; then
         ui_spinner_start "$MSG_PREPARE_STEP_1_A"
+        force_delete_ns "$NAMESPACE"
         kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
         kubectl label namespace "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT"
         ui_spinner_stop "PASS"

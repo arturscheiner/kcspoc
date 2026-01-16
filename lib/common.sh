@@ -25,7 +25,7 @@ CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
 ARTIFACTS_DIR="$CONFIG_DIR/artifacts"
 LOGS_DIR="$CONFIG_DIR/logs"
-VERSION="0.4.24"
+VERSION="0.4.25"
 
 # Execution Globals
 EXEC_HASH=""
@@ -337,6 +337,34 @@ download_artifact() {
     else
         echo -e "      ${DIM}${ICON_INFO} Using cached artifact: $name${NC}"
     fi
+}
+
+force_delete_ns() {
+    local ns="$1"
+    local status=$(kubectl get namespace "$ns" -o jsonpath='{.status.phase}' 2>/dev/null || echo "NotFound")
+    
+    if [ "$status" == "Terminating" ]; then
+        echo -e "[ $(date) ] Forcing deletion of namespace: $ns" >> "$DEBUG_OUT"
+        kubectl get namespace "$ns" -o json 2>>"$DEBUG_OUT" | jq 'del(.spec.finalizers)' 2>>"$DEBUG_OUT" | kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f - &>> "$DEBUG_OUT"
+        sleep 2
+    fi
+}
+
+wait_and_force_delete_ns() {
+    local ns="$1"
+    local timeout=${2:-5}
+    
+    # Wait up to 'timeout' seconds for normal deletion
+    for i in $(seq 1 $timeout); do
+        local status=$(kubectl get namespace "$ns" -o jsonpath='{.status.phase}' 2>/dev/null || echo "NotFound")
+        if [ "$status" == "NotFound" ]; then
+            return 0
+        fi
+        sleep 1
+    done
+    
+    # If still there (likely Terminating), force it
+    force_delete_ns "$ns"
 }
 
 load_config() {

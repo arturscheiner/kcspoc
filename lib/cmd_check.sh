@@ -35,7 +35,7 @@ cmd_check() {
     # Tools check
     ui_spinner_start "$MSG_CHECK_TOOLS"
     MISSING_TOOLS=""
-    for tool in kubectl helm; do
+    for tool in kubectl helm jq; do
         if ! command -v $tool &>> "$DEBUG_OUT"; then
             MISSING_TOOLS="$MISSING_TOOLS $tool"
         fi
@@ -111,6 +111,7 @@ cmd_check() {
     fi
  
     # Create dedicated namespace for kcspoc check operations (isolation)
+    force_delete_ns "$DEEP_NS"
     kubectl create namespace "$DEEP_NS" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
 
     # --- [3] Cluster Topology ---
@@ -494,6 +495,7 @@ EOF
     # Final Cleanup of isolated namespace
     echo -ne "   ${ICON_GEAR} Cleaning residue... "
     kubectl delete namespace "$DEEP_NS" --wait=false &>> "$DEBUG_OUT"
+    wait_and_force_delete_ns "$DEEP_NS" 3
     echo -e "${DIM}Done${NC}"
 
     if [ $ERROR -eq 0 ]; then
