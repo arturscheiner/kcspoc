@@ -33,6 +33,9 @@ cmd_pull() {
     # Handle --local early
     if [ "$LIST_LOCAL" == "true" ]; then
         echo -e "   ${BOLD}${MSG_PULL_LOCAL_TITLE}${NC}"
+        echo -e "   ${DIM}------------------------------------------------------${NC}"
+        
+        local kcs_artifact_base="$ARTIFACTS_DIR/kcs"
         if [ -d "$kcs_artifact_base" ]; then
             # Sort version numbers naturally
             local versions=$(ls -F "$kcs_artifact_base" | grep "/" | sed 's|/||g' | sort -V)
