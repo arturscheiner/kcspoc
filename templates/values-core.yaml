@@ -42,6 +42,11 @@ default:
   updates:
     enabled: true
 
+issuer:
+  create: true
+  name: kcs-issuer
+  kind: Issuer
+  
 # ---------------- #
 #   Configuracoes  #
 # ---------------- #
