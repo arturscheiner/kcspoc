@@ -10,7 +10,6 @@ commonLabels:
 default:
   platform: kubernetes
   domain: "$DOMAIN_CONFIGURED"
-  registryRoot: "$REGISTRY_SERVER_CONFIG"
   serviceAccount: kcs
 
   ingress:
@@ -160,7 +159,6 @@ component:
   kcs-updates:
     container:
       kcs-updates:
-        imageTag: v"${KCS_VERSION}"
         resources:
           requests:
             cpu: "100m"
