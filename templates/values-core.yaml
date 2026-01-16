@@ -1,0 +1,170 @@
+################################################################################################
+###                          VALUES CONSOLIDADO PARA UPGRADE v2.1.1                          ###
+###             MESCLA: CONFIGURACOES LAB + ESTRUTURA KCS v2.1.1 + METADADOS                 ###
+################################################################################################
+
+# Rótulo global para rastreio de todos os recursos criados pelo Helm
+commonLabels:
+  provisioned-by: "kcspoc"
+
+default:
+  platform: kubernetes
+  domain: "$DOMAIN_CONFIGURED"
+  registryRoot: "$REGISTRY_SERVER_CONFIG"
+  serviceAccount: kcs
+
+  ingress:
+    create: true
+    class: "nginx"
+
+  networkPolicies:
+    create: true
+    ingressControllerNamespaces:
+      - ingress-nginx
+
+  certSource: helm
+
+  ## RECURSOS OTIMIZADOS PARA LAB / POC REDUZIDA
+  postgresql:
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "512Mi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+
+  kcs-ih:
+    replicaCount: 1
+
+  updates:
+    enabled: true
+
+# ---------------- #
+#   Configuracoes  #
+# ---------------- #
+
+console:
+  adminUser:
+    email: "admin"
+    password: "Ka5per5Ky!"
+
+# ---------------- #
+#   Pull Secrets   #
+# ---------------- #
+
+pullSecret:
+  kcs-pullsecret:
+    registry: "$REGISTRY_SERVER_CONFIG"
+    username: "$REGISTRY_USER_CONFIG"
+    password: "$REGISTRY_PASS_CONFIG"
+    email: "$REGISTRY_EMAIL_CONFIG"
+
+# ------------- #
+#   Ingresses   #
+# ------------- #
+
+ingress:
+  kcs:
+    domain: "$DOMAIN_CONFIGURED"
+    externalTrafficType: https
+    secret: cert-ingress
+    ingressClass: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: 1500m
+
+# ---------------------- #
+#   Persistent Volumes   #
+# ---------------------- #
+
+persistentVolume:
+  postgresql:
+    size: 20Gi
+  pvc-minio:
+    size: 2Gi
+  pvc-clickhouse-cold:
+    size: 40Gi
+  pvc-clickhouse-hot:
+    size: 20Gi
+
+# -------------- #
+#   ConfigMaps   #
+# -------------- #
+
+configmap:
+  infraconfig:
+    type: fromEnvs
+    envs:
+      TLS_INTERNAL: true
+      TLS_INGRESS: false
+      POSTGRES_HOST: kcs-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB_NAME: api
+      POSTGRES_VERIFY_LEVEL: verify-full
+
+# ----------- #
+#   Secrets   #
+# ----------- #
+
+secret:
+  infracreds:
+    type: fromEnvs
+    envs:
+      POSTGRES_USER: pguser
+      POSTGRES_PASSWORD: "Ka5per5Ky!"
+      MINIO_ROOT_USER: "miniouser"
+      MINIO_ROOT_PASSWORD: "Ka5per5Ky!"
+      CLICKHOUSE_ADMIN_PASSWORD: "Ka5per5Ky!"
+      CLICKHOUSE_WRITE_PASSWORD: "Ka5per5Ky!"
+      CLICKHOUSE_READ_PASSWORD: "Ka5per5Ky!"
+      MCHD_USER: "mchduser"
+      MCHD_PASS: "Ka5per5Ky!"
+      APP_SECRET: "Ka5per5Ky!"
+
+# ---------------- #
+#    COMPONENTS    #
+# ---------------- #
+
+component:
+  kcs-clickhouse:
+    resources:
+      requests:
+        cpu: 200m
+        memory: 1Gi
+      limits:
+        cpu: "1"
+        memory: "2Gi"
+
+  kcs-ih:
+    container:
+      kcs-ih:
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "100m"
+          limits:
+            memory: "2Gi"
+            cpu: "1"
+
+  kcs-scanner:
+    container:
+      kcs-scanner:
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+
+  kcs-updates:
+    container:
+      kcs-updates:
+        imageTag: v"${KCS_VERSION}"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"

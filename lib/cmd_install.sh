@@ -80,39 +80,41 @@ cmd_install() {
             local BASE_VALUES="$CHART_PATH/values.yaml"
 
             if [ "$INSTALL_ERROR" -eq 0 ]; then
+                # 1.3.1 Process Dynamic Overrides
+                local DYNAMIC_TEMPLATE="$SCRIPT_DIR/templates/values-core.yaml"
+                local PROCESSED_VALUES="$CONFIG_DIR/processed-values.yaml"
+                
+                if [ -f "$DYNAMIC_TEMPLATE" ]; then
+                    cp "$DYNAMIC_TEMPLATE" "$PROCESSED_VALUES"
+                    sed -i "s|\$DOMAIN_CONFIGURED|$DOMAIN|g" "$PROCESSED_VALUES"
+                    sed -i "s|\$REGISTRY_SERVER_CONFIG|$REGISTRY_SERVER|g" "$PROCESSED_VALUES"
+                    sed -i "s|\$REGISTRY_USER_CONFIG|$REGISTRY_USER|g" "$PROCESSED_VALUES"
+                    sed -i "s|\$REGISTRY_PASS_CONFIG|$REGISTRY_PASS|g" "$PROCESSED_VALUES"
+                    sed -i "s|\$REGISTRY_EMAIL_CONFIG|$REGISTRY_EMAIL|g" "$PROCESSED_VALUES"
+                    sed -i "s|\${KCS_VERSION}|$TARGET_VER|g" "$PROCESSED_VALUES"
+                else
+                    # Fallback or error if template missing
+                    touch "$PROCESSED_VALUES"
+                fi
+
                 local HELM_CMD=""
                 
                 # Check if we have the extracted artifact folder
                 if [ -d "$CHART_PATH" ] && [ -f "$BASE_VALUES" ]; then
-                    # Use extracted chart and its values.yaml as base
+                    # Use extracted chart, base values and our processed dynamic overrides
                     HELM_CMD="helm upgrade --install kcs \"$CHART_PATH\" \
                       -n \"$NAMESPACE\" \
                       -f \"$BASE_VALUES\" \
-                      --set default.domain=\"$DOMAIN\" \
-                      --set default.networkPolicies.ingressControllerNamespaces=\"{ingress-nginx}\" \
-                      --set pullSecret.kcs-pullsecret.username=\"$REGISTRY_USER\" \
-                      --set-string pullSecret.kcs-pullsecret.password=\"$REGISTRY_PASS\" \
-                      --set secret.infracreds.envs.POSTGRES_USER=\"root\" \
-                      --set-string secret.infracreds.envs.POSTGRES_PASSWORD=\"kcsPoC2024!\" \
-                      --set secret.infracreds.envs.MINIO_ROOT_USER=\"admin\" \
-                      --set-string secret.infracreds.envs.MINIO_ROOT_PASSWORD=\"kcsPoC2024!\" \
-                      --set-string secret.infracreds.envs.CLICKHOUSE_ADMIN_PASSWORD=\"kcsPoC2024!\" \
-                      --set secret.infracreds.envs.MCHD_USER=\"admin\" \
-                      --set-string secret.infracreds.envs.MCHD_PASS=\"kcsPoC2024!\" \
-                      --set-string secret.infracreds.envs.APP_SECRET=\"kcsPoC2024!\" \
-                      --set commonLabels.provisioned-by=kcspoc --wait --timeout 600s"
+                      -f \"$PROCESSED_VALUES\" \
+                      --wait --timeout 600s"
                 else
-                    # Fallback to OCI if no local artifact found for this version
+                    # Fallback to OCI
                     echo -e "      ${YELLOW}${ICON_INFO} Local artifact not found for $TARGET_VER. Falling back to OCI...${NC}" >> "$DEBUG_OUT"
                     HELM_CMD="helm upgrade --install kcs oci://$REGISTRY_SERVER/charts/kcs \
                       --version $TARGET_VER \
                       -n \"$NAMESPACE\" \
-                      --set default.domain=\"$DOMAIN\" \
-                      --set default.networkPolicies.ingressControllerNamespaces=\"{ingress-nginx}\" \
-                      --set pullSecret.kcs-pullsecret.username=\"$REGISTRY_USER\" \
-                      --set-string pullSecret.kcs-pullsecret.password=\"$REGISTRY_PASS\" \
-                      --set-string secret.infracreds.envs.APP_SECRET=\"kcsPoC2024!\" \
-                      --set commonLabels.provisioned-by=kcspoc --wait --timeout 600s"
+                      -f \"$PROCESSED_VALUES\" \
+                      --wait --timeout 600s"
                 fi
 
                 if eval "$HELM_CMD" &>> "$DEBUG_OUT"; then
@@ -133,6 +135,9 @@ cmd_install() {
     fi
 
     echo ""
+    # Clean up temporary processed values
+    [ -f "$CONFIG_DIR/processed-values.yaml" ] && rm "$CONFIG_DIR/processed-values.yaml"
+
     if [ "$INSTALL_ERROR" -eq 0 ]; then
         echo -e "${GREEN}${BOLD}${ICON_OK} $MSG_INSTALL_SUCCESS${NC}"
     else
