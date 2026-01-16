@@ -229,12 +229,6 @@ MSG_DESTROY_NOT_FOUND="Not Found (Skipped)"
 MSG_DESTROY_SUCCESS="KCS has been completely removed from the cluster."
 MSG_DESTROY_HINT="Dependencies (MetalLB, Cert-Manager) were preserved."
 
-# --- Install Command ---
-MSG_INSTALL_TITLE="Install Kaspersky Container Security"
-MSG_INSTALL_CORE_STEP="Install KCS Core components"
-MSG_INSTALL_AGENTS_STEP="Install KCS Discovery & Runtime Agents"
-MSG_INSTALL_VALUES_NOT_FOUND="Error: values-final-211.yaml not found in current directory or ~/.kcspoc"
-
 # --- Deploy Command ---
 MSG_DEPLOY_TITLE="Deployment of Kaspersky Container Security"
 MSG_DEPLOY_CORE="KCS Core"

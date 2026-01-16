@@ -28,7 +28,7 @@ cmd_deploy() {
 
     # Default to help if no options provided
     if [ -z "$INSTALL_CORE" ] && [ -z "$INSTALL_AGENTS" ]; then
-        ui_help "install" "$MSG_HELP_INSTALL_DESC" "$MSG_HELP_INSTALL_OPTS" "$MSG_HELP_INSTALL_EX"
+        ui_help "deploy" "$MSG_HELP_DEPLOY_DESC" "$MSG_HELP_DEPLOY_OPTS" "$MSG_HELP_DEPLOY_EX"
         return 1
     fi
 
@@ -39,7 +39,7 @@ cmd_deploy() {
 
     # --- 1. CORE INSTALLATION ---
     if [ "$INSTALL_CORE" == "true" ]; then
-        ui_section "$MSG_DEPLOY_TITLE"_STEP"
+        ui_section "$MSG_DEPLOY_CORE"
         
         # 1.1 Namespace Setup
         ui_spinner_start "$MSG_PREPARE_STEP_1_A"
@@ -129,7 +129,7 @@ cmd_deploy() {
 
     # --- 2. AGENTS INSTALLATION (Placeholder) ---
     if [ "$INSTALL_AGENTS" == "true" ]; then
-        ui_section "$MSG_INSTALL_AGENTS_STEP"
+        ui_section "$MSG_DEPLOY_AGENTS"
         echo -e "   ${YELLOW}${ICON_INFO} Agents deployment logic is being finalized.${NC}"
         echo -e "      ${DIM}Manual deploy: ./kcspoc pull --version X && helm install agents...${NC}"
     fi
@@ -139,8 +139,8 @@ cmd_deploy() {
     [ -f "$CONFIG_DIR/processed-values.yaml" ] && rm "$CONFIG_DIR/processed-values.yaml"
 
     if [ "$INSTALL_ERROR" -eq 0 ]; then
-        echo -e "${GREEN}${BOLD}${ICON_OK} $MSG_INSTALL_SUCCESS${NC}"
-        echo -e "\n  ${BOLD}${MSG_INSTALL_BOOTSTRAP_HINT}${NC}"
+        echo -e "${GREEN}${BOLD}${ICON_OK} $MSG_DEPLOY_SUCCESS${NC}"
+        echo -e "\n  ${BOLD}${MSG_DEPLOY_BOOTSTRAP_HINT}${NC}"
         echo -e "  ${CYAN}kubectl get pods -n $NAMESPACE -w${NC}\n"
     else
         echo -e "${RED}${BOLD}${ICON_FAIL} Installation failed. Check logs with: ./kcspoc logs --show $EXEC_HASH${NC}"
@@ -153,10 +153,10 @@ cmd_deploy() {
 _verify_deploy_bootstrap() {
     local ns="$1"
     
-    echo -e "\n  ${BOLD}${ICON_GEAR} ${MSG_INSTALL_HEALTH_CHECK}${NC}"
+    echo -e "\n  ${BOLD}${ICON_GEAR} ${MSG_DEPLOY_HEALTH_CHECK}${NC}"
     
     # 1. Verify PVCs
-    ui_spinner_start "${MSG_INSTALL_PVC_STATUS}"
+    ui_spinner_start "${MSG_DEPLOY_PVC_STATUS}"
     # Wait a bit for PVCs to settle
     sleep 2
     local pvc_count=$(kubectl get pvc -n "$ns" --no-headers 2>/dev/null | wc -l)
@@ -173,7 +173,7 @@ _verify_deploy_bootstrap() {
     fi
 
     # 2. Verify Labelling
-    ui_spinner_start "${MSG_INSTALL_LABEL_CHECK}"
+    ui_spinner_start "${MSG_DEPLOY_LABEL_CHECK}"
     if kubectl get ns "$ns" -o jsonpath='{.metadata.labels.provisioned-by}' 2>/dev/null | grep -q "kcspoc"; then
         ui_spinner_stop "PASS"
     else
@@ -183,7 +183,7 @@ _verify_deploy_bootstrap() {
     fi
 
     # 3. Monitor Pods (Short loop to detect initial pod creation)
-    ui_spinner_start "${MSG_INSTALL_POD_STATUS}"
+    ui_spinner_start "${MSG_DEPLOY_POD_STATUS}"
     local pods_started=0
     for i in {1..8}; do
         local pods_count=$(kubectl get pods -n "$ns" --no-headers 2>/dev/null | wc -l)
@@ -207,5 +207,5 @@ _verify_deploy_bootstrap() {
         ui_spinner_stop "WARN"
     fi
     
-    echo -e "\n  ${GREEN}${ICON_OK} ${MSG_INSTALL_BOOTSTRAP_OK}${NC}"
+    echo -e "\n  ${GREEN}${ICON_OK} ${MSG_DEPLOY_BOOTSTRAP_OK}${NC}"
 }

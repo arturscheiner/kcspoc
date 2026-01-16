@@ -227,8 +227,7 @@ MSG_DESTROY_NOT_FOUND="Não Encontrado (Pulado)"
 MSG_DESTROY_SUCCESS="O KCS foi completamente removido do cluster."
 MSG_DESTROY_HINT="Dependências (MetalLB, Cert-Manager) foram preservadas."
 
-# --- Install Command ---
-MSG_INSTALL_TITLE="Instalando Kaspersky Container Security"
+# --- Deploy Command ---
 MSG_DEPLOY_TITLE="Implantação do Kaspersky Container Security"
 MSG_DEPLOY_CORE="KCS Core"
 MSG_DEPLOY_AGENTS="KCS Agents"
