@@ -207,8 +207,30 @@ cmd_check() {
         echo -e "      ${YELLOW}$MSG_CHECK_LABEL_WARN: $MSG_CHECK_CNI_WARN${NC}"
     fi
 
-    # --- [4] Cloud Provider & Topology ---
-    ui_section "4. Cloud Provider & Topology"
+    # --- [4] Infrastructure Status ---
+    ui_section "4. $MSG_CHECK_INFRA_TITLE"
+    echo -e "   ${DIM}$MSG_CHECK_INFRA_DESC${NC}\n"
+
+    check_infra_dep() {
+        local label="$1"
+        local cmd="$2"
+        echo -ne "   %-25s " "$label"
+        if eval "$cmd" &>> "$DEBUG_OUT"; then
+            echo -e "[ ${GREEN}${MSG_CHECK_INFRA_INSTALLED}${NC} ]"
+        else
+            echo -e "[ ${YELLOW}${MSG_CHECK_INFRA_MISSING}${NC} ]"
+        fi
+    }
+
+    check_infra_dep "Cert-Manager" "kubectl get ns cert-manager"
+    check_infra_dep "MetalLB" "kubectl get ns metallb-system"
+    check_infra_dep "Ingress-Nginx" "kubectl get ns ingress-nginx"
+    check_infra_dep "Local Path Storage" "kubectl get ns local-path-storage"
+    check_infra_dep "Metrics Server" "kubectl get deployment metrics-server -n kube-system"
+    echo ""
+
+    # --- [5] Cloud Provider & Topology ---
+    ui_section "5. $MSG_CHECK_CLOUD_TITLE"
     
     # Get raw data for the first node
     RAW_CLOUD=$(kubectl get nodes -o jsonpath='{.items[0].spec.providerID}|{.items[0].metadata.labels.topology\.kubernetes\.io/region}|{.items[0].metadata.labels.topology\.kubernetes\.io/zone}|{.items[0].status.nodeInfo.osImage}' 2>/dev/null)
@@ -241,8 +263,8 @@ cmd_check() {
     echo -e "      ${DIM}- ${MSG_CHECK_CLOUD_ZONE}     : ${NC}${ZONE:-N/A}"
     echo -e "      ${DIM}- ${MSG_CHECK_CLOUD_OS} : ${NC}${OS_IMG:-N/A}"
 
-    # --- [5] Node Resources & Health ---
-    ui_section "5. Node Resources & Health"
+    # --- [6] Node Resources & Health ---
+    ui_section "6. $MSG_CHECK_NODE_RES_TITLE"
     
     if [[ "$DEEP_ENABLED" == "true" ]]; then
         ui_spinner_start "${MSG_CHECK_DEEP_RUN}"
@@ -402,8 +424,8 @@ EOF
         printf "   %-25s %-12s %-10s %-10s %-15b %-15b %-15b\n" "$name" "$role" "${cpu_a_c}/${cpu_c_c}" "${ram_a_g}/${ram_c_g}G" "$disk_disp" "$ebpf" "$headers"
     done < "$NODE_DATA_FILE"
 
-    # --- [6] Hardware Compliance Audit (Detailed) ---
-    ui_section "6. $MSG_AUDIT_TITLE"
+    # --- [7] Hardware Compliance Audit (Detailed) ---
+    ui_section "7. $MSG_AUDIT_TITLE"
     
     # Constants (POC Min / Ideal)
     local MIN_CPU=4000      # 4 vCPUs (in millicores)
@@ -467,8 +489,8 @@ EOF
         ERROR=1
     fi
 
-    # --- [7] Connectivity Test ---
-    ui_section "7. Repository Connectivity"
+    # --- [8] Repository Connectivity ---
+    ui_section "8. Repository Connectivity"
     
     ui_spinner_start "$MSG_CHECK_REPO_CONN"
     if kubectl run -i --rm --image=curlimages/curl --restart=Never kcspoc-repo-connectivity-test -n "$DEEP_NS" -- curl -m 5 -I https://repo.kcs.kaspersky.com &>> "$DEBUG_OUT"; then

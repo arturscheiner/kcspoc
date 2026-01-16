@@ -111,6 +111,12 @@ MSG_CHECK_CLOUD_ZONE="Zona"
 MSG_CHECK_CLOUD_OS="Imagem do SO"
 MSG_CHECK_CLOUD_UNKNOWN="Desconhecido / Bare Metal"
 
+# Infrastructure Dependencies
+MSG_CHECK_INFRA_TITLE="Dependências de Infraestrutura"
+MSG_CHECK_INFRA_DESC="Verificando se os componentes necessários para a PoC estão presentes."
+MSG_CHECK_INFRA_INSTALLED="Instalado"
+MSG_CHECK_INFRA_MISSING="Ausente"
+
 # Status Markers
 MSG_CHECK_LABEL_PASS="[ PASS ]"
 MSG_CHECK_LABEL_FAIL="[ FALHA ]"
