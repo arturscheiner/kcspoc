@@ -1,6 +1,23 @@
 #!/bin/bash
 
 cmd_config() {
+    # Args Parsing
+    while [[ "$#" -gt 0 ]]; do
+        case $1 in
+            --help|help)
+                ui_help "config" "$MSG_HELP_CONFIG_DESC" "$MSG_HELP_CONFIG_OPTS" "$MSG_HELP_CONFIG_EX"
+                return 0
+                ;;
+            *)
+                # If we don't expect args, but get some, show help or ignore?
+                # Usually config is just run alone. Let's show help if any unknown arg.
+                ui_help "config" "$MSG_HELP_CONFIG_DESC" "$MSG_HELP_CONFIG_OPTS" "$MSG_HELP_CONFIG_EX"
+                return 1
+                ;;
+        esac
+        shift
+    done
+
     ui_banner
     ui_section "$MSG_CONFIG_WIZARD_TITLE"
     echo -e "$MSG_CONFIG_WIZARD_DESC"

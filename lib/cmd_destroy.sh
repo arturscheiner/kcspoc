@@ -9,8 +9,13 @@ cmd_destroy() {
                 UNATTENDED=true
                 shift
                 ;;
+            --help|help)
+                ui_help "destroy" "$MSG_HELP_DESTROY_DESC" "$MSG_HELP_DESTROY_OPTS" "$MSG_HELP_DESTROY_EX"
+                return 0
+                ;;
             *)
-                shift
+                ui_help "destroy" "$MSG_HELP_DESTROY_DESC" "$MSG_HELP_DESTROY_OPTS" "$MSG_HELP_DESTROY_EX"
+                return 1
                 ;;
         esac
     done

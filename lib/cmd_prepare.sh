@@ -41,8 +41,13 @@ cmd_prepare() {
                 UNATTENDED=true
                 shift
                 ;;
+            --help|help)
+                ui_help "prepare" "$MSG_HELP_PREPARE_DESC" "$MSG_HELP_PREPARE_OPTS" "$MSG_HELP_PREPARE_EX"
+                return 0
+                ;;
             *)
-                shift
+                ui_help "prepare" "$MSG_HELP_PREPARE_DESC" "$MSG_HELP_PREPARE_OPTS" "$MSG_HELP_PREPARE_EX"
+                return 1
                 ;;
         esac
     done

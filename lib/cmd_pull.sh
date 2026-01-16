@@ -8,7 +8,14 @@ cmd_pull() {
     while [[ "$#" -gt 0 ]]; do
         case $1 in
             --version) FORCE_VERSION="$2"; shift ;;
-            *) ;;
+            --help|help)
+                ui_help "pull" "$MSG_HELP_PULL_DESC" "$MSG_HELP_PULL_OPTS" "$MSG_HELP_PULL_EX"
+                return 0
+                ;;
+            *)
+                ui_help "pull" "$MSG_HELP_PULL_DESC" "$MSG_HELP_PULL_OPTS" "$MSG_HELP_PULL_EX"
+                return 1
+                ;;
         esac
         shift
     done

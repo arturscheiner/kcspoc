@@ -33,16 +33,31 @@ source "$LIB_DIR/cmd_logs.sh"
 
 cmd_usage() {
     ui_banner
-    echo -e "${BOLD}${MSG_USAGE}:${NC} $(basename "$0") [command] [options]"
+    echo -e "${BLUE}${BOLD}${MSG_USAGE}:${NC}"
+    echo -e "  kcspoc <command> [options]\n"
+
+    echo -e "${BLUE}${BOLD}${MSG_COMMANDS}:${NC}"
+    printf "  ${CYAN}%-10s${NC} %s\n" "config"  "$MSG_CMD_CONFIG_DESC"
+    printf "  ${CYAN}%-10s${NC} %s\n" "pull"    "$MSG_CMD_PULL_DESC"
+    printf "  ${CYAN}%-10s${NC} %s\n" "check"   "$MSG_CMD_CHECK_DESC"
+    printf "  ${CYAN}%-10s${NC} %s\n" "prepare" "$MSG_CMD_PREPARE_DESC"
+    printf "  ${CYAN}%-10s${NC} %s\n" "destroy" "$MSG_DESTROY_TITLE"
+    printf "  ${CYAN}%-10s${NC} %s\n" "logs"    "Manage logs (--list, --show, --cleanup)"
+    printf "  ${CYAN}%-10s${NC} %s\n" "help"    "$MSG_CMD_HELP_DESC"
     echo ""
-    echo -e "${BOLD}${MSG_COMMANDS}:${NC}"
-    echo -e "  ${GREEN}config${NC}   ${MSG_CMD_CONFIG_DESC}"
-    echo -e "  ${GREEN}pull${NC}     ${MSG_CMD_PULL_DESC}"
-    echo -e "  ${GREEN}check${NC}    ${MSG_CMD_CHECK_DESC}"
-    echo -e "  ${GREEN}prepare${NC}  ${MSG_CMD_PREPARE_DESC}"
-    echo -e "  ${GREEN}destroy${NC}  ${MSG_DESTROY_TITLE}"
-    echo -e "  ${GREEN}logs${NC}     Manage logs (--list, --show, --cleanup)"
-    echo -e "  ${GREEN}help${NC}     ${MSG_CMD_HELP_DESC}"
+
+    echo -e "${BLUE}${BOLD}${MSG_HELP_EXAMPLES}:${NC}"
+    echo -e "  ${DIM}# Start here${NC}"
+    echo -e "  kcspoc config"
+    echo -e "  kcspoc check"
+    echo ""
+    echo -e "  ${DIM}# Installation flow${NC}"
+    echo -e "  kcspoc pull"
+    echo -e "  kcspoc prepare"
+    echo ""
+    echo -e "  ${DIM}# Troubleshooting${NC}"
+    echo -e "  kcspoc logs --list"
+    echo ""
     exit 0
 }
 

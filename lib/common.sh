@@ -25,7 +25,7 @@ CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
 ARTIFACTS_DIR="$CONFIG_DIR/artifacts"
 LOGS_DIR="$CONFIG_DIR/logs"
-VERSION="0.4.26"
+VERSION="0.4.27"
 
 # Execution Globals
 EXEC_HASH=""
@@ -373,5 +373,36 @@ load_config() {
         return 0
     else
         return 1
+    fi
+}
+
+ui_help() {
+    local cmd="$1"
+    local desc="$2"
+    local opts="$3" # format: "opt|desc\nopt|desc"
+    local examples="$4" # format: "ex1\nex2"
+
+    ui_banner
+    
+    echo -e "${BLUE}${BOLD}${MSG_USAGE}:${NC}"
+    echo -e "   kcspoc $cmd [options]\n"
+
+    echo -e "${BLUE}${BOLD}${MSG_HELP_DESCRIPTION}:${NC}"
+    echo -e "   $desc\n"
+
+    if [ -n "$opts" ]; then
+        echo -e "${BLUE}${BOLD}${MSG_HELP_OPTIONS}:${NC}"
+        echo -e "$opts" | while IFS='|' read -r opt odesc; do
+            printf "   ${CYAN}%-18s${NC} %s\n" "$opt" "$odesc"
+        done
+        echo ""
+    fi
+
+    if [ -n "$examples" ]; then
+        echo -e "${BLUE}${BOLD}${MSG_HELP_EXAMPLES}:${NC}"
+        echo -e "$examples" | while read -r line; do
+            echo -e "   ${DIM}$line${NC}"
+        done
+        echo ""
     fi
 }

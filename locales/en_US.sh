@@ -213,3 +213,38 @@ MSG_DESTROY_REMOVED="Removed"
 MSG_DESTROY_NOT_FOUND="Not Found (Skipped)"
 MSG_DESTROY_SUCCESS="KCS has been completely removed from the cluster."
 MSG_DESTROY_HINT="Dependencies (MetalLB, Cert-Manager) were preserved."
+
+# --- Help System ---
+MSG_HELP_DESCRIPTION="Description"
+MSG_HELP_OPTIONS="Options"
+MSG_HELP_EXAMPLES="Examples"
+
+# Config Help
+MSG_HELP_CONFIG_DESC="Starts the interactive configuration wizard to setup or update your ~/.kcspoc/config environment variables."
+MSG_HELP_CONFIG_OPTS=""
+MSG_HELP_CONFIG_EX="kcspoc config"
+
+# Pull Help
+MSG_HELP_PULL_DESC="Downloads the Kaspersky Container Security Helm chart from the official registry. Authenticates using your config credentials."
+MSG_HELP_PULL_OPTS="--version <ver>|Specifically target a chart version (e.g., 2.3.0)"
+MSG_HELP_PULL_EX="kcspoc pull\nkcspoc pull --version 2.2.0"
+
+# Check Help
+MSG_HELP_CHECK_DESC="Performs a comprehensive diagnostic of your Kubernetes cluster, including tool checks, connectivity, and resource compliance auditing."
+MSG_HELP_CHECK_OPTS="--deep|Enable privileged pods to check kernel headers and eBPF readiness."
+MSG_HELP_CHECK_EX="kcspoc check\nkcspoc check --deep"
+
+# Prepare Help
+MSG_HELP_PREPARE_DESC="Orchestrates the installation of infrastructure dependencies (MetalLB, Nginx, Cert-Manager) and local storage to prepare for KCS."
+MSG_HELP_PREPARE_OPTS="--unattended|Install all components without asking for user confirmation."
+MSG_HELP_PREPARE_EX="kcspoc prepare\nkcspoc prepare --unattended"
+
+# Destroy Help
+MSG_HELP_DESTROY_DESC="Safely uninstalls KCS and its associated resources from your cluster. Includes optional cleanup of infrastructure dependencies."
+MSG_HELP_DESTROY_OPTS="--unattended|Bypass confirmation prompts (USE WITH CAUTION)."
+MSG_HELP_DESTROY_EX="kcspoc destroy\nkcspoc destroy --unattended"
+
+# Logs Help
+MSG_HELP_LOGS_DESC="Manage the execution logs of the kcspoc tool. Allows viewing history and deep-diving into specific execution IDs."
+MSG_HELP_LOGS_OPTS="--list [cmd]|Show last 10 logs (optionally filtered by command)\n--show <hash>|View the full debug output for a specific execution ID\n--cleanup|Delete all stored logs from ~/.kcspoc/logs"
+MSG_HELP_LOGS_EX="kcspoc logs --list\nkcspoc logs --list prepare\nkcspoc logs --show A1B2C3\nkcspoc logs --cleanup"

@@ -9,8 +9,13 @@ cmd_check() {
                 DEEP_OVERRIDE="true"
                 shift
                 ;;
+            --help|help)
+                ui_help "check" "$MSG_HELP_CHECK_DESC" "$MSG_HELP_CHECK_OPTS" "$MSG_HELP_CHECK_EX"
+                return 0
+                ;;
             *)
-                shift
+                ui_help "check" "$MSG_HELP_CHECK_DESC" "$MSG_HELP_CHECK_OPTS" "$MSG_HELP_CHECK_EX"
+                return 1
                 ;;
         esac
     done

@@ -26,13 +26,21 @@ cmd_logs() {
                 ACTION="cleanup"
                 shift 1
                 ;;
+            --help|help)
+                ui_help "logs" "$MSG_HELP_LOGS_DESC" "$MSG_HELP_LOGS_OPTS" "$MSG_HELP_LOGS_EX"
+                return 0
+                ;;
             *)
-                echo "Unknown option: $1"
-                echo "Usage: kcspoc logs --list [command] | --show [hash] | --cleanup"
+                ui_help "logs" "$MSG_HELP_LOGS_DESC" "$MSG_HELP_LOGS_OPTS" "$MSG_HELP_LOGS_EX"
                 return 1
                 ;;
         esac
     done
+
+    if [ -z "$ACTION" ]; then
+        ui_help "logs" "$MSG_HELP_LOGS_DESC" "$MSG_HELP_LOGS_OPTS" "$MSG_HELP_LOGS_EX"
+        return 1
+    fi
 
     ui_banner
 
