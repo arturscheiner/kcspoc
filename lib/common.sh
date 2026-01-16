@@ -23,7 +23,8 @@ ICON_GEAR="⚙"
 
 CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
-VERSION="0.4.20"
+ARTIFACTS_DIR="$CONFIG_DIR/artifacts"
+VERSION="0.4.21"
 
 # Labelling Constants
 POC_LABEL_KEY="provisioned-by"
@@ -243,6 +244,32 @@ check_k8s_label() {
     else
         echo -e "[ ${RED}${ICON_FAIL}${NC} ]"
         return 1
+    fi
+}
+
+download_artifact() {
+    local name="$1"
+    local source="$2" # URL or Git Repo
+    local dest_dir="$ARTIFACTS_DIR/$name"
+    local type="file"
+    
+    if [[ "$source" == *.git ]]; then
+        type="git"
+    fi
+
+    [ -d "$ARTIFACTS_DIR" ] || mkdir -p "$ARTIFACTS_DIR"
+
+    if [ ! -d "$dest_dir" ]; then
+        ui_spinner_start "Downloading $name"
+        if [ "$type" == "git" ]; then
+            git clone "$source" "$dest_dir" &>> "$DEBUG_OUT"
+        else
+            mkdir -p "$dest_dir"
+            curl -L "$source" -o "$dest_dir/$(basename "$source")" &>> "$DEBUG_OUT"
+        fi
+        ui_spinner_stop "PASS"
+    else
+        echo -e "      ${DIM}${ICON_INFO} Using cached artifact: $name${NC}"
     fi
 }
 

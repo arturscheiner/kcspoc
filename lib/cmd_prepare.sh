@@ -120,182 +120,31 @@ cmd_prepare() {
 
     # 3. Local Path Storage
     if confirm_step "Local Path Storage" "$MSG_PREPARE_WHY_STORAGE_TITLE" "$MSG_PREPARE_WHY_STORAGE_DESC" "$UNATTENDED"; then
-        ui_spinner_start "$MSG_PREPARE_INSTALL_LOCAL"
+        download_artifact "local-path-provisioner" "https://github.com/rancher/local-path-provisioner.git"
         
-        # Deploy Local Path Provisioner (Embedded v0.0.34)
-        cat << 'EOF' | kubectl apply -f - &>> "$DEBUG_OUT"
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: local-path-storage
-
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: local-path-provisioner-service-account
-  namespace: local-path-storage
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: local-path-provisioner-role
-  namespace: local-path-storage
-rules:
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: local-path-provisioner-role
-rules:
-  - apiGroups: [""]
-    resources: ["nodes", "persistentvolumeclaims", "configmaps", "pods", "pods/log"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["persistentvolumes"]
-    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
-  - apiGroups: [""]
-    resources: ["events"]
-    verbs: ["create", "patch"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["storageclasses"]
-    verbs: ["get", "list", "watch"]
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: local-path-provisioner-bind
-  namespace: local-path-storage
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: local-path-provisioner-role
-subjects:
-  - kind: ServiceAccount
-    name: local-path-provisioner-service-account
-    namespace: local-path-storage
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: local-path-provisioner-bind
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: local-path-provisioner-role
-subjects:
-  - kind: ServiceAccount
-    name: local-path-provisioner-service-account
-    namespace: local-path-storage
-
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: local-path-provisioner
-  namespace: local-path-storage
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: local-path-provisioner
-  template:
-    metadata:
-      labels:
-        app: local-path-provisioner
-    spec:
-      serviceAccountName: local-path-provisioner-service-account
-      containers:
-        - name: local-path-provisioner
-          image: rancher/local-path-provisioner:v0.0.34
-          imagePullPolicy: IfNotPresent
-          command:
-            - local-path-provisioner
-            - --debug
-            - start
-            - --config
-            - /etc/config/config.json
-          volumeMounts:
-            - name: config-volume
-              mountPath: /etc/config/
-          env:
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: CONFIG_MOUNT_PATH
-              value: /etc/config/
-      volumes:
-        - name: config-volume
-          configMap:
-            name: local-path-config
-
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: local-path
-provisioner: rancher.io/local-path
-volumeBindingMode: WaitForFirstConsumer
-reclaimPolicy: Delete
-
----
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: local-path-config
-  namespace: local-path-storage
-data:
-  config.json: |-
-    {
-            "nodePathMap":[
-            {
-                    "node":"DEFAULT_PATH_FOR_NON_LISTED_NODES",
-                    "paths":["/opt/local-path-provisioner"]
-            }
-            ]
-    }
-  setup: |-
-    #!/bin/sh
-    set -eu
-    mkdir -m 0777 -p "$VOL_DIR"
-  teardown: |-
-    #!/bin/sh
-    set -eu
-    rm -rf "$VOL_DIR"
-  helperPod.yaml: |-
-    apiVersion: v1
-    kind: Pod
-    metadata:
-      name: helper-pod
-    spec:
-      priorityClassName: system-node-critical
-      tolerations:
-        - key: node.kubernetes.io/disk-pressure
-          operator: Exists
-          effect: NoSchedule
-      containers:
-      - name: helper-pod
-        image: busybox
-        imagePullPolicy: IfNotPresent
-EOF
-        kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' &>> "$DEBUG_OUT"
-        kubectl label sc local-path $POC_LABEL --overwrite &>> "$DEBUG_OUT"
-        ui_spinner_stop "PASS"
-        check_k8s_label "sc" "local-path"
+        ui_spinner_start "$MSG_PREPARE_INSTALL_LOCAL"
+        local CHART_PATH="$ARTIFACTS_DIR/local-path-provisioner/deploy/chart/local-path-provisioner"
+        
+        if helm upgrade --install local-path-storage "$CHART_PATH" \
+           --namespace local-path-storage --create-namespace &>> "$DEBUG_OUT"; then
+            
+            kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' &>> "$DEBUG_OUT"
+            kubectl label sc local-path $POC_LABEL --overwrite &>> "$DEBUG_OUT"
+            ui_spinner_stop "PASS"
+            check_k8s_label "sc" "local-path"
+        else
+            ui_spinner_stop "FAIL"
+            echo -e "      ${RED}Helm install failed. Check logs.${NC}"
+        fi
     fi
 
     # 4. Metrics Server
     if confirm_step "Metrics Server" "$MSG_PREPARE_WHY_METRICS_TITLE" "$MSG_PREPARE_WHY_METRICS_DESC" "$UNATTENDED"; then
+        local MANIFEST_URL="https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml"
+        download_artifact "metrics-server" "$MANIFEST_URL"
+        
         ui_spinner_start "$MSG_PREPARE_INSTALL_METRICS"
-        kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml &>> "$DEBUG_OUT"
+        kubectl apply -f "$ARTIFACTS_DIR/metrics-server/components.yaml" &>> "$DEBUG_OUT"
         kubectl patch deployment metrics-server -n kube-system --type='json' -p='[
           {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"},
           {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-preferred-address-types=InternalIP"}
