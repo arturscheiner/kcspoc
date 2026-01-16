@@ -23,7 +23,7 @@ ICON_GEAR="⚙"
 
 CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
-VERSION="0.4.18"
+VERSION="0.4.19"
 
 # Labelling Constants
 POC_LABEL_KEY="provisioned-by"
