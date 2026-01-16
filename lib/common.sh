@@ -24,7 +24,7 @@ ICON_GEAR="⚙"
 CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
 ARTIFACTS_DIR="$CONFIG_DIR/artifacts"
-VERSION="0.4.21"
+VERSION="0.4.22"
 
 # Labelling Constants
 POC_LABEL_KEY="provisioned-by"

@@ -22,8 +22,18 @@ cmd_check() {
     
     local ERROR=0
 
+    # Kubeconfig check
+    ui_spinner_start "$MSG_CHECK_KUBECONFIG"
+    if [ ! -f "$HOME/.kube/config" ]; then
+        ui_spinner_stop "FAIL"
+        echo -e "      ${RED}${MSG_CHECK_KUBECONFIG_FAIL}${NC}"
+        ERROR=1
+    else
+        ui_spinner_stop "PASS"
+    fi
+
     # Tools check
-    echo -ne "   ${ICON_GEAR} $MSG_CHECK_TOOLS "
+    ui_spinner_start "$MSG_CHECK_TOOLS"
     MISSING_TOOLS=""
     for tool in kubectl helm; do
         if ! command -v $tool &>> "$DEBUG_OUT"; then
@@ -32,25 +42,25 @@ cmd_check() {
     done
 
     if [ -n "$MISSING_TOOLS" ]; then
-        echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
+        ui_spinner_stop "FAIL"
         echo -e "      ${RED}${MSG_CHECK_TOOLS_FAIL}:$MISSING_TOOLS${NC}"
         ERROR=1
     else
-        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+        ui_spinner_stop "PASS"
     fi
 
     # Config check
-    echo -ne "   ${ICON_GEAR} $MSG_CHECK_CONFIG "
+    ui_spinner_start "$MSG_CHECK_CONFIG"
     if load_config; then
         if [ -z "$NAMESPACE" ] || [ -z "$IP_RANGE" ] || [ -z "$REGISTRY_USER" ]; then
-             echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
+             ui_spinner_stop "FAIL"
              echo -e "      ${YELLOW}$MSG_CHECK_CONFIG_FIX${NC}"
              ERROR=1
         else
-            echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC} ${DIM}(Loaded)${NC}"
+            ui_spinner_stop "PASS"
         fi
     else
-        echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
+        ui_spinner_stop "FAIL"
         echo -e "      ${YELLOW}$MSG_CHECK_CONFIG_CREATE${NC}"
         ERROR=1
     fi
@@ -60,37 +70,50 @@ cmd_check() {
     local TARGET_NS="${NAMESPACE:-default}"
     local DEEP_NS="kcspoc"
 
-    # Create dedicated namespace for kcspoc check operations (isolation)
-    kubectl create namespace "$DEEP_NS" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
-
     # --- [2] Cluster Context ---
     ui_section "2. Cluster Context"
     
-    echo -ne "   ${ICON_INFO} $MSG_CHECK_CONN "
-    if command -v kubectl &> /dev/null; then
-        CURRENT_CTX=$(kubectl config current-context 2>/dev/null || echo "None")
-        echo -e "${BLUE}${CURRENT_CTX}${NC}"
-        echo -e "      ${DIM}$MSG_CHECK_CTX_DESC${NC}"
-    else
-        echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
-        ERROR=1
+    if [ "$ERROR" -eq 1 ]; then
+        echo -e "   ${RED}${ICON_FAIL} Skipping cluster checks due to prerequisite failures.${NC}"
+        return 1
     fi
 
-    echo -ne "   ${ICON_GEAR} $MSG_CHECK_VERIFY_CONN "
-    if kubectl get nodes &>> "$DEBUG_OUT"; then
-        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC}"
+    # Context Check
+    ui_spinner_start "$MSG_CHECK_CTX"
+    if command -v kubectl &> /dev/null; then
+        CURRENT_CTX=$(kubectl config current-context 2>/dev/null || echo "None")
+        ui_spinner_stop "PASS"
+        echo -e "      ${BLUE}${CURRENT_CTX}${NC}"
+        echo -e "      ${DIM}$MSG_CHECK_CTX_DESC${NC}"
     else
-        echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC}"
-        echo -e "      ${RED}${MSG_CHECK_CONN_FAIL}${NC}"
+        ui_spinner_stop "FAIL"
         ERROR=1
         return 1
     fi
+
+    # Connectivity Check
+    ui_spinner_start "Verifying Cluster Connectivity"
+    local CONN_ERR="/tmp/kcspoc_conn_err.tmp"
+    if kubectl get nodes &> "$CONN_ERR"; then
+        ui_spinner_stop "PASS"
+    else
+        ui_spinner_stop "FAIL"
+        echo -e "      ${RED}${BOLD}${MSG_CHECK_CONN_ERR}:${NC}"
+        # Extract the most relevant part of the error
+        local ERR_MSG=$(cat "$CONN_ERR" | tr '\n' ' ' | sed 's/  */ /g')
+        echo -e "      ${RED}${ERR_MSG}${NC}"
+        cat "$CONN_ERR" >> "$DEBUG_OUT"
+        return 1
+    fi
+ 
+    # Create dedicated namespace for kcspoc check operations (isolation)
+    kubectl create namespace "$DEEP_NS" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
 
     # --- [3] Cluster Topology ---
     ui_section "3. Cluster Topology"
     
     # 3.1 Kubernetes Version
-    echo -ne "   ${ICON_GEAR} $MSG_CHECK_K8S_VER "
+    ui_spinner_start "$MSG_CHECK_K8S_VER"
     K8S_VER_STR=$(kubectl version -o json 2>/dev/null | grep gitVersion | grep -v Client | head -n 1 | awk -F'"' '{print $4}')
     if [ -z "$K8S_VER_STR" ]; then
         K8S_VER_STR=$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}')
@@ -98,33 +121,36 @@ cmd_check() {
     VER_CLEAN=$(echo "$K8S_VER_STR" | sed 's/v//')
     MAJOR=$(echo "$VER_CLEAN" | cut -d. -f1)
     MINOR=$(echo "$VER_CLEAN" | cut -d. -f2)
-
+ 
     if [ "$MAJOR" -eq 1 ] && [ "$MINOR" -ge 25 ] && [ "$MINOR" -le 34 ]; then
-         echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC} ${BLUE}${K8S_VER_STR}${NC} ${DIM}(1.25 - 1.34)${NC}"
+         ui_spinner_stop "PASS"
+         echo -e "      ${BLUE}${K8S_VER_STR}${NC} ${DIM}(1.25 - 1.34)${NC}"
     else
-         echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC} ${RED}${K8S_VER_STR}${NC} ${DIM}(Supported: 1.25 - 1.34)${NC}"
+         ui_spinner_stop "FAIL"
+         echo -e "      ${RED}${K8S_VER_STR}${NC} ${DIM}(Supported: 1.25 - 1.34)${NC}"
          ERROR=1
     fi
-
+ 
     # 3.2 Architecture
-    echo -ne "   ${ICON_GEAR} $MSG_CHECK_ARCH "
+    ui_spinner_start "$MSG_CHECK_ARCH"
     ARCH_COUNT=$(kubectl get nodes -o jsonpath='{.items[*].status.nodeInfo.architecture}' | tr ' ' '\n' | sort | uniq -c)
     if echo "$ARCH_COUNT" | grep -q "amd64"; then
-         if [ $(echo "$ARCH_COUNT" | wc -l) -eq 1 ]; then
-             echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC} ${BLUE}amd64${NC}"
-         else
-             echo -e "${YELLOW}$MSG_CHECK_LABEL_WARN${NC} ${YELLOW}$MSG_CHECK_ARCH_MIXED${NC}"
+         ui_spinner_stop "PASS"
+         if [ $(echo "$ARCH_COUNT" | wc -l) -gt 1 ]; then
+             echo -e "      ${YELLOW}$MSG_CHECK_LABEL_WARN: $MSG_CHECK_ARCH_MIXED${NC}"
              echo -e "      ${DIM}$MSG_CHECK_ARCH_WARN${NC}"
          fi
     else
-         echo -e "${RED}$MSG_CHECK_LABEL_FAIL${NC} ${RED}$MSG_CHECK_ARCH_NONE${NC}"
+         ui_spinner_stop "FAIL"
+         echo -e "      ${RED}$MSG_CHECK_ARCH_NONE${NC}"
          ERROR=1
     fi
-
+ 
     # 3.3 Container Runtime
-    echo -ne "   ${ICON_GEAR} $MSG_CHECK_RUNTIME "
+    ui_spinner_start "$MSG_CHECK_RUNTIME"
     RUNTIMES=$(kubectl get nodes -o jsonpath='{.items[*].status.nodeInfo.containerRuntimeVersion}' | tr ' ' '\n' | sort | uniq)
-    echo -e "${BLUE}$RUNTIMES${NC}"
+    ui_spinner_stop "PASS"
+    echo -e "      ${BLUE}$RUNTIMES${NC}"
     
     for rt in $RUNTIMES; do
         RT_NAME=$(echo "$rt" | awk -F'://' '{print $1}')
@@ -135,7 +161,7 @@ cmd_check() {
              local min=$2
              if [ "$(printf '%s\n' "$min" "$ver" | sort -V | head -n1)" = "$min" ]; then echo "ok"; else echo "fail"; fi
         }
-
+ 
         if [[ "$RT_NAME" == "containerd" ]]; then
              if [ "$(check_ver "$RT_VER" "1.6")" == "ok" ]; then
                  echo -e "      - containerd $RT_VER ${GREEN}(OK - 1.6+)${NC}"
@@ -158,15 +184,17 @@ cmd_check() {
     done
     
     # 3.4 CNI Plugin
-    echo -ne "   ${ICON_GEAR} $MSG_CHECK_CNI "
+    ui_spinner_start "$MSG_CHECK_CNI"
     CNI_PODS=$(kubectl get pods -A --no-headers | grep -E "calico|flannel|cilium|weave|antrea|kube-proxy" | grep "Running" || true)
     
     if [ -n "$CNI_PODS" ]; then
         CNI_NAMES=$(echo "$CNI_PODS" | awk '{print $2}' | grep -oE "calico|flannel|cilium|weave|antrea" | sort | uniq | tr '\n' ' ')
         if [ -z "$CNI_NAMES" ]; then CNI_NAMES="kube-proxy (Standard)"; fi
-        echo -e "${GREEN}$MSG_CHECK_LABEL_PASS${NC} ${DIM}($CNI_NAMES)${NC}"
+        ui_spinner_stop "PASS"
+        echo -e "      ${DIM}($CNI_NAMES)${NC}"
     else
-        echo -e "${YELLOW}$MSG_CHECK_LABEL_WARN${NC} ${DIM}$MSG_CHECK_CNI_WARN${NC}"
+        ui_spinner_stop "PASS"
+        echo -e "      ${YELLOW}$MSG_CHECK_LABEL_WARN: $MSG_CHECK_CNI_WARN${NC}"
     fi
 
     # --- [4] Cloud Provider & Topology ---
