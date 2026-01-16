@@ -143,11 +143,11 @@ load_locale
 ui_banner() {
     clear
     echo -e "${GREEN}${BOLD}"
-    echo "  _   __  ________  ____  ____  ____  "
-    echo " | | / / / ___/ _ \/ __ \/ __ \/ __ \ "
-    echo " | |/ / / /__/  __/ /_/ / /_/ / /_/ / "
-    echo " |___/  \___/\___/ .___/\____/\____/  "
-    echo "                /_/                   "
+    echo "  _  __ _____ ____  ____   ___   ____ "
+    echo " | |/ // ____/ ___||  _ \ / _ \ / ___|"
+    echo " | ' /| |    \___ \| |_) | | | | |    "
+    echo " |  < | |___  ___) |  __/| |_| | |___ "
+    echo " |_|\_\\____/|____/|_|    \___/ \____|"
     echo -e "${NC}"
     echo -e "   Kaspersky Container Security PoC Tool - v${VERSION}"
     if [ -n "$EXEC_HASH" ]; then
