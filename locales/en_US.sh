@@ -8,6 +8,7 @@ MSG_CMD_CONFIG_DESC="Run interactive configuration wizard"
 MSG_CMD_PULL_DESC="Download KCS chart (usage: pull [--version X.X.X])"
 MSG_CMD_CHECK_DESC="Verify environment and prerequisites"
 MSG_CMD_PREPARE_DESC="Run the installation preparation (requires config)"
+MSG_CMD_INSTALL_DESC="Install Kaspersky Container Security components"
 MSG_CMD_HELP_DESC="Show this help message"
 MSG_VERSION="Version"
 MSG_AUTHOR="Author"
@@ -220,6 +221,13 @@ MSG_DESTROY_NOT_FOUND="Not Found (Skipped)"
 MSG_DESTROY_SUCCESS="KCS has been completely removed from the cluster."
 MSG_DESTROY_HINT="Dependencies (MetalLB, Cert-Manager) were preserved."
 
+# --- Install Command ---
+MSG_INSTALL_TITLE="Installing Kaspersky Container Security"
+MSG_INSTALL_CORE_STEP="Installing KCS Core components"
+MSG_INSTALL_AGENTS_STEP="Installing KCS Discovery & Runtime Agents"
+MSG_INSTALL_VALUES_NOT_FOUND="Error: values-final-211.yaml not found in current directory or ~/.kcspoc"
+MSG_INSTALL_SUCCESS="KCS has been installed and labelled successfully."
+
 # --- Help System ---
 MSG_HELP_DESCRIPTION="Description"
 MSG_HELP_OPTIONS="Options"
@@ -254,3 +262,8 @@ MSG_HELP_DESTROY_EX="kcspoc destroy\nkcspoc destroy --unattended"
 MSG_HELP_LOGS_DESC="Manage the execution logs of the kcspoc tool. Allows viewing history and deep-diving into specific execution IDs."
 MSG_HELP_LOGS_OPTS="--list [cmd]|Show last 10 logs (optionally filtered by command)\n--show <hash>|View the full debug output for a specific execution ID\n--cleanup|Delete all stored logs from ~/.kcspoc/logs"
 MSG_HELP_LOGS_EX="kcspoc logs --list\nkcspoc logs --list prepare\nkcspoc logs --show A1B2C3\nkcspoc logs --cleanup"
+
+# Install Help
+MSG_HELP_INSTALL_DESC="Installs Kaspersky Container Security components using Helm. Requires prior 'config' and 'pull'."
+MSG_HELP_INSTALL_OPTS="--core|Install the KCS Core (Backend, Console, Databases)\n--agents|Install the Discovery and Runtime Protection agents"
+MSG_HELP_INSTALL_EX="kcspoc install --core\nkcspoc install --agents"

@@ -28,6 +28,7 @@ source "$LIB_DIR/cmd_config.sh"
 source "$LIB_DIR/cmd_pull.sh"
 source "$LIB_DIR/cmd_check.sh"
 source "$LIB_DIR/cmd_prepare.sh"
+source "$LIB_DIR/cmd_install.sh"
 source "$LIB_DIR/cmd_destroy.sh"
 source "$LIB_DIR/cmd_logs.sh"
 
@@ -41,6 +42,7 @@ cmd_usage() {
     printf "  ${CYAN}%-10s${NC} %s\n" "pull"    "$MSG_CMD_PULL_DESC"
     printf "  ${CYAN}%-10s${NC} %s\n" "check"   "$MSG_CMD_CHECK_DESC"
     printf "  ${CYAN}%-10s${NC} %s\n" "prepare" "$MSG_CMD_PREPARE_DESC"
+    printf "  ${CYAN}%-10s${NC} %s\n" "install" "$MSG_CMD_INSTALL_DESC"
     printf "  ${CYAN}%-10s${NC} %s\n" "destroy" "$MSG_DESTROY_TITLE"
     printf "  ${CYAN}%-10s${NC} %s\n" "logs"    "Manage logs (--list, --show, --cleanup)"
     printf "  ${CYAN}%-10s${NC} %s\n" "help"    "$MSG_CMD_HELP_DESC"
@@ -54,6 +56,7 @@ cmd_usage() {
     echo -e "  ${DIM}# Installation flow${NC}"
     echo -e "  kcspoc pull"
     echo -e "  kcspoc prepare"
+    echo -e "  kcspoc install --core"
     echo ""
     echo -e "  ${DIM}# Troubleshooting${NC}"
     echo -e "  kcspoc logs --list"
@@ -96,6 +99,11 @@ case "$1" in
         shift
         cmd_needs_logging "$@" && init_logging "prepare"
         cmd_prepare "$@"
+        ;;
+    install)
+        shift
+        cmd_needs_logging "$@" && init_logging "install"
+        cmd_install "$@"
         ;;
     destroy)
         shift

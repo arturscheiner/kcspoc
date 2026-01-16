@@ -8,6 +8,7 @@ MSG_CMD_CONFIG_DESC="Executar assistente de configuração interativo"
 MSG_CMD_PULL_DESC="Baixar chart do KCS (uso: pull [--version X.X.X])"
 MSG_CMD_CHECK_DESC="Verificar ambiente e pré-requisitos"
 MSG_CMD_PREPARE_DESC="Executar preparação da instalação (requer config)"
+MSG_CMD_INSTALL_DESC="Instalar componentes do Kaspersky Container Security"
 MSG_CMD_HELP_DESC="Mostrar esta mensagem de ajuda"
 MSG_VERSION="Versão"
 MSG_AUTHOR="Autor"
@@ -218,6 +219,13 @@ MSG_DESTROY_NOT_FOUND="Não Encontrado (Pulado)"
 MSG_DESTROY_SUCCESS="O KCS foi completamente removido do cluster."
 MSG_DESTROY_HINT="Dependências (MetalLB, Cert-Manager) foram preservadas."
 
+# --- Install Command ---
+MSG_INSTALL_TITLE="Instalando Kaspersky Container Security"
+MSG_INSTALL_CORE_STEP="Instalando componentes Core do KCS"
+MSG_INSTALL_AGENTS_STEP="Instalando Agentes de Discovery e Runtime"
+MSG_INSTALL_VALUES_NOT_FOUND="Erro: arquivo values-final-211.yaml não encontrado no diretório atual ou em ~/.kcspoc"
+MSG_INSTALL_SUCCESS="O KCS foi instalado e etiquetado com sucesso."
+
 # --- Help System ---
 MSG_HELP_DESCRIPTION="Descrição"
 MSG_HELP_OPTIONS="Opções"
@@ -252,3 +260,8 @@ MSG_HELP_DESTROY_EX="kcspoc destroy\nkcspoc destroy --unattended"
 MSG_HELP_LOGS_DESC="Gerencia os logs de execução da ferramenta kcspoc. Permite visualizar o histórico e detalhar IDs de execução específicos."
 MSG_HELP_LOGS_OPTS="--list [cmd]|Mostra os últimos 10 logs (opcionalmente filtrados por comando)\n--show <hash>|Visualiza a saída completa de depuração para um ID de execução específico\n--cleanup|Exclui todos os logs armazenados em ~/.kcspoc/logs"
 MSG_HELP_LOGS_EX="kcspoc logs --list\nkcspoc logs --list prepare\nkcspoc logs --show A1B2C3\nkcspoc logs --cleanup"
+
+# Install Help
+MSG_HELP_INSTALL_DESC="Instala os componentes do Kaspersky Container Security usando Helm. Requer 'config' e 'pull' prévios."
+MSG_HELP_INSTALL_OPTS="--core|Instala o KCS Core (Backend, Console, Bancos de Dados)\n--agents|Instala os agentes de Discovery e Proteção de Runtime"
+MSG_HELP_INSTALL_EX="kcspoc install --core\nkcspoc install --agents"

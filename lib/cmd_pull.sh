@@ -64,22 +64,25 @@ cmd_pull() {
         HELM_ARGS="--version $TARGET_VER"
     fi
 
-    # 3. Helm Pull
-    cd "$CONFIG_DIR" || exit 1
+    # 3. Target Path Setup
+    local ARTIFACT_PATH="$ARTIFACTS_DIR/kcs/$TARGET_VER"
+    mkdir -p "$ARTIFACT_PATH" &>> "$DEBUG_OUT"
+
+    # 4. Helm Pull
     ui_spinner_start "$MSG_PULL_DOWNLOADING"
     
-    # Using explicit repo URL as requested
-    if helm pull oci://repo.kcs.kaspersky.com/charts/kcs $HELM_ARGS 2>&1 | tee -a "$DEBUG_OUT" > /dev/null; then
+    # Using explicit repo URL
+    if helm pull oci://repo.kcs.kaspersky.com/charts/kcs $HELM_ARGS --destination "$ARTIFACT_PATH" 2>&1 | tee -a "$DEBUG_OUT" > /dev/null; then
         ui_spinner_stop "PASS"
         
-        # 4. Extract
-        TGZ_FILE=$(ls -t kcs-*.tgz 2>/dev/null | head -n 1)
+        # 5. Extract
+        local TGZ_FILE=$(ls -t "$ARTIFACT_PATH"/kcs-*.tgz 2>/dev/null | head -n 1)
         
         if [ -f "$TGZ_FILE" ]; then
             echo -ne "      ${ICON_GEAR} ${MSG_PULL_EXTRACTING}... "
-            tar -xzf "$TGZ_FILE" &>> "$DEBUG_OUT"
+            tar -xzf "$TGZ_FILE" -C "$ARTIFACT_PATH" &>> "$DEBUG_OUT"
             echo -e "${GREEN}${ICON_OK}${NC}"
-            echo -e "      ${DIM}${MSG_PULL_EXTRACTED}: $CONFIG_DIR${NC}"
+            echo -e "      ${DIM}${MSG_PULL_EXTRACTED}: $ARTIFACT_PATH/kcs${NC}"
         else
             echo -e "      ${RED}${ICON_FAIL} ${MSG_PULL_ERR_FILE}${NC}"
             exit 1
