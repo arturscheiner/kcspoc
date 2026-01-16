@@ -99,6 +99,7 @@ cmd_install() {
                       --set-string secret.infracreds.envs.CLICKHOUSE_ADMIN_PASSWORD=\"kcsPoC2024!\" \
                       --set secret.infracreds.envs.MCHD_USER=\"admin\" \
                       --set-string secret.infracreds.envs.MCHD_PASS=\"kcsPoC2024!\" \
+                      --set-string secret.infracreds.envs.APP_SECRET=\"kcsPoC2024!\" \
                       --set commonLabels.provisioned-by=kcspoc --wait --timeout 600s"
                 else
                     # Fallback to OCI if no local artifact found for this version
@@ -110,6 +111,7 @@ cmd_install() {
                       --set default.networkPolicies.ingressControllerNamespaces=\"{ingress-nginx}\" \
                       --set pullSecret.kcs-pullsecret.username=\"$REGISTRY_USER\" \
                       --set-string pullSecret.kcs-pullsecret.password=\"$REGISTRY_PASS\" \
+                      --set-string secret.infracreds.envs.APP_SECRET=\"kcsPoC2024!\" \
                       --set commonLabels.provisioned-by=kcspoc --wait --timeout 600s"
                 fi
 
