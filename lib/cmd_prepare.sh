@@ -6,6 +6,7 @@ confirm_step() {
     local title="$2"
     local desc="$3"
     local unattended="$4"
+    local custom_prompt="$5"
 
     if [ "$unattended" = true ]; then
         return 0
@@ -14,7 +15,15 @@ confirm_step() {
     echo -e "\n${BLUE}${BOLD}--- $title ---${NC}"
     echo -e "${BLUE}${MSG_AUDIT_RES}:${NC} $desc"
     echo ""
-    echo -ne "   ${ICON_QUESTION} $(printf "$MSG_PREPARE_PROMPT_INSTALL" "$step_name")"
+    
+    local prompt_msg=""
+    if [ -n "$custom_prompt" ]; then
+        prompt_msg="$custom_prompt"
+    else
+        prompt_msg="$(printf "$MSG_PREPARE_PROMPT_INSTALL" "$step_name")"
+    fi
+
+    echo -ne "   ${ICON_QUESTION} ${prompt_msg}"
     read -r response
     if [[ "$response" =~ ^[SsYy]$ ]]; then
         return 0
@@ -61,7 +70,7 @@ cmd_prepare() {
     echo "   ----------------------------"
 
     # 1. Namespace
-    if confirm_step "Namespace" "$MSG_PREPARE_STEP_1_A" "Setup of $NAMESPACE." "$UNATTENDED"; then
+    if confirm_step "Namespace" "$MSG_PREPARE_STEP_1_A" "Setup of $NAMESPACE." "$UNATTENDED" "Create Namespace $NAMESPACE? [y/N] "; then
         ui_spinner_start "$MSG_PREPARE_STEP_1_A"
         kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
         kubectl label namespace "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT"
@@ -113,7 +122,7 @@ cmd_prepare() {
     if confirm_step "Local Path Storage" "$MSG_PREPARE_WHY_STORAGE_TITLE" "$MSG_PREPARE_WHY_STORAGE_DESC" "$UNATTENDED"; then
         ui_spinner_start "$MSG_PREPARE_INSTALL_LOCAL"
         
-        # Deploy Local Path Provisioner (Embedded v0.0.31)
+        # Deploy Local Path Provisioner (Embedded v0.0.34)
         cat << 'EOF' | kubectl apply -f - &>> "$DEBUG_OUT"
 apiVersion: v1
 kind: Namespace
@@ -205,7 +214,7 @@ spec:
       serviceAccountName: local-path-provisioner-service-account
       containers:
         - name: local-path-provisioner
-          image: rancher/local-path-provisioner:v0.0.31
+          image: rancher/local-path-provisioner:v0.0.34
           imagePullPolicy: IfNotPresent
           command:
             - local-path-provisioner
