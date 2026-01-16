@@ -41,22 +41,23 @@ cmd_pull() {
             local versions=$(ls -F "$kcs_artifact_base" | grep "/" | sed 's|/||g' | sort -V)
 
             if [ -n "$versions" ]; then
-                # Header using the log-style (no pipes, specific spacing)
-                printf "   ${BOLD}%-15s %-20s %-40s${NC}\n" "$MSG_PULL_TABLE_VER" "$MSG_PULL_TABLE_DATE" "$MSG_PULL_TABLE_PATH"
-                printf "   ${DIM}%s${NC}\n" "--------------------------------------------------------------------------------"
+                # Header using the log-style (Active column first)
+                printf "   ${BOLD}%-12s %-15s %-20s %-40s${NC}\n" "$MSG_PULL_TABLE_ACTIVE" "$MSG_PULL_TABLE_VER" "$MSG_PULL_TABLE_DATE" "$MSG_PULL_TABLE_PATH"
+                printf "   ${DIM}%s${NC}\n" "------------------------------------------------------------------------------------------"
                 
                 for ver in $versions; do
                     local date_file="$kcs_artifact_base/$ver/.downloaded"
                     local ddate="---"
                     [ -f "$date_file" ] && ddate=$(cat "$date_file")
                     
-                    local active_tag=""
+                    local active_str=""
+                    local active_color="${NC}"
                     if [ "$ver" == "$KCS_VERSION" ]; then
-                        active_tag=" ${GREEN}${MSG_PULL_ACTIVE_MARKER}${NC}"
+                        active_str="$MSG_PULL_ACTIVE_MARKER"
+                        active_color="${GREEN}"
                     fi
                     
-                    # Use echo -e with fixed-width printfs for perfect alignment and color interpretation
-                    echo -e "   $(printf "%-15s" "$ver")${active_tag} $(printf "%-20s" "$ddate") $(printf "%-40s" "$kcs_artifact_base/$ver")"
+                    echo -e "   ${active_color}$(printf "%-12s" "$active_str")${NC} $(printf "%-15s" "$ver") $(printf "%-20s" "$ddate") $(printf "%-40s" "$kcs_artifact_base/$ver")"
                 done
             else
                 echo -e "   ${YELLOW}${ICON_INFO} ${MSG_PULL_LOCAL_EMPTY}${NC}"
