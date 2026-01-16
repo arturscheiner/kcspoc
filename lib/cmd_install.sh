@@ -85,11 +85,32 @@ cmd_install() {
                 # Check if we have the extracted artifact folder
                 if [ -d "$CHART_PATH" ] && [ -f "$BASE_VALUES" ]; then
                     # Use extracted chart and its values.yaml as base
-                    HELM_CMD="helm upgrade --install kcs \"$CHART_PATH\" -n $NAMESPACE -f \"$BASE_VALUES\" --set commonLabels.provisioned-by=kcspoc --wait --timeout 600s"
+                    HELM_CMD="helm upgrade --install kcs \"$CHART_PATH\" \
+                      -n \"$NAMESPACE\" \
+                      -f \"$BASE_VALUES\" \
+                      --set default.domain=\"$DOMAIN\" \
+                      --set default.networkPolicies.ingressControllerNamespaces=\"{ingress-nginx}\" \
+                      --set pullSecret.kcs-pullsecret.username=\"$REGISTRY_USER\" \
+                      --set-string pullSecret.kcs-pullsecret.password=\"$REGISTRY_PASS\" \
+                      --set secret.infracreds.envs.POSTGRES_USER=\"root\" \
+                      --set-string secret.infracreds.envs.POSTGRES_PASSWORD=\"kcsPoC2024!\" \
+                      --set secret.infracreds.envs.MINIO_ROOT_USER=\"admin\" \
+                      --set-string secret.infracreds.envs.MINIO_ROOT_PASSWORD=\"kcsPoC2024!\" \
+                      --set-string secret.infracreds.envs.CLICKHOUSE_ADMIN_PASSWORD=\"kcsPoC2024!\" \
+                      --set secret.infracreds.envs.MCHD_USER=\"admin\" \
+                      --set-string secret.infracreds.envs.MCHD_PASS=\"kcsPoC2024!\" \
+                      --set commonLabels.provisioned-by=kcspoc --wait --timeout 600s"
                 else
                     # Fallback to OCI if no local artifact found for this version
                     echo -e "      ${YELLOW}${ICON_INFO} Local artifact not found for $TARGET_VER. Falling back to OCI...${NC}" >> "$DEBUG_OUT"
-                    HELM_CMD="helm upgrade --install kcs oci://$REGISTRY_SERVER/charts/kcs --version $TARGET_VER -n $NAMESPACE --set commonLabels.provisioned-by=kcspoc --wait --timeout 600s"
+                    HELM_CMD="helm upgrade --install kcs oci://$REGISTRY_SERVER/charts/kcs \
+                      --version $TARGET_VER \
+                      -n \"$NAMESPACE\" \
+                      --set default.domain=\"$DOMAIN\" \
+                      --set default.networkPolicies.ingressControllerNamespaces=\"{ingress-nginx}\" \
+                      --set pullSecret.kcs-pullsecret.username=\"$REGISTRY_USER\" \
+                      --set-string pullSecret.kcs-pullsecret.password=\"$REGISTRY_PASS\" \
+                      --set commonLabels.provisioned-by=kcspoc --wait --timeout 600s"
                 fi
 
                 if eval "$HELM_CMD" &>> "$DEBUG_OUT"; then
