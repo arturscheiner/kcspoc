@@ -105,20 +105,20 @@ cmd_install() {
                     HELM_CMD="helm upgrade --install kcs \"$CHART_PATH\" \
                       -n \"$NAMESPACE\" \
                       -f \"$BASE_VALUES\" \
-                      -f \"$PROCESSED_VALUES\" \
-                      --wait --timeout 600s"
+                      -f \"$PROCESSED_VALUES\""
                 else
                     # Fallback to OCI
                     echo -e "      ${YELLOW}${ICON_INFO} Local artifact not found for $TARGET_VER. Falling back to OCI...${NC}" >> "$DEBUG_OUT"
                     HELM_CMD="helm upgrade --install kcs oci://$REGISTRY_SERVER/charts/kcs \
                       --version $TARGET_VER \
                       -n \"$NAMESPACE\" \
-                      -f \"$PROCESSED_VALUES\" \
-                      --wait --timeout 600s"
+                      -f \"$PROCESSED_VALUES\""
                 fi
 
                 if eval "$HELM_CMD" &>> "$DEBUG_OUT"; then
                     ui_spinner_stop "PASS"
+                    # Run health check if Helm deployment was accepted
+                    _verify_install_bootstrap "$NAMESPACE"
                 else
                     ui_spinner_stop "FAIL"
                     INSTALL_ERROR=1
@@ -140,8 +140,72 @@ cmd_install() {
 
     if [ "$INSTALL_ERROR" -eq 0 ]; then
         echo -e "${GREEN}${BOLD}${ICON_OK} $MSG_INSTALL_SUCCESS${NC}"
+        echo -e "\n  ${BOLD}${MSG_INSTALL_BOOTSTRAP_HINT}${NC}"
+        echo -e "  ${CYAN}kubectl get pods -n $NAMESPACE -w${NC}\n"
     else
         echo -e "${RED}${BOLD}${ICON_FAIL} Installation failed. Check logs with: ./kcspoc logs --show $EXEC_HASH${NC}"
         return 1
     fi
+}
+
+# --- Helpers ---
+
+_verify_install_bootstrap() {
+    local ns="$1"
+    
+    echo -e "\n  ${BOLD}${ICON_GEAR} ${MSG_INSTALL_HEALTH_CHECK}${NC}"
+    
+    # 1. Verify PVCs
+    ui_spinner_start "${MSG_INSTALL_PVC_STATUS}"
+    # Wait a bit for PVCs to settle
+    sleep 2
+    local pvc_count=$(kubectl get pvc -n "$ns" --no-headers 2>/dev/null | wc -l)
+    if [ "$pvc_count" -gt 0 ]; then
+        local pending_pvc=$(kubectl get pvc -n "$ns" --no-headers 2>/dev/null | grep -v "Bound" | wc -l)
+        if [ "$pending_pvc" -eq 0 ]; then
+            ui_spinner_stop "PASS"
+        else
+            ui_spinner_stop "INFO"
+            echo -e "      ${YELLOW}${ICON_INFO} $pending_pvc PVC(s) are still pending. This is normal during bootstrap.${NC}"
+        fi
+    else
+        ui_spinner_stop "SKIP"
+    fi
+
+    # 2. Verify Labelling
+    ui_spinner_start "${MSG_INSTALL_LABEL_CHECK}"
+    if kubectl get ns "$ns" -o jsonpath='{.metadata.labels.provisioned-by}' 2>/dev/null | grep -q "kcspoc"; then
+        ui_spinner_stop "PASS"
+    else
+        # Apply labels if missing (best effort)
+        kubectl label ns "$ns" provisioned-by=kcspoc --overwrite &>> "$DEBUG_OUT"
+        ui_spinner_stop "FIXED"
+    fi
+
+    # 3. Monitor Pods (Short loop to detect initial pod creation)
+    ui_spinner_start "${MSG_INSTALL_POD_STATUS}"
+    local pods_started=0
+    for i in {1..8}; do
+        local pods_count=$(kubectl get pods -n "$ns" --no-headers 2>/dev/null | wc -l)
+        if [ "$pods_count" -gt 0 ]; then
+            pods_started=1
+            break
+        fi
+        sleep 3
+    done
+
+    if [ "$pods_started" -eq 1 ]; then
+        # Check for Pulling events as a sign of progress
+        local pulling=$(kubectl get events -n "$ns" --sort-by='.lastTimestamp' 2>/dev/null | grep -iE "Pulling|Pulled|Started" | tail -n 1)
+        if [ -n "$pulling" ]; then
+             ui_spinner_stop "PASS"
+             echo -e "      ${DIM}Event: $(echo $pulling | awk '{print $4, $5, $6, $7, $8}')${NC}"
+        else
+             ui_spinner_stop "PASS"
+        fi
+    else
+        ui_spinner_stop "WARN"
+    fi
+    
+    echo -e "\n  ${GREEN}${ICON_OK} ${MSG_INSTALL_BOOTSTRAP_OK}${NC}"
 }
