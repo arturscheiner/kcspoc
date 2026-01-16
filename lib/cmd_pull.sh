@@ -71,15 +71,41 @@ cmd_pull() {
     # 4. Helm Pull
     ui_spinner_start "$MSG_PULL_DOWNLOADING"
     
-    # Using explicit repo URL
     if helm pull oci://repo.kcs.kaspersky.com/charts/kcs $HELM_ARGS --destination "$ARTIFACT_PATH" 2>&1 | tee -a "$DEBUG_OUT" > /dev/null; then
         ui_spinner_stop "PASS"
         
-        # 5. Extract
+        # 5. Extract and Resolve Real Version
         local TGZ_FILE=$(ls -t "$ARTIFACT_PATH"/kcs-*.tgz 2>/dev/null | head -n 1)
         
         if [ -f "$TGZ_FILE" ]; then
-            echo -ne "      ${ICON_GEAR} ${MSG_PULL_EXTRACTING}... "
+            # Extract version from filename (e.g., kcs-2.3.0.tgz -> 2.3.0)
+            local REAL_VER=$(basename "$TGZ_FILE" | sed -E 's/kcs-([0-9.]+)\.tgz/\1/')
+            
+            # If we were using "latest", we need to rename the directory and update config
+            if [ "$TARGET_VER" == "latest" ]; then
+                local FINAL_ARTIFACT_PATH="$ARTIFACTS_DIR/kcs/$REAL_VER"
+                
+                # Check if the target version directory already exists to avoid conflict
+                if [ "$ARTIFACT_PATH" != "$FINAL_ARTIFACT_PATH" ]; then
+                    [ -d "$FINAL_ARTIFACT_PATH" ] && rm -rf "$FINAL_ARTIFACT_PATH"
+                    mv "$ARTIFACT_PATH" "$FINAL_ARTIFACT_PATH"
+                    ARTIFACT_PATH="$FINAL_ARTIFACT_PATH"
+                    TGZ_FILE="$ARTIFACT_PATH/$(basename "$TGZ_FILE")"
+                fi
+                
+                # Update Config File: KCS_VERSION="latest" -> KCS_VERSION="X.X.X"
+                if [ -f "$CONFIG_FILE" ]; then
+                    if grep -q "KCS_VERSION=" "$CONFIG_FILE"; then
+                        sed -i "s|KCS_VERSION=.*|KCS_VERSION=\"$REAL_VER\"|g" "$CONFIG_FILE"
+                    else
+                        echo "KCS_VERSION=\"$REAL_VER\"" >> "$CONFIG_FILE"
+                    fi
+                    echo -e "      ${DIM}${ICON_INFO} Config updated: KCS_VERSION=\"$REAL_VER\"${NC}"
+                fi
+                TARGET_VER="$REAL_VER"
+            fi
+
+            echo -ne "      ${ICON_GEAR} ${MSG_PULL_EXTRACTING} ($REAL_VER)... "
             tar -xzf "$TGZ_FILE" -C "$ARTIFACT_PATH" &>> "$DEBUG_OUT"
             echo -e "${GREEN}${ICON_OK}${NC}"
             echo -e "      ${DIM}${MSG_PULL_EXTRACTED}: $ARTIFACT_PATH/kcs${NC}"
