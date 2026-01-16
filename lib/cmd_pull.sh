@@ -39,9 +39,13 @@ cmd_pull() {
         if [ -d "$kcs_artifact_base" ]; then
             # Sort version numbers naturally
             local versions=$(ls -F "$kcs_artifact_base" | grep "/" | sed 's|/||g' | sort -V)
-            
+
             if [ -n "$versions" ]; then
-                printf "   %-15s | %-20s | %-40s\n" "${BOLD}$MSG_PULL_TABLE_VER${NC}" "${BOLD}$MSG_PULL_TABLE_DATE${NC}" "${BOLD}$MSG_PULL_TABLE_PATH${NC}"
+                # Header with proper color interpretation and fixed padding
+                local h_ver=$(printf "%-15s" "$MSG_PULL_TABLE_VER")
+                local h_date=$(printf "%-20s" "$MSG_PULL_TABLE_DATE")
+                local h_path=$(printf "%-40s" "$MSG_PULL_TABLE_PATH")
+                echo -e "   ${BOLD}${h_ver}${NC} | ${BOLD}${h_date}${NC} | ${BOLD}${h_path}${NC}"
                 echo -e "   ----------------|----------------------|-------------------------------------"
                 for ver in $versions; do
                     local date_file="$kcs_artifact_base/$ver/.downloaded"
