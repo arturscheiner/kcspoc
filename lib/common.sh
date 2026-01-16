@@ -23,7 +23,7 @@ ICON_GEAR="⚙"
 
 CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
-VERSION="0.4.17"
+VERSION="0.4.18"
 
 # Labelling Constants
 POC_LABEL_KEY="provisioned-by"
@@ -218,6 +218,31 @@ ui_spinner_stop() {
         echo -e "[ ${GREEN}${ICON_OK}${NC} ]"
     else
         echo -e "[ ${RED}${ICON_FAIL}${NC} ]"
+    fi
+}
+
+check_k8s_label() {
+    local res_type="$1"
+    local res_name="$2"
+    local ns="$3"
+    local label_desc="Checking Label ($POC_LABEL_KEY=$POC_LABEL_VAL)"
+    
+    # Construct kubectl args
+    local args=("$res_type" "$res_name" "--show-labels")
+    if [ -n "$ns" ]; then
+        args+=("-n" "$ns")
+    fi
+    
+    echo -ne "      ${ICON_GEAR} $label_desc... "
+    # We don't use the spinner here because it's a quick check usually, 
+    # and we want it indented.
+    
+    if kubectl get "${args[@]}" 2>> "$DEBUG_OUT" | grep -q "$POC_LABEL_KEY=$POC_LABEL_VAL"; then
+        echo -e "[ ${GREEN}${ICON_OK}${NC} ]"
+        return 0
+    else
+        echo -e "[ ${RED}${ICON_FAIL}${NC} ]"
+        return 1
     fi
 }
 

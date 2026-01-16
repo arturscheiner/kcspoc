@@ -60,12 +60,18 @@ cmd_prepare() {
     echo "   ${MSG_PREPARE_USING_IP}: $IP_RANGE"
     echo "   ----------------------------"
 
-    # 1. Namespace & Secret
-    if confirm_step "Namespace & Secret" "$MSG_PREPARE_STEP_1" "Setup of $NAMESPACE and credentials." "$UNATTENDED"; then
-        ui_spinner_start "$MSG_PREPARE_STEP_1"
+    # 1. Namespace
+    if confirm_step "Namespace" "$MSG_PREPARE_STEP_1_A" "Setup of $NAMESPACE." "$UNATTENDED"; then
+        ui_spinner_start "$MSG_PREPARE_STEP_1_A"
         kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
         kubectl label namespace "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT"
-        
+        ui_spinner_stop "PASS"
+        check_k8s_label "namespace" "$NAMESPACE"
+    fi
+
+    # 1.1 Registry Auth
+    if confirm_step "Registry Auth" "$MSG_PREPARE_STEP_1_B" "Setup of Docker Registry credentials." "$UNATTENDED"; then
+        ui_spinner_start "$MSG_PREPARE_STEP_1_B"
         kubectl create secret docker-registry kcs-registry-secret \
           --docker-server="$REGISTRY_SERVER" \
           --docker-username="$REGISTRY_USER" \
@@ -74,6 +80,7 @@ cmd_prepare() {
           -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
         kubectl label secret kcs-registry-secret -n "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT"
         ui_spinner_stop "PASS"
+        check_k8s_label "secret" "kcs-registry-secret" "$NAMESPACE"
     fi
 
     # 2. Cert-Manager
@@ -94,6 +101,7 @@ cmd_prepare() {
             kubectl label namespace cert-manager $POC_LABEL --overwrite &>> "$DEBUG_OUT"
             kubectl label deployment -n cert-manager --all $POC_LABEL --overwrite &>> "$DEBUG_OUT"
             ui_spinner_stop "PASS"
+            check_k8s_label "namespace" "cert-manager"
         else
             cat "$HELM_ERR" >> "$DEBUG_OUT"
             ui_spinner_stop "FAIL"
@@ -108,6 +116,7 @@ cmd_prepare() {
         kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' &>> "$DEBUG_OUT"
         kubectl label sc local-path $POC_LABEL --overwrite &>> "$DEBUG_OUT"
         ui_spinner_stop "PASS"
+        check_k8s_label "sc" "local-path"
     fi
 
     # 4. Metrics Server
@@ -120,6 +129,7 @@ cmd_prepare() {
         ]' &>> "$DEBUG_OUT"
         kubectl label deployment metrics-server -n kube-system $POC_LABEL --overwrite &>> "$DEBUG_OUT"
         ui_spinner_stop "PASS"
+        check_k8s_label "deployment" "metrics-server" "kube-system"
     fi
 
     # 5. MetalLB
@@ -162,6 +172,7 @@ spec:
   - first-pool
 EOF
             ui_spinner_stop "PASS"
+            check_k8s_label "namespace" "metallb-system"
         else
             cat "$HELM_ERR" >> "$DEBUG_OUT"
             ui_spinner_stop "FAIL"
@@ -184,6 +195,7 @@ EOF
             kubectl label namespace ingress-nginx $POC_LABEL --overwrite &>> "$DEBUG_OUT"
             kubectl label deployment -n ingress-nginx --all $POC_LABEL --overwrite &>> "$DEBUG_OUT"
             ui_spinner_stop "PASS"
+            check_k8s_label "namespace" "ingress-nginx"
         else
             cat "$HELM_ERR" >> "$DEBUG_OUT"
             ui_spinner_stop "FAIL"
