@@ -155,6 +155,18 @@ if [[ ":$PATH:" != *":$SYMLINK_DIR:"* ]]; then
     echo ""
 fi
 
+# 5. Dependency Audit
+ui_section "Command Dependency Audit"
+DEPS=("kubectl" "helm" "jq" "sed" "grep" "unzip")
+for dep in "${DEPS[@]}"; do
+    if command -v "$dep" &>/dev/null; then
+        echo -e "   ${GREEN}${ICON_OK}${NC} ${dep}"
+    else
+        echo -e "   ${RED}${ICON_FAIL}${NC} ${dep} ${DIM}(Missing)${NC}"
+    fi
+done
+echo ""
+
 echo -e "   Next steps:"
 echo -e "   ${DIM}1. Refresh shell: '${BOLD}hash -r${DIM}' (bash) or '${BOLD}rehash${DIM}' (zsh)${NC}"
 echo -e "   ${DIM}2. Run '${BOLD}kcspoc config${DIM}' to set up your environment.${NC}"
