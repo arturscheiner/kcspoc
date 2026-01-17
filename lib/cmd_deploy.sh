@@ -108,10 +108,15 @@ cmd_deploy() {
         # Log version and source info
         echo -e "      ${DIM}Target Version: $target_ver${NC}" >> "$DEBUG_OUT"
         
+        ui_section "Pre-flight Diagnostics"
+        
         # Phase GA: Global Instance Guard
+        ui_spinner_start "Analyzing cluster for KCS instances"
         local COLLISION=$(_find_global_kcs_instances "$NAMESPACE")
+        ui_spinner_stop "PASS"
+        
         if [ -n "$COLLISION" ]; then
-             echo -e "   ${RED}${BOLD}${ICON_WARN} GLOBAL COLLISION DETECTED!${NC}"
+             echo -e "\n   ${RED}${BOLD}${ICON_WARN} GLOBAL COLLISION DETECTED!${NC}"
              echo -e "   Kaspersky Container Security was found in other namespaces:"
              echo -e "${DIM}$COLLISION${NC}"
              echo -e "   ${BOLD}DANGER:${NC} Installing multiple instances may cause conflict in global"
@@ -123,9 +128,15 @@ cmd_deploy() {
                  return 0
              fi
              ui_banner
+             ui_section "Pre-flight Diagnostics"
         fi
 
-        if _check_kcs_exists "$NAMESPACE" ; then
+        ui_spinner_start "Checking target namespace ($NAMESPACE)"
+        local kcs_exists=""
+        _check_kcs_exists "$NAMESPACE" && kcs_exists="true"
+        ui_spinner_stop "PASS"
+
+        if [ "$kcs_exists" == "true" ]; then
              local INSTALLED_VER=$(_get_installed_version "$NAMESPACE")
              ui_banner
              printf "   ${ICON_INFO} ${BLUE}$MSG_DEPLOY_EXISTING${NC}\n" "$INSTALLED_VER" "$NAMESPACE"
