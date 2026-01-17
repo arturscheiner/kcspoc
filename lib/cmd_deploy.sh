@@ -136,6 +136,11 @@ kind: Issuer
 metadata:
   name: kcs-issuer
   namespace: $NAMESPACE
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: kcs
+    meta.helm.sh/release-namespace: $NAMESPACE
 spec:
   selfSigned: {}
 ---
@@ -144,6 +149,11 @@ kind: Certificate
 metadata:
   name: cert-ca
   namespace: $NAMESPACE
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: kcs
+    meta.helm.sh/release-namespace: $NAMESPACE
 spec:
   isCA: true
   commonName: kcs-ca
