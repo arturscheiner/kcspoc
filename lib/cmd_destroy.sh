@@ -72,7 +72,7 @@ cmd_destroy() {
     # 1. Helm Release
     if helm status "$RELEASE_NAME" -n "$TARGET_NS" &>> "$DEBUG_OUT"; then
         ui_spinner_start "[1/8] $MSG_DESTROY_STEP_1"
-        helm uninstall "$RELEASE_NAME" -n "$TARGET_NS" --wait &>> "$DEBUG_OUT"
+        helm uninstall "$RELEASE_NAME" -n "$TARGET_NS" &>> "$DEBUG_OUT"
         ui_spinner_stop "PASS"
     else
         echo -e "   ${BLUE}${ICON_INFO} [1/8] $RELEASE_NAME: $MSG_DESTROY_NOT_FOUND${NC}"
