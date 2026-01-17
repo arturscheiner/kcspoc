@@ -99,9 +99,8 @@ cmd_deploy() {
 
         ui_section "$MSG_DEPLOY_CORE"
         
-        # 1.1 Namespace Setup
-        ui_spinner_start "$MSG_PREPARE_STEP_1_A"
-        force_delete_ns "$NAMESPACE"
+        # [STEP 1] Namespace Preparation
+        ui_spinner_start "[1/5] $MSG_PREPARE_STEP_1_A"
         if kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT" && \
            kubectl label namespace "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT" && \
            kubectl label namespace "$NAMESPACE" provisioned-version="$target_ver" --overwrite &>> "$DEBUG_OUT"; then
@@ -113,7 +112,7 @@ cmd_deploy() {
 
         # 1.2 Secret Setup (Skip in Expert Mode)
         if [ "$INSTALL_ERROR" -eq 0 ] && [ -z "$VALUES_OVERRIDE" ]; then
-            ui_spinner_start "$MSG_PREPARE_STEP_1_B"
+            ui_spinner_start "KCS Registry Secret"
             if kubectl create secret docker-registry kcs-registry-secret \
               --docker-server="$REGISTRY_SERVER" \
               --docker-username="$REGISTRY_USER" \
@@ -125,6 +124,51 @@ cmd_deploy() {
             else
                 ui_spinner_stop "FAIL"
                 INSTALL_ERROR=1
+            fi
+        fi
+
+        # [STEP 2 & 3] Pre-flight Identity Bootstrap
+        if [ "$INSTALL_ERROR" -eq 0 ]; then
+            ui_spinner_start "[2/5] Identity Bootstrap (Issuer/CA)"
+            kubectl apply -n "$NAMESPACE" -f - <<EOF &>> "$DEBUG_OUT"
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: kcs-issuer
+  namespace: $NAMESPACE
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cert-ca
+  namespace: $NAMESPACE
+spec:
+  isCA: true
+  commonName: kcs-ca
+  secretName: cert-ca
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: kcs-issuer
+    kind: Issuer
+    group: cert-manager.io
+EOF
+            if [ $? -eq 0 ]; then
+                 ui_spinner_stop "PASS"
+                 
+                 ui_spinner_start "[3/5] Waiting for Root CA Readiness"
+                 if kubectl wait --for=condition=Ready certificate cert-ca -n "$NAMESPACE" --timeout=45s &>> "$DEBUG_OUT"; then
+                     ui_spinner_stop "PASS"
+                 else
+                     ui_spinner_stop "FAIL"
+                     INSTALL_ERROR=1
+                 fi
+            else
+                 ui_spinner_stop "FAIL"
+                 INSTALL_ERROR=1
             fi
         fi
 
@@ -243,10 +287,22 @@ cmd_deploy() {
                 fi
 
                 if [ "$INSTALL_ERROR" -eq 0 ]; then
-                    ui_spinner_start "Helm Upgrade/Install (KCS Core)"
+                    ui_spinner_start "[4/5] Helm Upgrade/Install"
                     if eval "$HELM_CMD" &>> "$DEBUG_OUT"; then
                         ui_spinner_stop "PASS"
-                        # Run health check if Helm deployment was accepted
+                        
+                        # [STEP 5] Final Sync & Pod Refresh
+                        ui_spinner_start "[5/5] Final Sync & Identity Refresh"
+                        
+                        # Wait for all certs (service-specific)
+                        kubectl wait --for=condition=Ready certificate --all -n "$NAMESPACE" --timeout=60s &>> "$DEBUG_OUT"
+                        
+                        # Refresh pods to ensure fresh identity mounts
+                        kubectl delete pods -n "$NAMESPACE" --all --grace-period=0 --force &>> "$DEBUG_OUT"
+                        
+                        ui_spinner_stop "PASS"
+                        
+                        # Run health check
                         _verify_deploy_bootstrap "$NAMESPACE"
                     else
                         ui_spinner_stop "FAIL"
