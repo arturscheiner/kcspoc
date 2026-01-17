@@ -33,15 +33,14 @@ cmd_deploy() {
     fi
 
     load_config || { echo -e "${RED}${MSG_ERROR_CONFIG_NOT_FOUND}${NC}"; return 1; }
+    ui_banner
 
     # Guard: Ensure at least one version is pulled
     local artifact_count=$(_count_local_artifacts)
     if [ "$artifact_count" -eq 0 ]; then
-        echo -e "${RED}${ICON_FAIL} ${MSG_DEPLOY_ERR_NO_ARTIFACTS}${NC}"
+        echo -e "   ${RED}${ICON_FAIL} ${MSG_DEPLOY_ERR_NO_ARTIFACTS}${NC}\n"
         return 1
     fi
-
-    ui_banner
 
     local INSTALL_ERROR=0
 
