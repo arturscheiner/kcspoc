@@ -31,6 +31,10 @@ cmd_destroy() {
         TARGET_NS="${NAMESPACE:-kcs}"
     fi
 
+    # Phase I: Transition Signaling (Status: cleaning)
+    # Applied as soon as TARGET_NS is determined to ensure maximum visibility.
+    _update_state "$TARGET_NS" "cleaning" "destroy" "$EXEC_HASH" "$(get_config_hash)" ""
+
     # --- Safety Check (Interactive) ---
     if [ "$UNATTENDED" = false ]; then
         ui_section "$MSG_DESTROY_TITLE"
@@ -68,9 +72,6 @@ cmd_destroy() {
 
     echo -e "${YELLOW}${ICON_GEAR} $MSG_DESTROY_START${NC}"
     echo "----------------------------"
-
-    # Phase I: Transition Signaling (Status: cleaning)
-    _update_state "$TARGET_NS" "cleaning" "destroy" "$EXEC_HASH" "$(get_config_hash)" ""
 
     # 1. Helm Release
     if helm status "$RELEASE_NAME" -n "$TARGET_NS" &>> "$DEBUG_OUT"; then

@@ -201,11 +201,14 @@ cmd_deploy() {
         ui_section "$MSG_DEPLOY_CORE"
         
         # Phase I: Initial Labeling (Status: deploying)
+        # Attempt 1: Before Step 1 (to catch existing namespace)
         _update_state "$NAMESPACE" "deploying" "$OPERATION_TYPE" "$EXEC_HASH" "$(get_config_hash)" "$target_ver"
         
         # [STEP 1] Namespace Preparation
         ui_spinner_start "[1/5] $MSG_PREPARE_STEP_1_A"
         if kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"; then
+            # Attempt 2: Immediately after creation (to catch fresh namespace)
+            _update_state "$NAMESPACE" "deploying" "$OPERATION_TYPE" "$EXEC_HASH" "$(get_config_hash)" "$target_ver"
             ui_spinner_stop "PASS"
         else
             ui_spinner_stop "FAIL"
