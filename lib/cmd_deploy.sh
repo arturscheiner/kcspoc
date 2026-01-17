@@ -184,7 +184,8 @@ cmd_deploy() {
 
                         # 1.3.3 Validation Guard
                         ui_spinner_start "$MSG_DEPLOY_VALIDATING"
-                        local MISSING_PLACEHOLDERS=$(grep -oP '\$[A-Z0-9_]+(_CONFIG|_CONFIGURED)' "$PROCESSED_VALUES" | sort | uniq | tr '\n' ' ')
+                        # Search for $VAR_CONFIG or ${VAR} or $VAR_CONFIGURED
+                        local MISSING_PLACEHOLDERS=$(grep -oP '\$[A-Z0-9_]+(_CONFIG|_CONFIGURED)|\$\{[A-Z0-9_]+\}' "$PROCESSED_VALUES" | sort | uniq | tr '\n' ' ')
                         if [ -n "$MISSING_PLACEHOLDERS" ]; then
                             ui_spinner_stop "FAIL"
                             echo -e "\n  ${RED}${BOLD}${ICON_FAIL} $MSG_DEPLOY_ERR_MISSING_PLACEHOLDERS${NC}"
@@ -215,20 +216,18 @@ cmd_deploy() {
                     # Fallback to OCI
                     echo -e "      ${DIM}Source: OCI Registry (oci://$REGISTRY_SERVER/charts/kcs)${NC}" >> "$DEBUG_OUT"
                     echo -e "      ${YELLOW}${ICON_INFO} Local artifact not found for $TARGET_VER. Falling back to OCI...${NC}" >> "$DEBUG_OUT"
-                    HELM_CMD="helm upgrade --install kcs oci://$REGISTRY_SERVER/charts/kcs \
-                      --version $TARGET_VER \
-                      -n \"$NAMESPACE\" \
-                      -f \"$PROCESSED_VALUES\""
                 fi
 
-                ui_spinner_start "Helm Upgrade/Install (KCS Core)"
-                if eval "$HELM_CMD" &>> "$DEBUG_OUT"; then
-                    ui_spinner_stop "PASS"
-                    # Run health check if Helm deployment was accepted
-                    _verify_deploy_bootstrap "$NAMESPACE"
-                else
-                    ui_spinner_stop "FAIL"
-                    INSTALL_ERROR=1
+                if [ "$INSTALL_ERROR" -eq 0 ]; then
+                    ui_spinner_start "Helm Upgrade/Install (KCS Core)"
+                    if eval "$HELM_CMD" &>> "$DEBUG_OUT"; then
+                        ui_spinner_stop "PASS"
+                        # Run health check if Helm deployment was accepted
+                        _verify_deploy_bootstrap "$NAMESPACE"
+                    else
+                        ui_spinner_stop "FAIL"
+                        INSTALL_ERROR=1
+                    fi
                 fi
             fi
         fi
