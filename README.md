@@ -24,9 +24,19 @@
 
 ## Installation
 
-You can run `kcspoc` directly from the source directory or install it system-wide.
+The easiest way to install `kcspoc` is using the remote installer:
 
-### Option 1: Run from Source
+```bash
+bash <(curl -s https://raw.githubusercontent.com/arturscheiner/kcspoc/main/install.sh)
+```
+
+This will automatically create the necessary directories (`~/.kcspoc`), clone the repository, and set up a global symlink.
+
+### Manual Installation Options
+
+You can also run `kcspoc` directly from the source directory or install it system-wide manually.
+
+#### Option 1: Run from Source
 
 1.  Clone the repository or download the source files.
 2.  Navigate to the directory:
@@ -42,7 +52,7 @@ You can run `kcspoc` directly from the source directory or install it system-wid
     ./kcspoc deploy --core
     ```
 
-### Option 2: System-wide Installation (Recommended)
+#### Option 2: Manual System-wide Installation
 
 To use `kcspoc` from anywhere, create a symlink in your binary path (e.g., `/usr/local/bin`).
 
