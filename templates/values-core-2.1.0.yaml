@@ -1,36 +1,55 @@
 ################################################################################
-# values-template-210.yaml
-# Kaspersky Container Security - Automation Template for v2.1.0
-# Purpose: Optimized for baseline stability and automated mTLS bootstrap.
+# KCS EDUCATIONAL TEMPLATE - Version 2.1.0
+# ------------------------------------------------------------------------------
+# 🎯 TARGET AUDIENCE: Pre-Sales Engineers & Architects
+# ⚠️ ENVIRONMENT: POC / LAB ONLY (Base version for lifecycle testing)
+#
+# 📝 VERSION CHARACTERISTICS:
+# 1. Base Version: This is our starting point for upgrade path simulations.
+# 2. Identity Bootstrap: Unlike later versions, 2.1.0 is more permissive but 
+#    still requires 'certSource: helm' to correctly trigger Cert-Manager.
+# 3. Simple Policies: Network Policies in this version do not yet require 
+#    the explicit 'ingressControllerNamespaces' list.
 ################################################################################
 
+# --- [TEACHING POINT: METADATA & TRACEABILITY] ---
+# In 2.1.0, 'commonLabels' helps us identify resources. 
+# We use 'kcspoc.io' prefix to distinguish automated lab resources.
 commonLabels:
-  provisioned-by: "kcspoc"
+  kcspoc.io/managed-by: "kcspoc"
+  kcspoc.io/config-hash: "$PROVISION_HASH_CONFIG"
+  kcspoc.io/tool-version: "$PROVISION_VERSION_CONFIG"
+  kcspoc.io/kcs-version: "2.1.0"
 
 default:
   platform: "$PLATFORM_CONFIGURED"
   domain: "$DOMAIN_CONFIGURED"
   
-  # --- MTLS & CERTIFICATE STABILITY ---
+  # --- [TEACHING POINT: IDENTITY BOOTSTRAP] ---
+  # In 2.1.0, setting 'certSource: helm' is the most reliable way to ensure 
+  # that internal mTLS certificates are generated and managed by Cert-Manager.
   certSource: "helm"
   internalTLS:
     enabled: true
     certSource: "helm"
-  
   certManager: true
 
-  # --- SCANNER UPDATES (FIXED PATH) ---
-  # Moved inside 'default' to match Chart's internal logic: $.Values.default.updates.enabled
+  # --- [TEACHING POINT: UPDATES COMPONENT] ---
+  # Essential for vulnerability database synchronization. 
+  # Note: Ensure this is correctly aligned under 'default'.
   updates:
     enabled: true
 
-  kcs-ih:
-    replicaCount: 1
-
+  # --- [TEACHING POINT: NETWORK POLICIES] ---
+  # Version 2.1.0 is less strict than 2.1.1+. 
+  # We can enable it here, but explicit ingress namespaces are optional.
   networkPolicies:
     create: true
-    ingressControllerNamespaces:
-      - ingress-nginx
+
+  # Lab Optimization: Image Handler (IH) consumes significant memory.
+  # We force 1 replica for POCs to stay within small node limits.
+  kcs-ih:
+    replicaCount: 1
 
   postgresql:
     resources:
@@ -51,7 +70,9 @@ configmap:
     type: fromEnvs
     envs:
       TLS_INTERNAL: true
-      TLS_INGRESS: false
+      # --- [TEACHING POINT: IMAGE TAGGING] ---
+      # In this template, we hardcode the v2.1.0 tags to prevent accidental 
+      # pull of newer images if the registry has 'latest' floating tags.
       KUBE_AGENT_TAG: v2.1.0
       NODE_AGENT_TAG: v2.1.0
       SCANNER_TAG: v2.1.0
@@ -94,4 +115,7 @@ secret:
       CLICKHOUSE_READ_PASSWORD: "$CH_READ_PASS_CONFIG"
       MCHD_USER: "$MCHD_USER_CONFIG"
       MCHD_PASS: "$MCHD_PASS_CONFIG"
+      # --- [TEACHING POINT: CRYPTOGRAPHY KEY] ---
+      # This is the 'Root of Trust' for your data. 
+      # MUST remain consistent across all 'update' or 'upgrade' operations.
       APP_SECRET: "$APP_SECRET_CONFIG"

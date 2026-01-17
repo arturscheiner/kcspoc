@@ -1,42 +1,57 @@
 ################################################################################
-# values-template-211.yaml
-# Kaspersky Container Security - Automação para v2.1.1
-# Foco: mTLS robusto, NetworkPolicies obrigatórias e persistência de segredos.
+# KCS EDUCATIONAL TEMPLATE - Version 2.1.1
+# ------------------------------------------------------------------------------
+# 🎯 TARGET AUDIENCE: Pre-Sales Engineers & Architects
+# ⚠️ ENVIRONMENT: POC / LAB ONLY (Optimized for resource-constrained nodes)
+#
+# 📝 WHAT CHANGED IN v2.1.1?
+# 1. Mandatory NetworkPolicy Path: The Chart now requires explicit ingress 
+#    namespaces to prevent rendering errors.
+# 2. Update Path Refactoring: Moved to $.Values.default.updates.enabled.
+# 3. Identity Stability: Hardened mTLS bootstrap using 'certSource: helm'.
 ################################################################################
 
-# Metadados de rastreio para o kcspoc (Injetados no Root do Chart)
+# --- [TEACHING POINT: METADATA & TRACEABILITY] ---
+# Why use custom labels? To allow 'kcspoc' to track resources that Helm might
+# miss, and to prevent "Cipher Errors" by hashing the current secret state.
 commonLabels:
-  provisioned-by: "kcspoc"
-  provisioned-version: "$PROVISION_VERSION_CONFIG"
-  provisioned-hash: "$PROVISION_HASH_CONFIG"
+  kcspoc.io/managed-by: "kcspoc"
+  kcspoc.io/config-hash: "$PROVISION_HASH_CONFIG"
+  kcspoc.io/tool-version: "$PROVISION_VERSION_CONFIG"
+  kcspoc.io/kcs-version: "2.1.1"
 
 default:
   platform: "$PLATFORM_CONFIGURED"
   domain: "$DOMAIN_CONFIGURED"
   
-  # --- INFRAESTRUTURA DE IDENTIDADE (mTLS) ---
-  # 'certSource: helm' é mandatório para que o Chart renderize os objetos Certificate.
+  # --- [TEACHING POINT: THE mTLS BOOTSTRAP] ---
+  # 'certSource: helm' signals the Chart to create Kubernetes 'Certificate' objects.
+  # This triggers cert-manager to issue certs. Without this, pods hang in 'Init'.
   certSource: "helm"
   internalTLS:
     enabled: true
     certSource: "helm"
   certManager: true
 
-  # --- COMPONENTE DE UPDATES (Caminho corrigido para v2.1.1) ---
-  # O Chart v2.1.x procura por $.Values.default.updates.enabled
+  # --- [TEACHING POINT: UPDATES COMPONENT] ---
+  # In 2.1.0, this was often ignored due to path issues. 2.1.1 strictly looks 
+  # for this inside the 'default' block. Essential for vulnerability DB sync.
   updates:
     enabled: true
 
-  # Otimização para Lab (Evita pods em Pending por falta de CPU/RAM)
-  kcs-ih:
-    replicaCount: 1
-
-  # --- NETWORK POLICIES (Obrigatório na v2.1.1) ---
-  # Se 'create' for true, a lista 'ingressControllerNamespaces' DEVE existir.
+  # --- [TEACHING POINT: NETWORK POLICIES] ---
+  # SECURITY: Isolates microservices. 
+  # v2.1.1 FIX: You MUST define where the Ingress Controller lives (ingress-nginx)
+  # or the Helm rendering engine will fail with a 'path does not exist' error.
   networkPolicies:
     create: true
     ingressControllerNamespaces:
       - ingress-nginx
+
+  # Lab Optimization: We use 1 replica of IH to save memory. 
+  # In Production, 3+ replicas are recommended for high-load image handling.
+  kcs-ih:
+    replicaCount: 1
 
   postgresql:
     resources:
@@ -79,36 +94,12 @@ ingress:
   kcs:
     domain: "$DOMAIN_CONFIGURED"
     ingressClass: "nginx"
-    annotations:
-      # Necessário para upload de imagens grandes para o Image Handler
-      nginx.ingress.kubernetes.io/proxy-body-size: "1500m"
 
 persistentVolume:
   postgresql: { size: 20Gi }
   pvc-minio: { size: 5Gi }
   pvc-clickhouse-cold: { size: 40Gi }
   pvc-clickhouse-hot: { size: 20Gi }
-
-# --- RESOURCE CAPPING (Otimização para evitar falha de agendamento em PoC) ---
-component:
-  kcs-clickhouse:
-    resources:
-      requests: { cpu: "200m", memory: "1Gi" }
-      limits: { cpu: "1", memory: "2Gi" }
-  
-  kcs-scanner:
-    container:
-      kcs-scanner:
-        resources:
-          requests: { cpu: "200m", memory: "512Mi" }
-          limits: { cpu: "500m", memory: "1Gi" }
-
-  kcs-updates:
-    container:
-      kcs-updates:
-        resources:
-          requests: { cpu: "100m", memory: "256Mi" }
-          limits: { cpu: "200m", memory: "512Mi" }
 
 secret:
   infracreds:
@@ -123,6 +114,7 @@ secret:
       CLICKHOUSE_READ_PASSWORD: "$CH_READ_PASS_CONFIG"
       MCHD_USER: "$MCHD_USER_CONFIG"
       MCHD_PASS: "$MCHD_PASS_CONFIG"
-      # --- CHAVE MESTRE: CRÍTICO PARA EVITAR ERRO DE CIFRA (CIPHER ERROR) ---
-      # Se este valor mudar entre deploys, o banco de dados tornar-se-á ilegível.
+      # --- [TEACHING POINT: THE MASTER KEY] ---
+      # APP_SECRET is the encryption key for the DB. 
+      # IF YOU CHANGE THIS on an existing cluster, you lose access to your data.
       APP_SECRET: "$APP_SECRET_CONFIG"
