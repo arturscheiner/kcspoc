@@ -4,8 +4,6 @@
 # Purpose: High-performance resources and Vault architecture changes.
 ################################################################################
 
-# commonLabels: Injected into every resource. 
-# Used by 'kcspoc destroy' to track and remove POC-related objects.
 commonLabels:
   provisioned-by: "kcspoc"
 
@@ -13,8 +11,6 @@ default:
   platform: "$PLATFORM_CONFIGURED"
   domain: "$DOMAIN_CONFIGURED"
   
-  # --- MODERN MTLS STRUCTURE ---
-  # Version 2.3.x uses a more modular TLS approach.
   certSource: "helm"
   internalTLS:
     enabled: true
@@ -22,40 +18,34 @@ default:
   
   certManager: true
 
-  # Image Handler replica reduction for Lab environments.
+  # --- SCANNER UPDATES (FIXED PATH) ---
+  updates:
+    enabled: true
+
   kcs-ih: { replicaCount: 1 }
 
-  # Version 2.3.0 significantly increases default database requirements.
-  # We use moderate limits to ensure stability while allowing lab scheduling.
   postgresql:
     resources:
       requests: { cpu: "200m", memory: "1Gi" }
       limits: { cpu: "1", memory: "2Gi" }
 
-# --- RUNTIME SECURITY (NODE AGENT) ---
 nodeAgent:
   enabled: true
   runtimeSocketPath: "$CRI_SOCKET_CONFIG"
 
-# --- ADMISSION CONTROLLER ---
 admissionController: { enabled: true }
-
-# --- SCANNER UPDATES ---
-updates: { enabled: true }
   
 configmap:
   infraconfig:
     type: fromEnvs
     envs:
       TLS_INTERNAL: true
-      # VAULT_PATH: New mandatory parameter for v2.3.x configuration management.
       VAULT_PATH: "infraconfig"
       KUBE_AGENT_TAG: v2.3.0
       NODE_AGENT_TAG: v2.3.0
       SCANNER_TAG: v2.3.0
       IMAGE_TAG_MIDDLEWARE: v2.3.0
 
-# Local Issuer: selfSigned: true creates the root CA for the 'kcs' namespace.
 issuer:
   create: true
   name: kcs-issuer
@@ -74,24 +64,20 @@ ingress:
     domain: "$DOMAIN_CONFIGURED"
     ingressClass: "nginx"
     annotations:
-      # Increased proxy body size for scanning large container images (>1GB).
       nginx.ingress.kubernetes.io/proxy-body-size: "2048m"
 
 persistentVolume:
   postgresql: { size: 20Gi }
-  pvc-minio: { size: 10Gi } # Increased S3 storage for version 2.3 scanning tasks.
+  pvc-minio: { size: 10Gi }
   pvc-clickhouse-cold: { size: 40Gi }
   pvc-clickhouse-hot: { size: 20Gi }
 
-# --- COMPONENT SPECIFIC OVERRIDES ---
-# Clickhouse in v2.3 requires more memory for background merging and indexing.
 component:
   kcs-clickhouse:
     resources:
       requests: { cpu: "500m", memory: "2Gi" }
-      limits: { cpu: "1.5", memory: "4Gi" }
+      limits: { cpu: "2", memory: "4Gi" }
 
-# --- INFRASTRUCTURE CREDENTIALS ---
 secret:
   infracreds:
     type: fromEnvs
