@@ -181,6 +181,21 @@ cmd_deploy() {
                         sed -i "s|\$MCHD_USER_CONFIG|$MCHD_USER|g" "$PROCESSED_VALUES"
                         sed -i "s|\$MCHD_PASS_CONFIG|$MCHD_PASS|g" "$PROCESSED_VALUES"
                         sed -i "s|\$APP_SECRET_CONFIG|$APP_SECRET|g" "$PROCESSED_VALUES"
+
+                        # 1.3.3 Validation Guard
+                        ui_spinner_start "$MSG_DEPLOY_VALIDATING"
+                        local MISSING_PLACEHOLDERS=$(grep -oP '\$[A-Z0-9_]+(_CONFIG|_CONFIGURED)' "$PROCESSED_VALUES" | sort | uniq | tr '\n' ' ')
+                        if [ -n "$MISSING_PLACEHOLDERS" ]; then
+                            ui_spinner_stop "FAIL"
+                            echo -e "\n  ${RED}${BOLD}${ICON_FAIL} $MSG_DEPLOY_ERR_MISSING_PLACEHOLDERS${NC}"
+                            for p in $MISSING_PLACEHOLDERS; do
+                                echo -e "      ${YELLOW}→ $p${NC}"
+                            done
+                            echo -e "\n  ${DIM}$MSG_DEPLOY_ERR_HINT${NC}"
+                            INSTALL_ERROR=1
+                        else
+                            ui_spinner_stop "PASS"
+                        fi
                     else
                         # Fallback or error if template missing
                         touch "$PROCESSED_VALUES"
