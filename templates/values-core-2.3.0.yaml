@@ -35,6 +35,17 @@ default:
       limits:
         cpu: "500m"
         memory: "1Gi"
+  # --- AGENTE DE SEGURANÇA (VISIBILIDADE EM TEMPO REAL) ---
+  nodeAgent:
+    enabled: true
+    # Caminho para o Lab (containerd)
+    runtimeSocketPath: "$CRI_SOCKET_CONFIG"
+    installStrategy: DaemonSet
+
+  # --- CONTROLE DE ADMISSÃO (O "SEGURANÇA" DO CLUSTER) ---
+  admissionController:
+    enabled: true
+    replicaCount: 1
 
   kcs-ih:
     replicaCount: 1
@@ -46,6 +57,8 @@ issuer:
   create: true
   name: kcs-issuer
   kind: Issuer
+  # Na v2.1.0+, esta flag ajuda a gerar a CA auto-assinada se o segredo 'cert-ca' faltar
+  selfSigned: true
   
 # ---------------- #
 #   Configuracoes  #

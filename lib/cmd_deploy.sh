@@ -152,7 +152,19 @@ cmd_deploy() {
                         cp "$DYNAMIC_TEMPLATE" "$PROCESSED_VALUES"
                         sed -i "s|\$DOMAIN_CONFIGURED|$DOMAIN|g" "$PROCESSED_VALUES"
                         sed -i "s|\$PLATFORM_CONFIGURED|$PLATFORM|g" "$PROCESSED_VALUES"
-                        sed -i "s|\$REGISTRY_SERVER_CONFIG|$REGISTRY_SERVER|g" "$PROCESSED_VALUES"
+                    
+                    # CRI Socket Auto-Detection
+                    local FINAL_CRI="$CRI_SOCKET"
+                    if [ -z "$FINAL_CRI" ]; then
+                        local RT_VER=$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.containerRuntimeVersion}' 2>/dev/null)
+                        if [[ "$RT_VER" == *"containerd"* ]]; then FINAL_CRI="/run/containerd/containerd.sock"; fi
+                        if [[ "$RT_VER" == *"cri-o"* ]]; then FINAL_CRI="/run/crio/crio.sock"; fi
+                        if [[ "$RT_VER" == *"docker"* ]]; then FINAL_CRI="/var/run/cri-dockerd.sock"; fi
+                        echo -e "      ${DIM}CRI Auto-Detected: $FINAL_CRI${NC}" >> "$DEBUG_OUT"
+                    fi
+                    sed -i "s|\$CRI_SOCKET_CONFIG|$FINAL_CRI|g" "$PROCESSED_VALUES"
+
+                    sed -i "s|\$REGISTRY_SERVER_CONFIG|$REGISTRY_SERVER|g" "$PROCESSED_VALUES"
                         sed -i "s|\$REGISTRY_USER_CONFIG|$REGISTRY_USER|g" "$PROCESSED_VALUES"
                         sed -i "s|\$REGISTRY_PASS_CONFIG|$REGISTRY_PASS|g" "$PROCESSED_VALUES"
                         sed -i "s|\$REGISTRY_EMAIL_CONFIG|$REGISTRY_EMAIL|g" "$PROCESSED_VALUES"

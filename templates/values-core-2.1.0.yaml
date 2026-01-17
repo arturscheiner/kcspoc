@@ -34,7 +34,22 @@ default:
     resources:
       requests: { cpu: "100m", memory: "512Mi" }
       limits: { cpu: "500m", memory: "1Gi" }
+# --- AGENTE DE SEGURANÇA (VISIBILIDADE EM TEMPO REAL) ---
+nodeAgent:
+  enabled: true
+  # Caminho para o Lab (containerd)
+  runtimeSocketPath: "$CRI_SOCKET_CONFIG"
+  installStrategy: DaemonSet
 
+# --- CONTROLE DE ADMISSÃO (O "SEGURANÇA" DO CLUSTER) ---
+admissionController:
+  enabled: true
+  replicaCount: 1
+
+# --- ATUALIZAÇÕES AUTOMÁTICAS ---
+updates:
+  enabled: true
+  
 configmap:
   infraconfig:
     type: fromEnvs

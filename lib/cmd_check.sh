@@ -263,6 +263,32 @@ cmd_check() {
     echo -e "      ${DIM}- ${MSG_CHECK_CLOUD_ZONE}     : ${NC}${ZONE:-N/A}"
     echo -e "      ${DIM}- ${MSG_CHECK_CLOUD_OS} : ${NC}${OS_IMG:-N/A}"
 
+    # --- [5.1] Container Runtime (CRI) Discovery ---
+    echo -e "\n   ${BOLD}${ICON_GEAR} $MSG_CHECK_CRI_DETECTING${NC}"
+    local RUNTIME_VERSION=$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.containerRuntimeVersion}' 2>/dev/null)
+    
+    if [ -n "$RUNTIME_VERSION" ]; then
+        local DETECTED_SOCKET=""
+        local RUNTIME_TYPE=""
+        
+        if [[ "$RUNTIME_VERSION" == *"containerd"* ]]; then
+            DETECTED_SOCKET="/run/containerd/containerd.sock"
+            RUNTIME_TYPE="containerd"
+        elif [[ "$RUNTIME_VERSION" == *"cri-o"* ]]; then
+            DETECTED_SOCKET="/run/crio/crio.sock"
+            RUNTIME_TYPE="CRI-O"
+        elif [[ "$RUNTIME_VERSION" == *"docker"* ]]; then
+            DETECTED_SOCKET="/var/run/cri-dockerd.sock"
+            RUNTIME_TYPE="Docker (via cri-dockerd)"
+        fi
+        
+        echo -e "      ${ICON_INFO} ${BLUE}$MSG_CHECK_CRI_FOUND${NC} ${GREEN}${RUNTIME_TYPE} (${RUNTIME_VERSION})${NC}"
+        if [ -n "$DETECTED_SOCKET" ]; then
+            echo -e "      ${ICON_INFO} ${BLUE}$MSG_CHECK_CRI_SOCKET${NC} ${GREEN}${DETECTED_SOCKET}${NC}"
+            echo -e "      ${DIM}$MSG_CHECK_CRI_HINT${NC}"
+        fi
+    fi
+
     # --- [6] Node Resources & Health ---
     ui_section "6. $MSG_CHECK_NODE_RES_TITLE"
     
