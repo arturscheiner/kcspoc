@@ -57,7 +57,9 @@ echo -e "   ${ICON_GEAR} Cloning ${REPO_URL}..."
 rm -rf kuberverse-simple kcspoc bin
 
 if git clone "$REPO_URL" kcspoc &>/dev/null; then
-    echo -e "   ${ICON_OK} Repository cloned successfully."
+    # Detect Version
+    DETECTED_VER=$(grep 'VERSION=' kcspoc/lib/common.sh | cut -d'"' -f2)
+    echo -e "   ${ICON_OK} Repository cloned successfully. ${DIM}(Target: v${DETECTED_VER})${NC}"
 else
     echo -e "   ${RED}${ICON_FAIL} Failed to clone repository.${NC}"
     exit 1
@@ -109,7 +111,7 @@ else
 fi
 echo ""
 
-echo -e "${GREEN}${BOLD}   ${ICON_OK} KCS PoC Tool installed successfully!${NC}"
+echo -e "${GREEN}${BOLD}   ${ICON_OK} KCS PoC Tool installed successfully! ${DIM}(v${DETECTED_VER:-unknown})${NC}"
 echo -e "   You can now run '${BOLD}kcspoc${NC}' from anywhere."
 echo ""
 
