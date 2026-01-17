@@ -99,7 +99,6 @@ cmd_deploy() {
 
         # 1.3 Helm Installation
         if [ "$INSTALL_ERROR" -eq 0 ]; then
-            ui_spinner_start "Helm Upgrade/Install (KCS Core)"
             
             # Determine Version to use
             local TARGET_VER="${KCS_VERSION:-latest}"
@@ -195,6 +194,7 @@ cmd_deploy() {
                       -f \"$PROCESSED_VALUES\""
                 fi
 
+                ui_spinner_start "Helm Upgrade/Install (KCS Core)"
                 if eval "$HELM_CMD" &>> "$DEBUG_OUT"; then
                     ui_spinner_stop "PASS"
                     # Run health check if Helm deployment was accepted
