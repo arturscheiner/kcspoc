@@ -50,7 +50,7 @@ cmd_config() {
     mkdir -p "$CONFIG_DIR"
     
     # Load existing config to show as "Current"
-    local CUR_NS="" CUR_DOMAIN="" CUR_REG_SRV="" CUR_REG_USER="" CUR_REG_EMAIL="" CUR_IP_RANGE="" CUR_DEEP="" CUR_VER="" CUR_LANG=""
+    local CUR_NS="" CUR_DOMAIN="" CUR_REG_SRV="" CUR_REG_USER="" CUR_REG_EMAIL="" CUR_IP_RANGE="" CUR_DEEP="" CUR_VER="" CUR_LANG="" CUR_PLAT=""
     local CUR_PG_USER="" CUR_PG_PASS="" CUR_MINIO_USER="" CUR_MINIO_PASS="" CUR_CH_ADMIN_PASS="" CUR_CH_WRITE_PASS="" CUR_CH_READ_PASS="" CUR_MCHD_USER="" CUR_MCHD_PASS="" CUR_APP_SECRET=""
     
     if [ -f "$CONFIG_FILE" ]; then
@@ -64,6 +64,7 @@ cmd_config() {
         CUR_DEEP="$ENABLE_DEEP_CHECK"
         CUR_VER="$KCS_VERSION"
         CUR_LANG="$PREFERRED_LANG"
+        CUR_PLAT="$PLATFORM"
         # Secrets
         CUR_PG_USER="$POSTGRES_USER"
         CUR_PG_PASS="$POSTGRES_PASSWORD"
@@ -78,7 +79,7 @@ cmd_config() {
         echo -e "${GREEN}${ICON_OK} $MSG_CONFIG_LOADED${NC}"
     fi
 
-    local TOTAL_STEPS=8
+    local TOTAL_STEPS=9
 
     # 0. Language (Step 1 effectively)
     ui_step 1 $TOTAL_STEPS "$MSG_STEP_LANG" "$MSG_STEP_LANG_DESC"
@@ -171,8 +172,13 @@ cmd_config() {
     ui_input "$MSG_INPUT_VERSION" "latest" "$CUR_VER"
     KCS_VERSION="$RET_VAL"
 
-    # 7. Secrets
-    ui_step 8 $TOTAL_STEPS "$MSG_STEP_SECRETS" "$MSG_STEP_SECRETS_DESC"
+    # 7. Platform
+    ui_step 8 $TOTAL_STEPS "$MSG_STEP_PLATFORM" "$MSG_STEP_PLATFORM_DESC"
+    ui_input "$MSG_INPUT_PLATFORM" "kubernetes" "$CUR_PLAT"
+    PLATFORM="$RET_VAL"
+
+    # 8. Secrets
+    ui_step 9 $TOTAL_STEPS "$MSG_STEP_SECRETS" "$MSG_STEP_SECRETS_DESC"
     ui_input "$MSG_INPUT_SECRETS_AUTO" "y" "y"
     local AUTO_GEN="$RET_VAL"
 
@@ -233,6 +239,7 @@ IP_RANGE="$IP_RANGE"
 
 # Installation
 KCS_VERSION="$KCS_VERSION"
+PLATFORM="$PLATFORM"
 
 # Checks
 ENABLE_DEEP_CHECK="$ENABLE_DEEP_CHECK"

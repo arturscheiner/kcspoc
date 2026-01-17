@@ -115,6 +115,7 @@ cmd_deploy() {
                     echo -e "      ${DIM}Template Source: $DYNAMIC_TEMPLATE${NC}" >> "$DEBUG_OUT"
                     cp "$DYNAMIC_TEMPLATE" "$PROCESSED_VALUES"
                     sed -i "s|\$DOMAIN_CONFIGURED|$DOMAIN|g" "$PROCESSED_VALUES"
+                    sed -i "s|\$PLATFORM_CONFIGURED|$PLATFORM|g" "$PROCESSED_VALUES"
                     sed -i "s|\$REGISTRY_SERVER_CONFIG|$REGISTRY_SERVER|g" "$PROCESSED_VALUES"
                     sed -i "s|\$REGISTRY_USER_CONFIG|$REGISTRY_USER|g" "$PROCESSED_VALUES"
                     sed -i "s|\$REGISTRY_PASS_CONFIG|$REGISTRY_PASS|g" "$PROCESSED_VALUES"

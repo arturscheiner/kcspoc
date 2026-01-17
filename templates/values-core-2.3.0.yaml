@@ -8,7 +8,7 @@ commonLabels:
   provisioned-by: "kcspoc"
 
 default:
-  platform: kubernetes
+  platform: "$PLATFORM_CONFIGURED"
   domain: "$DOMAIN_CONFIGURED"
   serviceAccount: kcs
 

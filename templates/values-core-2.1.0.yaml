@@ -7,11 +7,17 @@ commonLabels:
   provisioned-by: "kcspoc"
 
 default:
-  platform: kubernetes
+  platform: "$PLATFORM_CONFIGURED"
   domain: "$DOMAIN_CONFIGURED"
   # No 2.1.0, esta flag é mandatória para renderizar os manifestos de Certificate
   certSource: helm 
-  
+
+  # --- CORREÇÃO DO ERRO networkPolicy.yaml ---
+  networkPolicies:
+    create: true
+    ingressControllerNamespaces:
+      - ingress-nginx        # Namespace onde o nosso 'porteiro' reside
+
   postgresql:
     resources:
       requests: { cpu: "100m", memory: "512Mi" }
