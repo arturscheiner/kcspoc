@@ -5,13 +5,17 @@ cmd_deploy() {
     local INSTALL_CORE=""
     local INSTALL_AGENTS=""
     local VALUES_OVERRIDE=""
-    local CHECK_HASH=""
+    local CHECK_MODE=""
 
     while [[ $# -gt 0 ]]; do
         case $1 in
             --core)
                 INSTALL_CORE="true"
                 shift
+                ;;
+            --check)
+                CHECK_MODE="$2"
+                shift; shift
                 ;;
             --agents)
                 INSTALL_AGENTS="true"
@@ -37,7 +41,7 @@ cmd_deploy() {
     done
 
     # Default to help if no options provided
-    if [ -z "$INSTALL_CORE" ] && [ -z "$INSTALL_AGENTS" ] && [ -z "$CHECK_HASH" ]; then
+    if [ -z "$INSTALL_CORE" ] && [ -z "$INSTALL_AGENTS" ] && [ -z "$CHECK_MODE" ]; then
         ui_help "deploy" "$MSG_HELP_DEPLOY_DESC" "$MSG_HELP_DEPLOY_OPTS" "$MSG_HELP_DEPLOY_EX"
         return 1
     fi
@@ -52,28 +56,49 @@ cmd_deploy() {
         return 1
     fi
 
-    local INSTALL_ERROR=0
-
-    # --- 0. HASH CHECK (Standalone) ---
-    if [ "$CHECK_HASH" == "true" ]; then
-        ui_section "Hash Integrity Check"
-        local local_hash=$(get_config_hash)
-        local remote_hash=$(kubectl get ns "$NAMESPACE" -o jsonpath='{.metadata.labels.provisioned-hash}' 2>/dev/null || echo "N/A (New NS)")
+    # --- 0. INTEGRITY CHECK (Standalone) ---
+    if [ -n "$CHECK_MODE" ]; then
+        ui_section "Integrity Check: $CHECK_MODE"
+        local local_val=""
+        local remote_val=""
+        local label_key=""
+        local col_header=""
+        
+        case "$CHECK_MODE" in
+            hash)
+                local_val=$(get_config_hash)
+                label_key="provisioned-hash"
+                col_header="CONFIG HASH"
+                remote_val=$(kubectl get ns "$NAMESPACE" -o jsonpath="{.metadata.labels.$label_key}" 2>/dev/null || echo "N/A")
+                ;;
+            version)
+                local_val="${KCS_VERSION:-latest}"
+                label_key="kcs-version"
+                col_header="KCS VERSION"
+                remote_val=$(kubectl get ns "$NAMESPACE" -o jsonpath="{.metadata.labels.$label_key}" 2>/dev/null || echo "N/A")
+                ;;
+            *)
+                echo -e "   ${RED}${ICON_FAIL} Invalid check mode: $CHECK_MODE${NC} (Use: hash, version)"
+                return 1
+                ;;
+        esac
         
         local match_icon="${RED}${ICON_FAIL}${NC}"
-        [ "$local_hash" == "$remote_hash" ] && match_icon="${GREEN}${ICON_OK}${NC}"
+        [ "$local_val" == "$remote_val" ] && match_icon="${GREEN}${ICON_OK}${NC}"
         
         echo -e "   ${BOLD}Namespace:${NC} $NAMESPACE\n"
         
-        printf "   %-32s | %-32s | %s\n" "LOCAL CONFIG" "CLUSTER/REMOTE" "MATCH"
+        printf "   %-32s | %-32s | %s\n" "LOCAL $col_header" "CLUSTER/REMOTE" "MATCH"
         printf "   ---------------------------------|----------------------------------|-------\n"
-        printf "   %-32s | %-32s |  %b\n" "$local_hash" "$remote_hash" "$match_icon"
+        printf "   %-32s | %-32s |  %b\n" "$local_val" "$remote_val" "$match_icon"
         echo ""
         
-        if [ "$remote_hash" != "not-found" ] && [ "$local_hash" != "$remote_hash" ]; then
-             echo -e "   ${RED}${BOLD}${ICON_WARN} Mismatched Configuration Detected!${NC}"
-             echo -e "   ${DIM}This deploy may break data encryption (Cipher Error).${NC}"
-             echo -e "   ${DIM}Please sync your local config with the original provisioner.${NC}"
+        if [ "$remote_val" != "N/A" ] && [ "$local_val" != "$remote_val" ]; then
+             echo -e "   ${RED}${BOLD}${ICON_WARN} Mismatched $CHECK_MODE Detected!${NC}"
+             if [ "$CHECK_MODE" == "hash" ]; then
+                 echo -e "   ${DIM}This deploy may break data encryption (Cipher Error).${NC}"
+             fi
+             echo -e "   ${DIM}Please sync your local configuration with the cluster status.${NC}"
         fi
         echo ""
         return 0
@@ -358,7 +383,8 @@ EOF
                         
                         # Phase H: Final Explicit Labeling
                         local FINAL_HASH=$(get_config_hash)
-                        kubectl label ns "$NAMESPACE" provisioned-by=kcspoc provisioned-hash="$FINAL_HASH" provisioned-version="$VERSION" --overwrite &>> "$DEBUG_OUT"
+                        local FINAL_VER="${KCS_VERSION:-latest}"
+                        kubectl label ns "$NAMESPACE" provisioned-by=kcspoc provisioned-hash="$FINAL_HASH" provisioned-version="$VERSION" kcs-version="$FINAL_VER" --overwrite &>> "$DEBUG_OUT"
 
                         ui_spinner_stop "PASS"
                         
