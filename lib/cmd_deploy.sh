@@ -177,6 +177,19 @@ cmd_deploy() {
                  return 0
              fi
         fi
+
+         # Phase L: Anti-Cipher Protection (v0.4.93)
+         if [[ "$OPERATION_TYPE" =~ ^(update|upgrade)$ ]]; then
+             ui_spinner_start "Recovering APP_SECRET from cluster"
+             local cluster_secret=$(kubectl get secret infracreds -n "$NAMESPACE" -o jsonpath='{.data.APP_SECRET}' 2>/dev/null | base64 -d)
+             if [ -n "$cluster_secret" ]; then
+                 APP_SECRET="$cluster_secret"
+                 ui_spinner_stop "RECOVERED"
+                 echo -e "      ${DIM}Master Key preserved to prevent Cipher Errors.${NC}" >> "$DEBUG_OUT"
+             else
+                 ui_spinner_stop "SKIP (New Secret)"
+             fi
+         fi
         # 1.0 Mandatory Config Pre-Check (Skip in Expert Mode)
         if [ -z "$VALUES_OVERRIDE" ]; then
             local MANDATORY_VARS=("NAMESPACE" "DOMAIN" "REGISTRY_SERVER" "CRI_SOCKET")
@@ -419,8 +432,11 @@ EOF
                     fi
 
                     ui_spinner_start "[4/5] Helm Upgrade/Install"
-                    if eval "$HELM_CMD" &>> "$DEBUG_OUT"; then
+                    local HELM_LOG=$(mktemp)
+                    if eval "$HELM_CMD" &> "$HELM_LOG"; then
+                        cat "$HELM_LOG" >> "$DEBUG_OUT"
                         ui_spinner_stop "PASS"
+                        rm "$HELM_LOG"
                         
                         # [STEP 5] Final Sync & Pod Refresh
                         ui_spinner_start "[5/5] Final Sync & Identity Refresh"
@@ -442,8 +458,36 @@ EOF
                             INSTALL_ERROR=1
                         fi
                     else
-                        ui_spinner_stop "FAIL"
-                        INSTALL_ERROR=1
+                        cat "$HELM_LOG" >> "$DEBUG_OUT"
+                        # Phase M: Self-Healing Execution (v0.4.93)
+                        if grep -q "Forbidden: updates to statefulset spec" "$HELM_LOG"; then
+                            ui_spinner_stop "RESILIENCE"
+                            echo -e "      ${YELLOW}${ICON_GEAR} Immutability detected. Fixing StatefulSets...${NC}"
+                            kubectl delete sts kcs-s3 kcs-postgres kcs-clickhouse -n "$NAMESPACE" --cascade=orphan &>> "$DEBUG_OUT"
+                            
+                            ui_spinner_start "[4/5] Retrying Helm Upgrade/Install"
+                            if eval "$HELM_CMD" &>> "$DEBUG_OUT"; then
+                                ui_spinner_stop "PASS"
+                                # Proceed to Step 5 (repeated for clarity)
+                                ui_spinner_start "[5/5] Final Sync & Identity Refresh"
+                                kubectl wait --for=condition=Ready certificate --all -n "$NAMESPACE" --timeout=60s &>> "$DEBUG_OUT"
+                                kubectl delete pods -n "$NAMESPACE" --all --grace-period=0 --force &>> "$DEBUG_OUT"
+                                ui_spinner_stop "PASS"
+                                
+                                if _watch_deploy_stability "$NAMESPACE" "$OPERATION_TYPE" "$EXEC_HASH" "$TARGET_VER"; then
+                                    _verify_deploy_bootstrap "$NAMESPACE"
+                                else
+                                    INSTALL_ERROR=1
+                                fi
+                            else
+                                ui_spinner_stop "FAIL"
+                                INSTALL_ERROR=1
+                            fi
+                        else
+                            ui_spinner_stop "FAIL"
+                            INSTALL_ERROR=1
+                        fi
+                        rm "$HELM_LOG"
                     fi
                 fi
             fi
@@ -633,7 +677,8 @@ _watch_deploy_stability() {
         
         # Calculate totals
         local total_pods=$(echo "$pods_status" | grep -v "^$" | wc -l)
-        local ready_pods=$(echo "$pods_status" | grep "Running" | grep -v "0/" | wc -l)
+        # Accurate Ready check: First field matches Second field in READY column (e.g. 1/1, 2/2)
+        local ready_pods=$(echo "$pods_status" | awk '$2 ~ /\// {split($2,a,"/"); if(a[1]==a[2] && a[2]!="0") print $0}' | wc -l)
         local completed_jobs=$(echo "$pods_status" | grep "Completed" | wc -l)
         
         local stable_count=$((ready_pods + completed_jobs))
@@ -641,7 +686,20 @@ _watch_deploy_stability() {
         # Print progress
         if [ "$total_pods" -gt 0 ]; then
             local percent=$((stable_count * 100 / total_pods))
-            printf "\r   ${ICON_ARROW} Progress: ${BOLD}%d/%d${NC} pods stable (${CYAN}%d%%${NC})   " "$stable_count" "$total_pods" "$percent"
+            
+            # ASCII Progress Bar (20 chars)
+            local bar_size=20
+            local filled=$((percent * bar_size / 100))
+            local empty=$((bar_size - filled))
+            local bar="["
+            for ((i=0; i<filled; i++)); do bar+="#"; done
+            for ((i=0; i<empty; i++)); do bar+="-"; done
+            bar+="]"
+
+            printf "\r   ${ICON_ARROW} Progress: ${BLUE}%s${NC} ${BOLD}%d%%${NC} (%d/%d pods)   " "$bar" "$percent" "$stable_count" "$total_pods"
+            
+            # Sync label with progress
+            _update_state "$ns" "deploying" "$op_type" "$exec_id" "$local_hash" "$target_ver" "$percent"
         else
             printf "\r   ${ICON_ARROW} Waiting for pods to initialize...   "
         fi
@@ -650,8 +708,32 @@ _watch_deploy_stability() {
         if [ "$stable_count" -eq "$total_pods" ] && [ "$total_pods" -gt 0 ]; then
             echo -e "\n\n  ${GREEN}${BOLD}${ICON_OK} DEPLOYMENT SUCCESSFUL!${NC}"
             echo -e "  All KCS components are Running/Completed."
+            
             # Final transition to STABLE
             _update_state "$ns" "stable" "$op_type" "$exec_id" "$local_hash" "$target_ver"
+
+            # --- "CHAVE DE OURO" POST-INSTALL GUIDANCE ---
+            local domain=$(kubectl get ingress -n "$ns" -o jsonpath='{.items[0].spec.rules[0].host}' 2>/dev/null)
+            [ -z "$domain" ] && domain="kcs.cluster.local"
+
+            echo -e "\n  ${BLUE}================================================================${NC}"
+            echo -e "  ${BOLD}${ICON_ROCKET} KASPERSKY CONTAINER SECURITY IS READY FOR DEMO!${NC}"
+            echo -e "  ${BLUE}================================================================${NC}"
+            echo -e "\n  ${BOLD}1. Access the Web Console:${NC}"
+            echo -e "     URL:      ${GREEN}https://$domain${NC}"
+            echo -e "     Username: ${YELLOW}admin${NC}"
+            echo -e "     Password: ${YELLOW}${APP_SECRET:-admin}${NC} (Configured APP_SECRET)"
+            
+            echo -e "\n  ${BOLD}2. Next Step (Automated Onboarding):${NC}"
+            echo -e "     Log in to the console, go to ${BOLD}Settings > API Keys${NC},"
+            echo -e "     generate a new key, and then run:"
+            echo -e "\n     ${GREEN}${BOLD}./kcspoc bootstrap${NC}"
+            
+            echo -e "\n     ${BLUE}This command will:${NC}"
+            echo -e "     ${DIM}- Configure the API integration${NC}"
+            echo -e "     ${DIM}- Create a default 'PoC Agent Group'${NC}"
+            echo -e "     ${DIM}- Prepare the environment for './kcspoc deploy --agents'${NC}"
+            echo -e "  ${BLUE}================================================================${NC}\n"
             break
         fi
 

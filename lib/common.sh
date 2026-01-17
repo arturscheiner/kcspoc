@@ -25,7 +25,7 @@ CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
 ARTIFACTS_DIR="$CONFIG_DIR/artifacts"
 LOGS_DIR="$CONFIG_DIR/logs"
-VERSION="0.4.91"
+VERSION="0.4.93"
 
 # Execution Globals
 EXEC_HASH=""
@@ -74,6 +74,7 @@ _update_state() {
     local execution_id="$4"
     local config_hash="$5"
     local kcs_ver="$6"
+    local status_progress="${7:-0}"
 
     # Only attempt if namespace exists
     if kubectl get ns "$ns" &>/dev/null; then
@@ -83,7 +84,8 @@ _update_state() {
           "kcspoc.io/last-operation=$operation" \
           "kcspoc.io/execution-id=$execution_id" \
           "kcspoc.io/config-hash=$config_hash" \
-          "kcspoc.io/kcs-version=$kcs_ver" --overwrite &>> "$DEBUG_OUT"
+          "kcspoc.io/kcs-version=$kcs_ver" \
+          "kcspoc.io/status-progress=$status_progress" --overwrite &>> "$DEBUG_OUT"
     fi
 }
 

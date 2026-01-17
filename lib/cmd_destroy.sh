@@ -82,28 +82,25 @@ cmd_destroy() {
         echo -e "   ${BLUE}${ICON_INFO} [1/8] $RELEASE_NAME: $MSG_DESTROY_NOT_FOUND${NC}"
     fi
 
-    # 2. Namespace & Certificates
+    # 2. PVC Purge (Phase N: Deep Destruction)
+    if kubectl get pvc -n "$TARGET_NS" &>> "$DEBUG_OUT"; then
+        ui_spinner_start "[2/8] Mandatory PVC Purge"
+        kubectl delete pvc --all -n "$TARGET_NS" --timeout=60s &>> "$DEBUG_OUT" || true
+        ui_spinner_stop "PASS"
+    else
+        echo -e "   ${BLUE}${ICON_INFO} [2/8] PVCs: $MSG_DESTROY_NOT_FOUND${NC}"
+    fi
+
+    # 3. Namespace & Certificates
     if kubectl get namespace "$TARGET_NS" &>> "$DEBUG_OUT"; then
-        ui_spinner_start "[2/8] $MSG_DESTROY_STEP_2"
+        ui_spinner_start "[3/8] $MSG_DESTROY_STEP_2"
         # Pre-delete certificates to avoid stuck finalizers
         kubectl delete certificate --all -n "$TARGET_NS" --timeout=30s &>> "$DEBUG_OUT" || true
-        kubectl delete namespace "$TARGET_NS" --timeout=60s &>> "$DEBUG_OUT"
+        kubectl delete namespace "$TARGET_NS" --timeout=120s &>> "$DEBUG_OUT"
         wait_and_force_delete_ns "$TARGET_NS" 5
         ui_spinner_stop "PASS"
     else
-        echo -e "   ${BLUE}${ICON_INFO} [2/8] $TARGET_NS: $MSG_DESTROY_NOT_FOUND${NC}"
-    fi
-
-    # 3. PVCs (Residual)
-    ui_spinner_start "[3/8] $MSG_DESTROY_STEP_3"
-    # Even if NS is gone, check if any PVCs are stuck (might happen during termination) or if NS deletion failed
-    local RESIDUAL_PVCS=$(kubectl get pvc -n "$TARGET_NS" --no-headers 2>> "$DEBUG_OUT" | awk '{print $1}')
-    if [ -n "$RESIDUAL_PVCS" ]; then
-        echo "$RESIDUAL_PVCS" | xargs -I {} kubectl delete pvc {} -n "$TARGET_NS" --force --grace-period=0 &>> "$DEBUG_OUT" || true
-        ui_spinner_stop "PASS"
-    else
-        ui_spinner_stop "PASS"
-        echo -e "      ${DIM}$MSG_DESTROY_NOT_FOUND${NC}"
+        echo -e "   ${BLUE}${ICON_INFO} [3/8] $TARGET_NS: $MSG_DESTROY_NOT_FOUND${NC}"
     fi
  
     # 4. PVs (Orphaned)
