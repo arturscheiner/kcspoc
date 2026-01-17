@@ -4,6 +4,7 @@ cmd_deploy() {
     # --- Parse Arguments ---
     local INSTALL_CORE=""
     local INSTALL_AGENTS=""
+    local VALUES_OVERRIDE=""
 
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -14,6 +15,10 @@ cmd_deploy() {
             --agents)
                 INSTALL_AGENTS="true"
                 shift
+                ;;
+            --values|-f)
+                VALUES_OVERRIDE="$2"
+                shift; shift
                 ;;
             --help|help)
                 ui_help "deploy" "$MSG_HELP_DEPLOY_DESC" "$MSG_HELP_DEPLOY_OPTS" "$MSG_HELP_DEPLOY_EX"
@@ -104,65 +109,71 @@ cmd_deploy() {
             local CHART_SOURCE="$TGZ_FILE"
 
             if [ "$INSTALL_ERROR" -eq 0 ]; then
-                # 1.3.1 Process Dynamic Overrides
-                local DYNAMIC_TEMPLATE="$ARTIFACT_PATH/values-core-$TARGET_VER.yaml"
-                # Fallback for older pulls or 'latest' resolves
-                [ ! -f "$DYNAMIC_TEMPLATE" ] && DYNAMIC_TEMPLATE="$ARTIFACT_PATH/values-core-latest.yaml"
-                
-                # --- INTEGRITY CHECK: Remote vs Local ---
-                if [ -f "$DYNAMIC_TEMPLATE" ]; then
-                    local REMOTE_URL="https://raw.githubusercontent.com/arturscheiner/kcspoc/refs/heads/main/templates/$(basename "$DYNAMIC_TEMPLATE")"
-                    local TEMP_REMOTE="/tmp/kcspoc-remote-check.yaml"
-                    
-                    echo -n "      ${DIM}${ICON_INFO} $MSG_DEPLOY_TEMPLATE_CHECK${NC}"
-                    if curl -sSf "$REMOTE_URL" -o "$TEMP_REMOTE" 2>/dev/null; then
-                        if ! cmp -s "$DYNAMIC_TEMPLATE" "$TEMP_REMOTE"; then
-                            echo -e "\r      ${YELLOW}${ICON_INFO} $MSG_DEPLOY_TEMPLATE_UPDATED${NC}"
-                            echo -en "      ${BOLD}$MSG_DEPLOY_TEMPLATE_PROMPT ${NC}"
-                            read -r -p "" opt
-                            if [[ "$opt" =~ ^[yY]$ ]]; then
-                                cp "$DYNAMIC_TEMPLATE" "${DYNAMIC_TEMPLATE}.old"
-                                mv "$TEMP_REMOTE" "$DYNAMIC_TEMPLATE"
-                                echo -e "      ${GREEN}${ICON_OK} $MSG_DEPLOY_TEMPLATE_DOWNLOAD_OK${NC}"
-                                echo -e "      ${DIM}$MSG_DEPLOY_TEMPLATE_BACKUP ${DYNAMIC_TEMPLATE}.old${NC}"
-                            fi
-                        else
-                             echo -e "\r      ${DIM}${ICON_OK} $MSG_DEPLOY_TEMPLATE_CHECK${NC} (${GREEN}UP-TO-DATE${NC})"
-                        fi
-                    else
-                        echo -e "\r      ${DIM}${ICON_INFO} $MSG_DEPLOY_TEMPLATE_CHECK${NC} (${YELLOW}OFFLINE/NOT FOUND${NC})"
-                    fi
-                    [ -f "$TEMP_REMOTE" ] && rm -f "$TEMP_REMOTE"
-                fi
-                # ----------------------------------------
-
                 local PROCESSED_VALUES="$CONFIG_DIR/values-core-$TARGET_VER.yaml"
                 
-                if [ -f "$DYNAMIC_TEMPLATE" ]; then
-                    echo -e "      ${DIM}Template Source: $DYNAMIC_TEMPLATE${NC}" >> "$DEBUG_OUT"
-                    cp "$DYNAMIC_TEMPLATE" "$PROCESSED_VALUES"
-                    sed -i "s|\$DOMAIN_CONFIGURED|$DOMAIN|g" "$PROCESSED_VALUES"
-                    sed -i "s|\$PLATFORM_CONFIGURED|$PLATFORM|g" "$PROCESSED_VALUES"
-                    sed -i "s|\$REGISTRY_SERVER_CONFIG|$REGISTRY_SERVER|g" "$PROCESSED_VALUES"
-                    sed -i "s|\$REGISTRY_USER_CONFIG|$REGISTRY_USER|g" "$PROCESSED_VALUES"
-                    sed -i "s|\$REGISTRY_PASS_CONFIG|$REGISTRY_PASS|g" "$PROCESSED_VALUES"
-                    sed -i "s|\$REGISTRY_EMAIL_CONFIG|$REGISTRY_EMAIL|g" "$PROCESSED_VALUES"
-                    sed -i "s|\${KCS_VERSION}|$TARGET_VER|g" "$PROCESSED_VALUES"
-                    
-                    # Inject Secrets
-                    sed -i "s|\$POSTGRES_USER_CONFIG|$POSTGRES_USER|g" "$PROCESSED_VALUES"
-                    sed -i "s|\$POSTGRES_PASS_CONFIG|$POSTGRES_PASSWORD|g" "$PROCESSED_VALUES"
-                    sed -i "s|\$MINIO_USER_CONFIG|$MINIO_ROOT_USER|g" "$PROCESSED_VALUES"
-                    sed -i "s|\$MINIO_PASS_CONFIG|$MINIO_ROOT_PASSWORD|g" "$PROCESSED_VALUES"
-                    sed -i "s|\$CH_ADMIN_PASS_CONFIG|$CLICKHOUSE_ADMIN_PASSWORD|g" "$PROCESSED_VALUES"
-                    sed -i "s|\$CH_WRITE_PASS_CONFIG|$CLICKHOUSE_WRITE_PASSWORD|g" "$PROCESSED_VALUES"
-                    sed -i "s|\$CH_READ_PASS_CONFIG|$CLICKHOUSE_READ_PASSWORD|g" "$PROCESSED_VALUES"
-                    sed -i "s|\$MCHD_USER_CONFIG|$MCHD_USER|g" "$PROCESSED_VALUES"
-                    sed -i "s|\$MCHD_PASS_CONFIG|$MCHD_PASS|g" "$PROCESSED_VALUES"
-                    sed -i "s|\$APP_SECRET_CONFIG|$APP_SECRET|g" "$PROCESSED_VALUES"
+                # --- TEMPLATE PROCESSING (Skip if override provided) ---
+                if [ -n "$VALUES_OVERRIDE" ]; then
+                    if [ -f "$VALUES_OVERRIDE" ]; then
+                        echo -e "      ${GREEN}${ICON_OK} Using custom values: ${VALUES_OVERRIDE}${NC}"
+                        PROCESSED_VALUES="$VALUES_OVERRIDE"
+                    else
+                        echo -e "      ${RED}${ICON_FAIL} Custom values file not found: ${VALUES_OVERRIDE}${NC}"
+                        return 1
+                    fi
                 else
-                    # Fallback or error if template missing
-                    touch "$PROCESSED_VALUES"
+                    # 1.3.1 Remote Integrity Check
+                    if [ -f "$DYNAMIC_TEMPLATE" ]; then
+                        local REMOTE_URL="https://raw.githubusercontent.com/arturscheiner/kcspoc/refs/heads/main/templates/$(basename "$DYNAMIC_TEMPLATE")"
+                        local TEMP_REMOTE="/tmp/kcspoc-remote-check.yaml"
+                        
+                        echo -n "      ${DIM}${ICON_INFO} $MSG_DEPLOY_TEMPLATE_CHECK${NC}"
+                        if curl -sSf "$REMOTE_URL" -o "$TEMP_REMOTE" 2>/dev/null; then
+                            if ! cmp -s "$DYNAMIC_TEMPLATE" "$TEMP_REMOTE"; then
+                                echo -ne "\r\033[K      ${YELLOW}${ICON_INFO} $MSG_DEPLOY_TEMPLATE_UPDATED${NC}\n"
+                                echo -en "      ${BOLD}$MSG_DEPLOY_TEMPLATE_PROMPT ${NC}"
+                                read -r -p "" opt
+                                if [[ "$opt" =~ ^[yY]$ ]]; then
+                                    cp "$DYNAMIC_TEMPLATE" "${DYNAMIC_TEMPLATE}.old"
+                                    mv "$TEMP_REMOTE" "$DYNAMIC_TEMPLATE"
+                                    echo -e "      ${GREEN}${ICON_OK} $MSG_DEPLOY_TEMPLATE_DOWNLOAD_OK${NC}"
+                                    echo -e "      ${DIM}$MSG_DEPLOY_TEMPLATE_BACKUP ${DYNAMIC_TEMPLATE}.old${NC}"
+                                fi
+                            else
+                                 echo -e "\r\033[K      ${DIM}${ICON_OK} $MSG_DEPLOY_TEMPLATE_CHECK${NC} (${GREEN}UP-TO-DATE${NC})"
+                            fi
+                        else
+                            echo -e "\r\033[K      ${DIM}${ICON_INFO} $MSG_DEPLOY_TEMPLATE_CHECK${NC} (${YELLOW}OFFLINE/NOT FOUND${NC})"
+                        fi
+                        [ -f "$TEMP_REMOTE" ] && rm -f "$TEMP_REMOTE"
+                    fi
+
+                    # 1.3.2 Placeholder Injection
+                    if [ -f "$DYNAMIC_TEMPLATE" ]; then
+                        echo -e "      ${DIM}Template Source: $DYNAMIC_TEMPLATE${NC}" >> "$DEBUG_OUT"
+                        cp "$DYNAMIC_TEMPLATE" "$PROCESSED_VALUES"
+                        sed -i "s|\$DOMAIN_CONFIGURED|$DOMAIN|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$PLATFORM_CONFIGURED|$PLATFORM|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$REGISTRY_SERVER_CONFIG|$REGISTRY_SERVER|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$REGISTRY_USER_CONFIG|$REGISTRY_USER|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$REGISTRY_PASS_CONFIG|$REGISTRY_PASS|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$REGISTRY_EMAIL_CONFIG|$REGISTRY_EMAIL|g" "$PROCESSED_VALUES"
+                        sed -i "s|\${KCS_VERSION}|$TARGET_VER|g" "$PROCESSED_VALUES"
+                        
+                        # Inject Secrets
+                        sed -i "s|\$POSTGRES_USER_CONFIG|$POSTGRES_USER|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$POSTGRES_PASS_CONFIG|$POSTGRES_PASSWORD|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$MINIO_USER_CONFIG|$MINIO_ROOT_USER|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$MINIO_PASS_CONFIG|$MINIO_ROOT_PASSWORD|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$CH_ADMIN_PASS_CONFIG|$CLICKHOUSE_ADMIN_PASSWORD|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$CH_WRITE_PASS_CONFIG|$CLICKHOUSE_WRITE_PASSWORD|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$CH_READ_PASS_CONFIG|$CLICKHOUSE_READ_PASSWORD|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$MCHD_USER_CONFIG|$MCHD_USER|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$MCHD_PASS_CONFIG|$MCHD_PASS|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$APP_SECRET_CONFIG|$APP_SECRET|g" "$PROCESSED_VALUES"
+                    else
+                        # Fallback or error if template missing
+                        touch "$PROCESSED_VALUES"
+                    fi
                 fi
 
                 local HELM_CMD=""

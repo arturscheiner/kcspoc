@@ -297,5 +297,5 @@ MSG_HELP_LOGS_EX="kcspoc logs --list\nkcspoc logs --list prepare\nkcspoc logs --
 
 # Deploy Help
 MSG_HELP_DEPLOY_DESC="Implanta os componentes do Kaspersky Container Security (Core e Agents) no seu cluster."
-MSG_HELP_DEPLOY_OPTS="--core|Implanta o console principal e o backend do KCS.\n--agents|Implanta os agentes de segurança nos seus nós (Finalizando)."
+MSG_HELP_DEPLOY_OPTS="--core|Implanta o console principal e o backend do KCS.\n--agents|Implanta os agentes de segurança nos seus nós (Finalizando).\n--values <arquivo>|Fornece um arquivo values.yaml customizado para ignorar o template padrão."
 MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --agents"
