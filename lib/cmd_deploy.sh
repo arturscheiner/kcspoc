@@ -33,6 +33,14 @@ cmd_deploy() {
     fi
 
     load_config || { echo -e "${RED}${MSG_ERROR_CONFIG_NOT_FOUND}${NC}"; return 1; }
+
+    # Guard: Ensure at least one version is pulled
+    local artifact_count=$(_count_local_artifacts)
+    if [ "$artifact_count" -eq 0 ]; then
+        echo -e "${RED}${ICON_FAIL} ${MSG_DEPLOY_ERR_NO_ARTIFACTS}${NC}"
+        return 1
+    fi
+
     ui_banner
 
     local INSTALL_ERROR=0
@@ -239,4 +247,13 @@ _check_kcs_exists() {
         return 0
     fi
     return 1
+}
+
+_count_local_artifacts() {
+    local kcs_artifact_base="$ARTIFACTS_DIR/kcs"
+    if [ ! -d "$kcs_artifact_base" ]; then
+        echo 0
+        return
+    fi
+    find "$kcs_artifact_base" -maxdepth 2 -name "kcs-*.tgz" | wc -l
 }

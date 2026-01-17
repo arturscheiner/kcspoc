@@ -237,6 +237,7 @@ MSG_DEPLOY_BOOTSTRAP_OK="Implantação do Core aceita. Inicialização em progre
 MSG_DEPLOY_SUCCESS="Implantação do KCS iniciada com sucesso."
 MSG_DEPLOY_BOOTSTRAP_HINT="Para acompanhar o progresso em tempo real, execute:"
 MSG_DEPLOY_CONFIRM="KCS não detectado no cluster. Deseja prosseguir com a instalação do core versão"
+MSG_DEPLOY_ERR_NO_ARTIFACTS="Erro: Nenhuma versão do KCS encontrada no cache local. Por favor, execute './kcspoc pull' primeiro."
 
 # --- Help System ---
 MSG_HELP_DESCRIPTION="Descrição"
