@@ -108,7 +108,7 @@ cmd_pull() {
     local ARTIFACT_PATH="$ARTIFACTS_DIR/kcs/$TARGET_VER"
 
     # 3. Cache Check
-    if [ "$TARGET_VER" != "latest" ] && [ -d "$ARTIFACT_PATH/kcs" ]; then
+    if [ "$TARGET_VER" != "latest" ] && ls "$ARTIFACT_PATH"/kcs-*.tgz &>/dev/null; then
         echo -e "   ${GREEN}${ICON_OK} ${MSG_PULL_SUCCESS}${NC} (Local cache: $TARGET_VER)"
         return 0
     fi
@@ -122,7 +122,7 @@ cmd_pull() {
     if helm pull oci://repo.kcs.kaspersky.com/charts/kcs $HELM_ARGS --destination "$ARTIFACT_PATH" 2>&1 | tee -a "$DEBUG_OUT" > /dev/null; then
         ui_spinner_stop "PASS"
         
-        # 6. Extract and Resolve Real Version
+        # 6. Resolve Real Version
         local TGZ_FILE=$(ls -t "$ARTIFACT_PATH"/kcs-*.tgz 2>/dev/null | head -n 1)
         
         if [ -f "$TGZ_FILE" ]; then
@@ -141,30 +141,17 @@ cmd_pull() {
                     TGZ_FILE="$ARTIFACT_PATH/$(basename "$TGZ_FILE")"
                 fi
                 
-                # Update Config File: KCS_VERSION="latest" -> KCS_VERSION="X.X.X"
+                # Update Config File
                 if [ -f "$CONFIG_FILE" ]; then
-                    if grep -q "KCS_VERSION=" "$CONFIG_FILE"; then
-                        sed -i "s|KCS_VERSION=.*|KCS_VERSION=\"$REAL_VER\"|g" "$CONFIG_FILE"
-                    else
-                        echo "KCS_VERSION=\"$REAL_VER\"" >> "$CONFIG_FILE"
-                    fi
+                    sed -i "s|KCS_VERSION=.*|KCS_VERSION=\"$REAL_VER\"|g" "$CONFIG_FILE"
                     echo -e "      ${DIM}${ICON_INFO} Config updated: KCS_VERSION=\"$REAL_VER\"${NC}"
                 fi
                 TARGET_VER="$REAL_VER"
             fi
 
-            # Double check cache again after resolving REAL_VER (only if we were latest)
-            if [ -d "$ARTIFACT_PATH/kcs" ] && [ -f "$ARTIFACT_PATH/.downloaded" ]; then
-                 echo -e "      ${GREEN}${ICON_OK}${NC} ${DIM}Version $REAL_VER already extracted.${NC}"
-            else
-                echo -ne "      ${ICON_GEAR} ${MSG_PULL_EXTRACTING} ($REAL_VER)... "
-                tar -xzf "$TGZ_FILE" -C "$ARTIFACT_PATH" &>> "$DEBUG_OUT"
-                echo -e "${GREEN}${ICON_OK}${NC}"
-            fi
-
             # Save download metadata
             date +'%Y-%m-%d %H:%M' > "$ARTIFACT_PATH/.downloaded"
-            echo -e "      ${DIM}${MSG_PULL_EXTRACTED}: $ARTIFACT_PATH/kcs${NC}"
+            echo -e "      ${DIM}${MSG_PULL_SUCCESS}: $(basename "$TGZ_FILE")${NC}"
         else
             echo -e "      ${RED}${ICON_FAIL} ${MSG_PULL_ERR_FILE}${NC}"
             exit 1

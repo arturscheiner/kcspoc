@@ -92,13 +92,14 @@ cmd_deploy() {
             # Determine Version to use
             local TARGET_VER="${KCS_VERSION:-latest}"
             local ARTIFACT_PATH="$ARTIFACTS_DIR/kcs/$TARGET_VER"
-            local CHART_PATH="$ARTIFACT_PATH/kcs"
-            local BASE_VALUES="$CHART_PATH/values.yaml"
+            # Find the tgz file
+            local TGZ_FILE=$(ls "$ARTIFACT_PATH"/kcs-*.tgz 2>/dev/null | head -n 1)
+            local CHART_SOURCE="$TGZ_FILE"
 
             if [ "$INSTALL_ERROR" -eq 0 ]; then
                 # 1.3.1 Process Dynamic Overrides
                 local DYNAMIC_TEMPLATE="$SCRIPT_DIR/templates/values-core.yaml"
-                local PROCESSED_VALUES="$CONFIG_DIR/processed-values.yaml"
+                local PROCESSED_VALUES="$CONFIG_DIR/values-core-$TARGET_VER.yaml"
                 
                 if [ -f "$DYNAMIC_TEMPLATE" ]; then
                     cp "$DYNAMIC_TEMPLATE" "$PROCESSED_VALUES"
@@ -115,21 +116,19 @@ cmd_deploy() {
 
                 local HELM_CMD=""
                 
-                # Check if we have the extracted artifact folder
-                if [ -d "$CHART_PATH" ] && [ -f "$BASE_VALUES" ]; then
+                # Check if we have the tgz file
+                if [ -n "$CHART_SOURCE" ] && [ -f "$CHART_SOURCE" ]; then
                     # Log source
-                    echo -e "      ${DIM}Source: Local Artifact ($CHART_PATH)${NC}" >> "$DEBUG_OUT"
-                    # Use extracted chart, base values and our processed dynamic overrides
-                    HELM_CMD="helm upgrade --install kcs \"$CHART_PATH\" \
+                    echo -e "      ${DIM}Source: Local TGZ ($CHART_SOURCE)${NC}" >> "$DEBUG_OUT"
+                    HELM_CMD="helm upgrade --install kcs \"$CHART_SOURCE\" \
                       -n \"$NAMESPACE\" \
-                      -f \"$BASE_VALUES\" \
                       -f \"$PROCESSED_VALUES\""
                 else
                     # Fallback to OCI
                     echo -e "      ${DIM}Source: OCI Registry (oci://$REGISTRY_SERVER/charts/kcs)${NC}" >> "$DEBUG_OUT"
-                    echo -e "      ${YELLOW}${ICON_INFO} Local artifact not found for $target_ver. Falling back to OCI...${NC}" >> "$DEBUG_OUT"
+                    echo -e "      ${YELLOW}${ICON_INFO} Local artifact not found for $TARGET_VER. Falling back to OCI...${NC}" >> "$DEBUG_OUT"
                     HELM_CMD="helm upgrade --install kcs oci://$REGISTRY_SERVER/charts/kcs \
-                      --version $target_ver \
+                      --version $TARGET_VER \
                       -n \"$NAMESPACE\" \
                       -f \"$PROCESSED_VALUES\""
                 fi
