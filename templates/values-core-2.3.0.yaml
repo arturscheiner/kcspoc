@@ -1,15 +1,13 @@
 ################################################################################
 # values-template-230.yaml
-# Kaspersky Container Security - Automation Template for v2.3.0
-# Purpose: High-performance resources and Vault architecture changes.
+# Kaspersky Container Security - Automação para v2.3.0
+# FOCO: Performance v2.3.0, mTLS e NetworkPolicies Obrigatórias.
 ################################################################################
 
-# commonLabels: Injected into every resource. 
-# Tracks version and config hash to ensure multi-machine consistency.
 commonLabels:
-  provisioned-by: "kcspoc"
-  provisioned-version: "$PROVISION_VERSION_CONFIG"
-  provisioned-hash: "$PROVISION_HASH_CONFIG"
+  kcspoc.io/managed-by: "kcspoc"
+  kcspoc.io/config-hash: "$PROVISION_HASH_CONFIG"
+  kcspoc.io/tool-version: "$PROVISION_VERSION_CONFIG"
 
 default:
   platform: "$PLATFORM_CONFIGURED"
@@ -20,32 +18,38 @@ default:
   internalTLS:
     enabled: true
     certSource: "helm"
-  
   certManager: true
-  kcs-ih: { replicaCount: 1 }
-
-  # v2.3.0 significantly increases resource requirements for the database backend.
-  postgresql:
-    resources:
-      requests: { cpu: "200m", memory: "1Gi" }
-      limits: { cpu: "1", memory: "2Gi" }
 
   # --- SCANNER UPDATES ---
   updates:
     enabled: true
 
+  # --- NETWORK POLICIES (Obrigatório na v2.3.0) ---
+  # Corrigindo o erro de 'ingressControllerNamespaces does not exist'
+  networkPolicies:
+    create: true
+    ingressControllerNamespaces:
+      - ingress-nginx
+
+  # v2.3.0 exige mais recursos para o banco Postgres
+  postgresql:
+    resources:
+      requests: { cpu: "200m", memory: "1Gi" }
+      limits: { cpu: "1", memory: "2Gi" }
+
 nodeAgent:
   enabled: true
   runtimeSocketPath: "$CRI_SOCKET_CONFIG"
 
-admissionController: { enabled: true }
+admissionController:
+  enabled: true
   
 configmap:
   infraconfig:
     type: fromEnvs
     envs:
       TLS_INTERNAL: true
-      # VAULT_PATH: New mandatory parameter for v2.3.x configuration storage.
+      # VAULT_PATH: Obrigatório na v2.3.0 para gestão de secrets
       VAULT_PATH: "infraconfig"
       KUBE_AGENT_TAG: v2.3.0
       NODE_AGENT_TAG: v2.3.0
@@ -78,11 +82,14 @@ persistentVolume:
   pvc-clickhouse-cold: { size: 40Gi }
   pvc-clickhouse-hot: { size: 20Gi }
 
+# Ajustes de recursos específicos da v2.3.0
 component:
   kcs-clickhouse:
     resources:
       requests: { cpu: "500m", memory: "2Gi" }
       limits: { cpu: "2", memory: "4Gi" }
+  kcs-ih:
+    replicaCount: 1
 
 secret:
   infracreds:
@@ -97,6 +104,4 @@ secret:
       CLICKHOUSE_READ_PASSWORD: "$CH_READ_PASS_CONFIG"
       MCHD_USER: "$MCHD_USER_CONFIG"
       MCHD_PASS: "$MCHD_PASS_CONFIG"
-      # --- CRITICAL: DO NOT CHANGE THIS SECRET ONCE DATA IS WRITTEN ---
-      # Changing this value on an existing cluster causes "Cipher Error"
       APP_SECRET: "$APP_SECRET_CONFIG"
