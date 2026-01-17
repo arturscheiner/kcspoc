@@ -667,54 +667,79 @@ _watch_deploy_stability() {
     local timeout=900 # 15 minutes
     local start_time=$(date +%s)
     local local_hash=$(get_config_hash)
+    local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+    local frame_idx=0
+    local poll_interval=50 # 5 seconds (50 * 0.1s)
+    local poll_counter=$poll_interval
+    local total_pods=0
+    local stable_count=0
+    local percent=0
+    local bar=""
 
     echo -e "\n  ${YELLOW}${ICON_GEAR} ${BOLD}PHASE 6: DEPLOYMENT STABILITY WATCHER${NC}"
     echo -e "  ${DIM}Monitoring pod convergence (timeout: 15m)...${NC}\n"
 
-    while true; do
-        # Get pod status: Name, Ready Condition, and Phase
-        local pods_status=$(kubectl get pods -n "$ns" --no-headers 2>/dev/null)
-        
-        # Calculate totals
-        local total_pods=$(echo "$pods_status" | grep -v "^$" | wc -l)
-        # Accurate Ready check: First field matches Second field in READY column (e.g. 1/1, 2/2)
-        local ready_pods=$(echo "$pods_status" | awk '$2 ~ /\// {split($2,a,"/"); if(a[1]==a[2] && a[2]!="0") print $0}' | wc -l)
-        local completed_jobs=$(echo "$pods_status" | grep "Completed" | wc -l)
-        
-        local stable_count=$((ready_pods + completed_jobs))
+    # Hide cursor
+    tput civis 2>/dev/null || true
 
-        # Print progress
-        if [ "$total_pods" -gt 0 ]; then
-            local percent=$((stable_count * 100 / total_pods))
+    while true; do
+        if [ "$poll_counter" -ge "$poll_interval" ]; then
+            # Get pod status: Name, Ready Condition, and Phase
+            local pods_status=$(kubectl get pods -n "$ns" --no-headers 2>/dev/null)
             
+            # Calculate totals
+            total_pods=$(echo "$pods_status" | grep -v "^$" | wc -l)
+            # Accurate Ready check: First field matches Second field in READY column (e.g. 1/1, 2/2)
+            local ready_pods=$(echo "$pods_status" | awk '$2 ~ /\// {split($2,a,"/"); if(a[1]==a[2] && a[2]!="0") print $0}' | wc -l)
+            local completed_jobs=$(echo "$pods_status" | grep "Completed" | wc -l)
+            
+            stable_count=$((ready_pods + completed_jobs))
+            percent=0
+            [ "$total_pods" -gt 0 ] && percent=$((stable_count * 100 / total_pods))
+
             # ASCII Progress Bar (20 chars)
             local bar_size=20
             local filled=$((percent * bar_size / 100))
             local empty=$((bar_size - filled))
-            local bar="["
+            bar="["
             for ((i=0; i<filled; i++)); do bar+="#"; done
             for ((i=0; i<empty; i++)); do bar+="-"; done
             bar+="]"
 
-            printf "\r   ${ICON_ARROW} Progress: ${BLUE}%s${NC} ${BOLD}%d%%${NC} (%d/%d pods)   " "$bar" "$percent" "$stable_count" "$total_pods"
-            
             # Sync label with progress
             _update_state "$ns" "deploying" "$op_type" "$exec_id" "$local_hash" "$target_ver" "$percent"
+            
+            poll_counter=0
+        fi
+
+        # Print progress with animated spinner
+        local frame="${frames[$frame_idx]}"
+        if [ "$total_pods" -gt 0 ]; then
+            printf "\r   ${ICON_ARROW} Progress: ${BLUE}%s${NC} ${BOLD}%d%%${NC} (%d/%d pods)  ${CYAN}%s${NC} " "$bar" "$percent" "$stable_count" "$total_pods" "$frame"
         else
-            printf "\r   ${ICON_ARROW} Waiting for pods to initialize...   "
+            printf "\r   ${ICON_ARROW} Waiting for pods to initialize... ${CYAN}%s${NC} " "$frame"
         fi
 
         # Check if all pods are stable
-        if [ "$stable_count" -eq "$total_pods" ] && [ "$total_pods" -gt 0 ]; then
+        if [ "$poll_counter" -eq 0 ] && [ "$stable_count" -eq "$total_pods" ] && [ "$total_pods" -gt 0 ]; then
+            tput cnorm 2>/dev/null || true
             echo -e "\n\n  ${GREEN}${BOLD}${ICON_OK} DEPLOYMENT SUCCESSFUL!${NC}"
             echo -e "  All KCS components are Running/Completed."
             
             # Final transition to STABLE
-            _update_state "$ns" "stable" "$op_type" "$exec_id" "$local_hash" "$target_ver"
+            _update_state "$ns" "stable" "$op_type" "$exec_id" "$local_hash" "$target_ver" "100"
 
             # --- "CHAVE DE OURO" POST-INSTALL GUIDANCE ---
             local domain=$(kubectl get ingress -n "$ns" -o jsonpath='{.items[0].spec.rules[0].host}' 2>/dev/null)
             [ -z "$domain" ] && domain="kcs.cluster.local"
+
+            # Version 0.4.95: Conditional Credential Display
+            local display_pass="admin"
+            local pass_note="Initial Password"
+            if [[ "$op_type" =~ ^(update|upgrade)$ ]]; then
+                display_pass="*******"
+                pass_note="Preserved Credentials"
+            fi
 
             echo -e "\n  ${BLUE}================================================================${NC}"
             echo -e "  ${BOLD}${ICON_ROCKET} KASPERSKY CONTAINER SECURITY IS READY FOR DEMO!${NC}"
@@ -722,7 +747,7 @@ _watch_deploy_stability() {
             echo -e "\n  ${BOLD}1. Access the Web Console:${NC}"
             echo -e "     URL:      ${GREEN}https://$domain${NC}"
             echo -e "     Username: ${YELLOW}admin${NC}"
-            echo -e "     Password: ${YELLOW}${APP_SECRET:-admin}${NC} (Configured APP_SECRET)"
+            echo -e "     Password: ${YELLOW}${display_pass}${NC} ($pass_note)"
             
             echo -e "\n  ${BOLD}2. Next Step (Automated Onboarding):${NC}"
             echo -e "     Log in to the console, go to ${BOLD}Settings > API Keys${NC},"
@@ -741,15 +766,19 @@ _watch_deploy_stability() {
         local current_time=$(date +%s)
         local elapsed=$((current_time - start_time))
         if [ "$elapsed" -gt "$timeout" ]; then
+            tput cnorm 2>/dev/null || true
             echo -e "\n\n  ${RED}${BOLD}${ICON_FAIL} DEPLOYMENT TIMEOUT!${NC}"
             echo -e "  Convergence took longer than 15 minutes. Checking for 'Init' or 'ImagePull' errors."
             # Final transition to FAILED
-            _update_state "$ns" "failed" "$op_type" "$exec_id" "$local_hash" "$target_ver"
+            _update_state "$ns" "failed" "$op_type" "$exec_id" "$local_hash" "$target_ver" "$percent"
             return 1
         fi
 
-        sleep 5
+        sleep 0.1
+        ((frame_idx = (frame_idx + 1) % ${#frames[@]}))
+        ((poll_counter++))
     done
+    tput cnorm 2>/dev/null || true
     return 0
 }
 
