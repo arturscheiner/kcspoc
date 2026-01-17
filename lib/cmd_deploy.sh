@@ -76,7 +76,6 @@ cmd_deploy() {
                  return 0
              fi
         fi
-
         ui_section "$MSG_DEPLOY_CORE"
         
         # 1.1 Namespace Setup
@@ -174,7 +173,6 @@ cmd_deploy() {
                         if [[ "$RT_VER" == *"docker"* ]]; then FINAL_CRI="/var/run/cri-dockerd.sock"; fi
                         echo -e "      ${DIM}CRI Auto-Detected: $FINAL_CRI${NC}" >> "$DEBUG_OUT"
                     fi
-
                     if [ -n "$FINAL_CRI" ]; then
                         sed -i "s|\$CRI_SOCKET_CONFIG|$FINAL_CRI|g" "$PROCESSED_VALUES"
                     fi
@@ -198,7 +196,6 @@ cmd_deploy() {
                         [ -n "$MCHD_USER" ] && sed -i "s|\$MCHD_USER_CONFIG|$MCHD_USER|g" "$PROCESSED_VALUES"
                         [ -n "$MCHD_PASS" ] && sed -i "s|\$MCHD_PASS_CONFIG|$MCHD_PASS|g" "$PROCESSED_VALUES"
                         [ -n "$APP_SECRET" ] && sed -i "s|\$APP_SECRET_CONFIG|$APP_SECRET|g" "$PROCESSED_VALUES"
-
                         # 1.3.3 Validation Guard
                         ui_spinner_start "$MSG_DEPLOY_VALIDATING"
                         # Search for $VAR_CONFIG or ${VAR} or $VAR_CONFIGURED
