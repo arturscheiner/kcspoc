@@ -41,10 +41,13 @@ default:
     enabled: true
 
   # --- [TEACHING POINT: NETWORK POLICIES] ---
-  # Version 2.1.0 is less strict than 2.1.1+. 
-  # We can enable it here, but explicit ingress namespaces are optional.
+  # SECURITY: Isolates microservices. 
+  # v2.1.0 FIX: You MUST define where the Ingress Controller lives (ingress-nginx)
+  # or the Helm rendering engine will fail with a 'path does not exist' error.
   networkPolicies:
     create: true
+    ingressControllerNamespaces:
+      - ingress-nginx
 
   # Lab Optimization: Image Handler (IH) consumes significant memory.
   # We force 1 replica for POCs to stay within small node limits.
