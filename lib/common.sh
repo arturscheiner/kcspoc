@@ -25,7 +25,7 @@ CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
 ARTIFACTS_DIR="$CONFIG_DIR/artifacts"
 LOGS_DIR="$CONFIG_DIR/logs"
-VERSION="0.4.79"
+VERSION="0.4.80"
 
 # Execution Globals
 EXEC_HASH=""
@@ -76,6 +76,16 @@ save_log_status() {
 POC_LABEL_KEY="provisioned-by"
 POC_LABEL_VAL="kcspoc"
 POC_LABEL="${POC_LABEL_KEY}=${POC_LABEL_VAL}"
+
+get_config_hash() {
+    # Generate a unique hash of sensitive local configuration values
+    # These values are critical for data encryption and system stability.
+    if [ -n "$APP_SECRET" ]; then
+        echo -n "${APP_SECRET}${POSTGRES_PASSWORD}${MINIO_ROOT_PASSWORD}${CLICKHOUSE_ADMIN_PASSWORD}" | md5sum | awk '{print $1}'
+    else
+        echo "none"
+    fi
+}
 
 # Debugging Defaults
 DEBUG_OUT="/dev/null"

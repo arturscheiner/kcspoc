@@ -4,30 +4,35 @@
 # Purpose: High-performance resources and Vault architecture changes.
 ################################################################################
 
+# commonLabels: Injected into every resource. 
+# Tracks version and config hash to ensure multi-machine consistency.
 commonLabels:
   provisioned-by: "kcspoc"
+  provisioned-version: "$PROVISION_VERSION_CONFIG"
+  provisioned-hash: "$PROVISION_HASH_CONFIG"
 
 default:
   platform: "$PLATFORM_CONFIGURED"
   domain: "$DOMAIN_CONFIGURED"
   
+  # --- MTLS & CERTIFICATE STABILITY ---
   certSource: "helm"
   internalTLS:
     enabled: true
     certSource: "helm"
   
   certManager: true
-
-  # --- SCANNER UPDATES (FIXED PATH) ---
-  updates:
-    enabled: true
-
   kcs-ih: { replicaCount: 1 }
 
+  # v2.3.0 significantly increases resource requirements for the database backend.
   postgresql:
     resources:
       requests: { cpu: "200m", memory: "1Gi" }
       limits: { cpu: "1", memory: "2Gi" }
+
+  # --- SCANNER UPDATES ---
+  updates:
+    enabled: true
 
 nodeAgent:
   enabled: true
@@ -40,6 +45,7 @@ configmap:
     type: fromEnvs
     envs:
       TLS_INTERNAL: true
+      # VAULT_PATH: New mandatory parameter for v2.3.x configuration storage.
       VAULT_PATH: "infraconfig"
       KUBE_AGENT_TAG: v2.3.0
       NODE_AGENT_TAG: v2.3.0
@@ -91,4 +97,6 @@ secret:
       CLICKHOUSE_READ_PASSWORD: "$CH_READ_PASS_CONFIG"
       MCHD_USER: "$MCHD_USER_CONFIG"
       MCHD_PASS: "$MCHD_PASS_CONFIG"
+      # --- CRITICAL: DO NOT CHANGE THIS SECRET ONCE DATA IS WRITTEN ---
+      # Changing this value on an existing cluster causes "Cipher Error"
       APP_SECRET: "$APP_SECRET_CONFIG"

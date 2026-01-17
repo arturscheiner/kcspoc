@@ -252,6 +252,11 @@ EOF
                         [ -n "$REGISTRY_PASS" ] && sed -i "s|\$REGISTRY_PASS_CONFIG|$REGISTRY_PASS|g" "$PROCESSED_VALUES"
                         [ -n "$REGISTRY_EMAIL" ] && sed -i "s|\$REGISTRY_EMAIL_CONFIG|$REGISTRY_EMAIL|g" "$PROCESSED_VALUES"
                         [ -n "$TARGET_VER" ] && sed -i "s|\${KCS_VERSION}|$TARGET_VER|g" "$PROCESSED_VALUES"
+                        
+                        # Phase H: Integrity Injection
+                        local LOCAL_HASH=$(get_config_hash)
+                        sed -i "s|\$PROVISION_HASH_CONFIG|$LOCAL_HASH|g" "$PROCESSED_VALUES"
+                        sed -i "s|\$PROVISION_VERSION_CONFIG|$VERSION|g" "$PROCESSED_VALUES"
 
                         # Inject Secrets Individually
                         [ -n "$POSTGRES_USER" ] && sed -i "s|\$POSTGRES_USER_CONFIG|$POSTGRES_USER|g" "$PROCESSED_VALUES"
@@ -303,6 +308,11 @@ EOF
                 fi
 
                 if [ "$INSTALL_ERROR" -eq 0 ]; then
+                    # Phase H: Integrity Validation Gate
+                    if ! _verify_config_integrity "$NAMESPACE"; then
+                        return 1
+                    fi
+
                     ui_spinner_start "[4/5] Helm Upgrade/Install"
                     if eval "$HELM_CMD" &>> "$DEBUG_OUT"; then
                         ui_spinner_stop "PASS"
@@ -313,9 +323,13 @@ EOF
                         # Wait for all certs (service-specific)
                         kubectl wait --for=condition=Ready certificate --all -n "$NAMESPACE" --timeout=60s &>> "$DEBUG_OUT"
                         
-                        # Refresh pods to ensure fresh identity mounts
+                        # Force a pod refresh to ensure all mounts use the fresh identity
                         kubectl delete pods -n "$NAMESPACE" --all --grace-period=0 --force &>> "$DEBUG_OUT"
                         
+                        # Phase H: Final Explicit Labeling
+                        local FINAL_HASH=$(get_config_hash)
+                        kubectl label ns "$NAMESPACE" provisioned-by=kcspoc provisioned-hash="$FINAL_HASH" provisioned-version="$VERSION" --overwrite &>> "$DEBUG_OUT"
+
                         ui_spinner_stop "PASS"
                         
                         # Run health check
@@ -448,6 +462,32 @@ _get_installed_version() {
     # 3. Fallback
     echo "unknown"
 }
+
+_verify_config_integrity() {
+    local ns="$1"
+    local local_hash=$(get_config_hash)
+    
+    # Skip if local hash is none
+    [ "$local_hash" == "none" ] && return 0
+    
+    # Check if namespace has a hash label
+    local remote_hash=$(kubectl get ns "$ns" -o jsonpath='{.metadata.labels.provisioned-hash}' 2>/dev/null)
+    
+    if [ -n "$remote_hash" ]; then
+        if [ "$remote_hash" != "$local_hash" ]; then
+            echo -e "\n   ${RED}${BOLD}${ICON_FAIL} CONFIGURATION MISMATCH DETECTED!${NC}"
+            echo -e "   The target namespace '$ns' was provisioned with a different configuration."
+            echo -e "   ${YELLOW}Cluster Hash: $remote_hash${NC}"
+            echo -e "   ${YELLOW}Local Hash:   $local_hash${NC}"
+            echo -e "\n   ${BOLD}DANGER:${NC} Proceeding may cause ${RED}Cipher Errors${NC} and data corruption."
+            echo -e "   Please sync your local config with the original provisioner or use a new namespace."
+            echo -e "\n   ${DIM}Deployment aborted.${NC}\n"
+            return 1
+        fi
+    fi
+    return 0
+}
+
 _count_local_artifacts() {
     local kcs_artifact_base="$ARTIFACTS_DIR/kcs"
     if [ ! -d "$kcs_artifact_base" ]; then
