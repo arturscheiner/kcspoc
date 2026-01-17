@@ -109,6 +109,33 @@ cmd_deploy() {
                 # Fallback for older pulls or 'latest' resolves
                 [ ! -f "$DYNAMIC_TEMPLATE" ] && DYNAMIC_TEMPLATE="$ARTIFACT_PATH/values-core-latest.yaml"
                 
+                # --- INTEGRITY CHECK: Remote vs Local ---
+                if [ -f "$DYNAMIC_TEMPLATE" ]; then
+                    local REMOTE_URL="https://raw.githubusercontent.com/arturscheiner/kcspoc/refs/heads/main/templates/$(basename "$DYNAMIC_TEMPLATE")"
+                    local TEMP_REMOTE="/tmp/kcspoc-remote-check.yaml"
+                    
+                    echo -n "      ${DIM}${ICON_INFO} $MSG_DEPLOY_TEMPLATE_CHECK${NC}"
+                    if curl -sSf "$REMOTE_URL" -o "$TEMP_REMOTE" 2>/dev/null; then
+                        if ! cmp -s "$DYNAMIC_TEMPLATE" "$TEMP_REMOTE"; then
+                            echo -e "\r      ${YELLOW}${ICON_INFO} $MSG_DEPLOY_TEMPLATE_UPDATED${NC}"
+                            echo -en "      ${BOLD}$MSG_DEPLOY_TEMPLATE_PROMPT ${NC}"
+                            read -r -p "" opt
+                            if [[ "$opt" =~ ^[yY]$ ]]; then
+                                cp "$DYNAMIC_TEMPLATE" "${DYNAMIC_TEMPLATE}.old"
+                                mv "$TEMP_REMOTE" "$DYNAMIC_TEMPLATE"
+                                echo -e "      ${GREEN}${ICON_OK} $MSG_DEPLOY_TEMPLATE_DOWNLOAD_OK${NC}"
+                                echo -e "      ${DIM}$MSG_DEPLOY_TEMPLATE_BACKUP ${DYNAMIC_TEMPLATE}.old${NC}"
+                            fi
+                        else
+                             echo -e "\r      ${DIM}${ICON_OK} $MSG_DEPLOY_TEMPLATE_CHECK${NC} (${GREEN}UP-TO-DATE${NC})"
+                        fi
+                    else
+                        echo -e "\r      ${DIM}${ICON_INFO} $MSG_DEPLOY_TEMPLATE_CHECK${NC} (${YELLOW}OFFLINE/NOT FOUND${NC})"
+                    fi
+                    [ -f "$TEMP_REMOTE" ] && rm -f "$TEMP_REMOTE"
+                fi
+                # ----------------------------------------
+
                 local PROCESSED_VALUES="$CONFIG_DIR/values-core-$TARGET_VER.yaml"
                 
                 if [ -f "$DYNAMIC_TEMPLATE" ]; then

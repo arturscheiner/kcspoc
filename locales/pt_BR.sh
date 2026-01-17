@@ -254,6 +254,11 @@ MSG_DEPLOY_SUCCESS="Implantação do KCS iniciada com sucesso."
 MSG_DEPLOY_BOOTSTRAP_HINT="Para acompanhar o progresso em tempo real, execute:"
 MSG_DEPLOY_CONFIRM="KCS não detectado no cluster. Deseja prosseguir com a instalação do core versão"
 MSG_DEPLOY_ERR_NO_ARTIFACTS="Erro: Nenhuma versão do KCS encontrada no cache local. Por favor, execute './kcspoc pull' primeiro."
+MSG_DEPLOY_TEMPLATE_CHECK="Verificando atualizações remotas do template..."
+MSG_DEPLOY_TEMPLATE_UPDATED="Uma versão mais recente do template está disponível online."
+MSG_DEPLOY_TEMPLATE_PROMPT="Deseja fazer backup do atual e baixar a nova versão? [y/N]"
+MSG_DEPLOY_TEMPLATE_BACKUP="Backup criado:"
+MSG_DEPLOY_TEMPLATE_DOWNLOAD_OK="Template atualizado com sucesso."
 
 # --- Help System ---
 MSG_HELP_DESCRIPTION="Descrição"

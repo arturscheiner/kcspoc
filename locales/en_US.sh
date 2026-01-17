@@ -256,6 +256,11 @@ MSG_DEPLOY_SUCCESS="KCS deployment initiated successfully."
 MSG_DEPLOY_BOOTSTRAP_HINT="To watch the real-time progress, run:"
 MSG_DEPLOY_CONFIRM="KCS is not detected in the cluster. Do you want to proceed with the core installation of version"
 MSG_DEPLOY_ERR_NO_ARTIFACTS="Error: No KCS versions found in local cache. Please run './kcspoc pull' first."
+MSG_DEPLOY_TEMPLATE_CHECK="Checking for remote template updates..."
+MSG_DEPLOY_TEMPLATE_UPDATED="A newer version of the template is available online."
+MSG_DEPLOY_TEMPLATE_PROMPT="Do you want to backup the current one and download the new version? [y/N]"
+MSG_DEPLOY_TEMPLATE_BACKUP="Backup created:"
+MSG_DEPLOY_TEMPLATE_DOWNLOAD_OK="Template updated successfully."
 
 # --- Help System ---
 MSG_HELP_DESCRIPTION="Description"
