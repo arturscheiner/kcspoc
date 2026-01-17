@@ -69,6 +69,9 @@ cmd_destroy() {
     echo -e "${YELLOW}${ICON_GEAR} $MSG_DESTROY_START${NC}"
     echo "----------------------------"
 
+    # Phase I: Transition Signaling (Status: cleaning)
+    _update_state "$TARGET_NS" "cleaning" "destroy" "$EXEC_HASH" "$(get_config_hash)" ""
+
     # 1. Helm Release
     if helm status "$RELEASE_NAME" -n "$TARGET_NS" &>> "$DEBUG_OUT"; then
         ui_spinner_start "[1/8] $MSG_DESTROY_STEP_1"

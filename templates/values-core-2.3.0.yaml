@@ -9,8 +9,17 @@
 # 2. Performance Baseline: Clickhouse and Postgres now require more RAM 
 #    to handle advanced v2.3 telemetry and scanning features.
 # 3. Enhanced Ingress: Larger buffer sizes for multi-gigabyte image scans.
+#
+# 🛠️ TROUBLESHOOTING:
+# If you see "Forbidden: updates to statefulset spec", it's because K8s forbids 
+# changing immutable fields (like selectors) in an existing StatefulSet.
+# FIX: Run 'kubectl delete sts kcs-s3 kcs-postgres kcs-clickhouse -n kcs --cascade=orphan'
+# Then, re-run 'kcspoc deploy --core'. This replaces the controller but keeps data.
 ################################################################################
 
+# --- [TEACHING POINT: METADATA & STATE] ---
+# We use 'kcspoc.io' labels to track the 'execution-id' (like your 2M32LB).
+# This allows the tool to cross-reference logs with the cluster state.
 commonLabels:
   kcspoc.io/managed-by: "kcspoc"
   kcspoc.io/config-hash: "$PROVISION_HASH_CONFIG"
@@ -21,26 +30,32 @@ default:
   platform: "$PLATFORM_CONFIGURED"
   domain: "$DOMAIN_CONFIGURED"
   
+  # --- [TEACHING POINT: IDENTITY BOOTSTRAP] ---
   certSource: "helm"
   internalTLS:
     enabled: true
     certSource: "helm"
   certManager: true
 
+  # --- [TEACHING POINT: SCANNER UPDATES] ---
+  # Essential for syncing the Vulnerability and Malware databases.
   updates:
     enabled: true
 
+  # Lab Optimization: We keep 1 replica of IH to save resources.
   kcs-ih:
     replicaCount: 1
 
+  # --- [TEACHING POINT: NETWORK POLICIES v2.3.x] ---
+  # v2.3.x remains strict: you MUST define the Ingress namespaces.
   networkPolicies:
     create: true
     ingressControllerNamespaces:
       - ingress-nginx
 
   # --- [TEACHING POINT: v2.3 RESOURCE DEMAND] ---
-  # Version 2.3 handles more data concurrently. We increased PostgreSQL 
-  # to 1Gi RAM minimum to prevent crashes during heavy policy processing.
+  # Version 2.3 is more demanding. We increased PostgreSQL to 1Gi RAM 
+  # to prevent OOMKills during the new 'policy migration' tasks of v2.3.
   postgresql:
     resources:
       requests: { cpu: "200m", memory: "1Gi" }
@@ -59,8 +74,8 @@ configmap:
     envs:
       TLS_INTERNAL: true
       # --- [TEACHING POINT: VAULT INTEGRATION] ---
-      # Starting with v2.3, the system uses a Vault-like internal path to 
-      # manage sensitive configurations. 'VAULT_PATH' is now mandatory.
+      # Starting with v2.3, KCS uses a internal Vault-like path logic.
+      # 'VAULT_PATH' points to the ConfigMap key containing the environment data.
       VAULT_PATH: "infraconfig"
       KUBE_AGENT_TAG: v2.3.0
       NODE_AGENT_TAG: v2.3.0
@@ -86,18 +101,18 @@ ingress:
     ingressClass: "nginx"
     annotations:
       # --- [TEACHING POINT: LARGE IMAGE HANDLING] ---
-      # Scans for huge container images (>1GB) require large proxy buffers.
+      # In v2.3, scan payloads can be larger. We increase proxy-body-size to 2GB.
       nginx.ingress.kubernetes.io/proxy-body-size: "2048m"
 
 persistentVolume:
   postgresql: { size: 20Gi }
-  pvc-minio: { size: 10Gi } # v2.3 requires more S3 space for caching scans.
+  pvc-minio: { size: 10Gi }
   pvc-clickhouse-cold: { size: 40Gi }
   pvc-clickhouse-hot: { size: 20Gi }
 
 # --- [TEACHING POINT: CLICKHOUSE STABILITY] ---
-# Clickhouse is the database for events and scans. 
-# v2.3.0 is more 'memory-hungry'. We set 2Gi as the baseline to avoid OOMKills.
+# Clickhouse is the event/alert storage engine. 
+# v2.3.0 requires 2Gi RAM to initialize the new analytical schemas.
 component:
   kcs-clickhouse:
     resources:
@@ -117,4 +132,7 @@ secret:
       CLICKHOUSE_READ_PASSWORD: "$CH_READ_PASS_CONFIG"
       MCHD_USER: "$MCHD_USER_CONFIG"
       MCHD_PASS: "$MCHD_PASS_CONFIG"
+      # --- [TEACHING POINT: THE MASTER KEY] ---
+      # APP_SECRET is the encryption key. 
+      # DO NOT CHANGE it if you are preserving data volumes (PVCs).
       APP_SECRET: "$APP_SECRET_CONFIG"

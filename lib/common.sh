@@ -25,7 +25,7 @@ CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
 ARTIFACTS_DIR="$CONFIG_DIR/artifacts"
 LOGS_DIR="$CONFIG_DIR/logs"
-VERSION="0.4.86"
+VERSION="0.4.87"
 
 # Execution Globals
 EXEC_HASH=""
@@ -65,10 +65,26 @@ init_logging() {
 save_log_status() {
     local status="$1" # SUCCESS or FAIL
     echo "--- EXECUTION FINISHED: $status ---" >> "$EXEC_LOG_FILE"
-    # Rename file to include status for easy listing? 
-    # Or just grep it. Grep is safer against partial writes.
-    # Let's verify requirement: "list should bring information if ended up successful or not"
-    # We can parse the last line.
+}
+
+_update_state() {
+    local ns="$1"
+    local status="$2"
+    local operation="$3"
+    local execution_id="$4"
+    local config_hash="$5"
+    local kcs_ver="$6"
+
+    # Only attempt if namespace exists
+    if kubectl get ns "$ns" &>/dev/null; then
+        kubectl label ns "$ns" \
+          "kcspoc.io/managed-by=kcspoc" \
+          "kcspoc.io/status=$status" \
+          "kcspoc.io/last-operation=$operation" \
+          "kcspoc.io/execution-id=$execution_id" \
+          "kcspoc.io/config-hash=$config_hash" \
+          "kcspoc.io/kcs-version=$kcs_ver" --overwrite &>> "$DEBUG_OUT"
+    fi
 }
 
 

@@ -137,11 +137,25 @@ cmd_deploy() {
         _check_kcs_exists "$NAMESPACE" && kcs_exists="true"
         ui_spinner_stop "PASS"
 
+        local OPERATION_TYPE="install"
         if [ "$kcs_exists" == "true" ]; then
              local INSTALLED_VER=$(_get_installed_version "$NAMESPACE")
              ui_banner
              printf "   ${ICON_INFO} ${BLUE}$MSG_DEPLOY_EXISTING${NC}\n" "$INSTALLED_VER" "$NAMESPACE"
-             echo -e "   ${YELLOW}${ICON_INFO} $(printf "$MSG_DEPLOY_UPGRADE_PROMPT" "${BOLD}${target_ver}${NC}") [y/N]"
+             
+             # Infer operation type (update or upgrade)
+             if [ "$INSTALLED_VER" == "$target_ver" ]; then
+                 OPERATION_TYPE="update"
+             else
+                 local latest=$(printf "%s\n%s" "$INSTALLED_VER" "$target_ver" | sort -V | tail -n 1)
+                 if [ "$latest" == "$target_ver" ]; then
+                     OPERATION_TYPE="upgrade"
+                 else
+                     OPERATION_TYPE="update" # Downgrade treated as update
+                 fi
+             fi
+
+             echo -e "   ${YELLOW}${ICON_INFO} $(printf "$MSG_DEPLOY_UPGRADE_PROMPT" "${BOLD}${target_ver}${NC}") ($OPERATION_TYPE) [y/N]"
              read -p "   > " confirm
              if [[ ! "$confirm" =~ ^[yY]$ ]]; then
                  echo -e "   ${DIM}Deployment cancelled by user.${NC}"
@@ -178,6 +192,9 @@ cmd_deploy() {
         fi
 
         ui_section "$MSG_DEPLOY_CORE"
+        
+        # Phase I: Initial Labeling (Status: deploying)
+        _update_state "$NAMESPACE" "deploying" "$OPERATION_TYPE" "$EXEC_HASH" "$(get_config_hash)" "$target_ver"
         
         # [STEP 1] Namespace Preparation
         ui_spinner_start "[1/5] $MSG_PREPARE_STEP_1_A"
@@ -406,11 +423,9 @@ EOF
                         # Force a pod refresh to ensure all mounts use the fresh identity
                         kubectl delete pods -n "$NAMESPACE" --all --grace-period=0 --force &>> "$DEBUG_OUT"
                         
-                        # Phase H: Final Explicit Labeling
-                        local FINAL_HASH=$(get_config_hash)
-                        local FINAL_VER="${KCS_VERSION:-latest}"
-                        kubectl label ns "$NAMESPACE" provisioned-by=kcspoc provisioned-hash="$FINAL_HASH" provisioned-version="$VERSION" kcs-version="$FINAL_VER" --overwrite &>> "$DEBUG_OUT"
-
+                        # Phase I: Success Signaling (Status: stable)
+                        _update_state "$NAMESPACE" "stable" "$OPERATION_TYPE" "$EXEC_HASH" "$(get_config_hash)" "$TARGET_VER"
+                        
                         ui_spinner_stop "PASS"
                         
                         # Run health check
@@ -440,6 +455,9 @@ EOF
         echo -e "\n  ${BOLD}${MSG_DEPLOY_BOOTSTRAP_HINT}${NC}"
         echo -e "  ${CYAN}kubectl get pods -n $NAMESPACE -w${NC}\n"
     else
+        # Phase I: Failure Signaling (Status: failed)
+        _update_state "$NAMESPACE" "failed" "$OPERATION_TYPE" "$EXEC_HASH" "$(get_config_hash)" "${KCS_VERSION:-latest}"
+        
         echo -e "${RED}${BOLD}${ICON_FAIL} Installation failed. Check logs with: ./kcspoc logs --show $EXEC_HASH${NC}"
         return 1
     fi
