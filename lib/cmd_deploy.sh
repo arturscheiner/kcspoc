@@ -5,6 +5,7 @@ cmd_deploy() {
     local INSTALL_CORE=""
     local INSTALL_AGENTS=""
     local VALUES_OVERRIDE=""
+    local CHECK_HASH=""
 
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -20,6 +21,10 @@ cmd_deploy() {
                 VALUES_OVERRIDE="$2"
                 shift; shift
                 ;;
+            --check-hash)
+                CHECK_HASH="true"
+                shift
+                ;;
             --help|help)
                 ui_help "deploy" "$MSG_HELP_DEPLOY_DESC" "$MSG_HELP_DEPLOY_OPTS" "$MSG_HELP_DEPLOY_EX"
                 return 0
@@ -32,7 +37,7 @@ cmd_deploy() {
     done
 
     # Default to help if no options provided
-    if [ -z "$INSTALL_CORE" ] && [ -z "$INSTALL_AGENTS" ]; then
+    if [ -z "$INSTALL_CORE" ] && [ -z "$INSTALL_AGENTS" ] && [ -z "$CHECK_HASH" ]; then
         ui_help "deploy" "$MSG_HELP_DEPLOY_DESC" "$MSG_HELP_DEPLOY_OPTS" "$MSG_HELP_DEPLOY_EX"
         return 1
     fi
@@ -48,6 +53,31 @@ cmd_deploy() {
     fi
 
     local INSTALL_ERROR=0
+
+    # --- 0. HASH CHECK (Standalone) ---
+    if [ "$CHECK_HASH" == "true" ]; then
+        ui_section "Hash Integrity Check"
+        local local_hash=$(get_config_hash)
+        local remote_hash=$(kubectl get ns "$NAMESPACE" -o jsonpath='{.metadata.labels.provisioned-hash}' 2>/dev/null || echo "N/A (New NS)")
+        
+        local match_icon="${RED}${ICON_FAIL}${NC}"
+        [ "$local_hash" == "$remote_hash" ] && match_icon="${GREEN}${ICON_OK}${NC}"
+        
+        echo -e "   ${BOLD}Namespace:${NC} $NAMESPACE\n"
+        
+        printf "   %-32s | %-32s | %s\n" "LOCAL CONFIG" "CLUSTER/REMOTE" "MATCH"
+        printf "   ---------------------------------|----------------------------------|-------\n"
+        printf "   %-32s | %-32s |  %b\n" "$local_hash" "$remote_hash" "$match_icon"
+        echo ""
+        
+        if [ "$remote_hash" != "not-found" ] && [ "$local_hash" != "$remote_hash" ]; then
+             echo -e "   ${RED}${BOLD}${ICON_WARN} Mismatched Configuration Detected!${NC}"
+             echo -e "   ${DIM}This deploy may break data encryption (Cipher Error).${NC}"
+             echo -e "   ${DIM}Please sync your local config with the original provisioner.${NC}"
+        fi
+        echo ""
+        return 0
+    fi
 
     # --- 1. CORE INSTALLATION ---
     if [ "$INSTALL_CORE" == "true" ]; then
