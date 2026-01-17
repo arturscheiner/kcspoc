@@ -68,6 +68,8 @@ echo ""
 ui_section "Organizing deployment"
 echo -e "   ${ICON_GEAR} Setting up binary directory..."
 if [ -d "kcspoc" ]; then
+    # Ensure executable permissions
+    chmod +x kcspoc/kcspoc &>/dev/null
     mv kcspoc bin
     echo -e "   ${ICON_OK} Directory ./kcspoc renamed to ./bin"
 else
@@ -110,7 +112,18 @@ echo ""
 echo -e "${GREEN}${BOLD}   ${ICON_OK} KCS PoC Tool installed successfully!${NC}"
 echo -e "   You can now run '${BOLD}kcspoc${NC}' from anywhere."
 echo ""
+
+# Check if SYMLINK_DEST folder is in PATH
+SYMLINK_DIR=$(dirname "$SYMLINK_DEST")
+if [[ ":$PATH:" != *":$SYMLINK_DIR:"* ]]; then
+    echo -e "   ${YELLOW}${ICON_WARN} WARNING: ${SYMLINK_DIR} is not in your PATH.${NC}"
+    echo -e "   Add it to your ~/.bashrc or ~/.zshrc:"
+    echo -e "      ${DIM}export PATH=\"\$PATH:${SYMLINK_DIR}\"${NC}"
+    echo ""
+fi
+
 echo -e "   Next steps:"
-echo -e "   ${DIM}1. Run '${BOLD}kcspoc config${DIM}' to set up your environment.${NC}"
-echo -e "   ${DIM}2. Run '${BOLD}kcspoc pull${DIM}' to fetch the KCS maps.${NC}"
+echo -e "   ${DIM}1. Refresh shell: '${BOLD}hash -r${DIM}' (bash) or '${BOLD}rehash${DIM}' (zsh)${NC}"
+echo -e "   ${DIM}2. Run '${BOLD}kcspoc config${DIM}' to set up your environment.${NC}"
+echo -e "   ${DIM}3. Run '${BOLD}kcspoc pull${DIM}' to fetch the KCS charts.${NC}"
 echo ""
