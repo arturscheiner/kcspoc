@@ -270,7 +270,7 @@ cmd_check() {
     if [ -n "$RUNTIME_VERSION" ]; then
         local DETECTED_SOCKET=""
         local RUNTIME_TYPE=""
-        
+        local DEEP_CONFIRMED_SOCKET=""
         if [[ "$RUNTIME_VERSION" == *"containerd"* ]]; then
             DETECTED_SOCKET="/run/containerd/containerd.sock"
             RUNTIME_TYPE="containerd"
@@ -413,6 +413,14 @@ EOF
                     else
                          headers="${RED}ERR${NC}"
                     fi
+
+                    #   Deep CRI Verification
+                    if [ -z "$DEEP_CONFIRMED_SOCKET" ]; then
+                        local SOCKET_RAW=$(kubectl exec kcspoc-deep-check-${name} -n "$DEEP_NS" -- /bin/bash -c "tr '\0' ' ' < /proc/\$(pgrep kubelet | head -n 1)/cmdline 2>/dev/null | grep -oP '\-\-container-runtime-endpoint=\K[^ ]+' || cat /host/var/lib/kubelet/kubeadm-flags.env 2>/dev/null | grep -oP '\-\-container-runtime-endpoint=\K[^ ]+'" 2>/dev/null)
+                        if [ -n "$SOCKET_RAW" ]; then
+                            DEEP_CONFIRMED_SOCKET="${SOCKET_RAW#unix://}"
+                        fi
+                    fi
                 else
                     disk_disp="${RED}ERR (Wait)${NC}"
                     ebpf="${RED}ERR (Wait)${NC}"
@@ -431,6 +439,9 @@ EOF
     
     if [[ "$DEEP_ENABLED" == "true" ]]; then
         ui_spinner_stop "PASS"
+        if [ -n "$DEEP_CONFIRMED_SOCKET" ]; then
+             echo -e "      ${ICON_OK} ${BLUE}$MSG_CHECK_CRI_CONFIRMED${NC} ${GREEN}${DEEP_CONFIRMED_SOCKET}${NC}"
+        fi
         echo ""
     fi
 
