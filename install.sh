@@ -53,8 +53,8 @@ ui_section "Fetching source code"
 REPO_URL="https://github.com/arturscheiner/kcspoc.git"
 echo -e "   ${ICON_GEAR} Cloning ${REPO_URL}..."
 
-# Clean up any existing clone attempts in ~/.kcspoc/kuberverse-simple or ~/.kcspoc/kcspoc
-rm -rf kuberverse-simple kcspoc bin
+# Clean up any existing clone attempts in ~/.kcspoc/kcspoc
+rm -rf kcspoc bin
 
 if git clone "$REPO_URL" kcspoc &>/dev/null; then
     # Detect Version
