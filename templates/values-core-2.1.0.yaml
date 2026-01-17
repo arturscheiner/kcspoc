@@ -1,0 +1,54 @@
+################################################################################
+# values-final-210.yaml
+# FOCO: Bootstrap da versão base com fix de Certificados (certSource)
+################################################################################
+
+commonLabels:
+  provisioned-by: "kcspoc"
+
+default:
+  platform: kubernetes
+  domain: "$DOMAIN_CONFIGURED"
+  # No 2.1.0, esta flag é mandatória para renderizar os manifestos de Certificate
+  certSource: helm 
+  
+  postgresql:
+    resources:
+      requests: { cpu: "100m", memory: "512Mi" }
+      limits: { cpu: "500m", memory: "1Gi" }
+
+configmap:
+  infraconfig:
+    type: fromEnvs
+    envs:
+      TLS_INTERNAL: true  # Exige certificados mTLS internos
+      TLS_INGRESS: false
+      # Tags de imagem fixas para a v2.1.0
+      KUBE_AGENT_TAG: v2.1.0
+      NODE_AGENT_TAG: v2.1.0
+      SCANNER_TAG: v2.1.0
+      IMAGE_TAG_MIDDLEWARE: v2.1.0
+
+# Cria o emissor local se não existir um ClusterIssuer
+issuer:
+  create: true
+  name: kcs-issuer
+  kind: Issuer
+
+pullSecret:
+  kcs-pullsecret:
+    registry: "$REGISTRY_SERVER_CONFIG"
+    username: "$REGISTRY_USER_CONFIG"
+    password: "$REGISTRY_PASS_CONFIG"
+    email: "$REGISTRY_EMAIL_CONFIG"
+
+ingress:
+  kcs:
+    domain: "$DOMAIN_CONFIGURED"
+    ingressClass: "nginx"
+
+persistentVolume:
+  postgresql: { size: 20Gi }
+  pvc-minio: { size: 5Gi }
+  pvc-clickhouse-cold: { size: 40Gi }
+  pvc-clickhouse-hot: { size: 20Gi }

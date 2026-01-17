@@ -106,10 +106,14 @@ cmd_deploy() {
 
             if [ "$INSTALL_ERROR" -eq 0 ]; then
                 # 1.3.1 Process Dynamic Overrides
-                local DYNAMIC_TEMPLATE="$SCRIPT_DIR/templates/values-core.yaml"
+                local DYNAMIC_TEMPLATE="$ARTIFACT_PATH/values-core-$TARGET_VER.yaml"
+                # Fallback for older pulls or 'latest' resolves
+                [ ! -f "$DYNAMIC_TEMPLATE" ] && DYNAMIC_TEMPLATE="$ARTIFACT_PATH/values-core-latest.yaml"
+                
                 local PROCESSED_VALUES="$CONFIG_DIR/values-core-$TARGET_VER.yaml"
                 
                 if [ -f "$DYNAMIC_TEMPLATE" ]; then
+                    echo -e "      ${DIM}Template Source: $DYNAMIC_TEMPLATE${NC}" >> "$DEBUG_OUT"
                     cp "$DYNAMIC_TEMPLATE" "$PROCESSED_VALUES"
                     sed -i "s|\$DOMAIN_CONFIGURED|$DOMAIN|g" "$PROCESSED_VALUES"
                     sed -i "s|\$REGISTRY_SERVER_CONFIG|$REGISTRY_SERVER|g" "$PROCESSED_VALUES"

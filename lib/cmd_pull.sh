@@ -152,6 +152,20 @@ cmd_pull() {
             # Save download metadata
             date +'%Y-%m-%d %H:%M' > "$ARTIFACT_PATH/.downloaded"
             echo -e "      ${DIM}${MSG_PULL_SUCCESS}: $(basename "$TGZ_FILE")${NC}"
+
+            # 7. Fetch Remote Template
+            local TEMPLATE_URL="https://raw.githubusercontent.com/arturscheiner/kcspoc/refs/heads/main/templates/values-core-$REAL_VER.yaml"
+            local TEMPLATE_DEST="$ARTIFACT_PATH/values-core-$REAL_VER.yaml"
+            
+            ui_spinner_start "Fetching Remote Template ($REAL_VER)"
+            if curl -sSf "$TEMPLATE_URL" -o "$TEMPLATE_DEST" &>> "$DEBUG_OUT"; then
+                ui_spinner_stop "PASS"
+                echo -e "      ${DIM}Template: values-core-$REAL_VER.yaml cached.${NC}"
+            else
+                ui_spinner_stop "WARN"
+                echo -e "      ${YELLOW}${ICON_INFO} Versioned template not found in repo. Using 'latest' fallback.${NC}"
+                curl -sSf "https://raw.githubusercontent.com/arturscheiner/kcspoc/refs/heads/main/templates/values-core-latest.yaml" -o "$ARTIFACT_PATH/values-core-latest.yaml" &>> "$DEBUG_OUT"
+            fi
         else
             echo -e "      ${RED}${ICON_FAIL} ${MSG_PULL_ERR_FILE}${NC}"
             exit 1
