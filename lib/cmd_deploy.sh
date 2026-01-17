@@ -76,6 +76,25 @@ cmd_deploy() {
                  return 0
              fi
         fi
+        # 1.0 Mandatory Config Pre-Check
+        local MANDATORY_VARS=("NAMESPACE" "DOMAIN" "REGISTRY_SERVER" "CRI_SOCKET")
+        local MISSING_CONFIG=""
+        for var in "${MANDATORY_VARS[@]}"; do
+            if [ -z "${!var}" ]; then
+                MISSING_CONFIG+="$var "
+            fi
+        done
+
+        if [ -n "$MISSING_CONFIG" ]; then
+            echo -e "\n   ${RED}${BOLD}${ICON_FAIL} Missing Mandatory Configuration${NC}"
+            echo -e "   The following variables are empty in your config file:"
+            for m in $MISSING_CONFIG; do
+                echo -e "      ${YELLOW}→ $m${NC}"
+            done
+            echo -e "\n   ${DIM}Please run: ./kcspoc config${NC}\n"
+            return 1
+        fi
+
         ui_section "$MSG_DEPLOY_CORE"
         
         # 1.1 Namespace Setup
@@ -163,19 +182,7 @@ cmd_deploy() {
                         cp "$DYNAMIC_TEMPLATE" "$PROCESSED_VALUES"
                         [ -n "$DOMAIN" ] && sed -i "s|\$DOMAIN_CONFIGURED|$DOMAIN|g" "$PROCESSED_VALUES"
                         [ -n "$PLATFORM" ] && sed -i "s|\$PLATFORM_CONFIGURED|$PLATFORM|g" "$PROCESSED_VALUES"
-                    
-                    # CRI Socket Auto-Detection
-                    local FINAL_CRI="$CRI_SOCKET"
-                    if [ -z "$FINAL_CRI" ]; then
-                        local RT_VER=$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.containerRuntimeVersion}' 2>/dev/null)
-                        if [[ "$RT_VER" == *"containerd"* ]]; then FINAL_CRI="/run/containerd/containerd.sock"; fi
-                        if [[ "$RT_VER" == *"cri-o"* ]]; then FINAL_CRI="/run/crio/crio.sock"; fi
-                        if [[ "$RT_VER" == *"docker"* ]]; then FINAL_CRI="/var/run/cri-dockerd.sock"; fi
-                        echo -e "      ${DIM}CRI Auto-Detected: $FINAL_CRI${NC}" >> "$DEBUG_OUT"
-                    fi
-                    if [ -n "$FINAL_CRI" ]; then
-                        sed -i "s|\$CRI_SOCKET_CONFIG|$FINAL_CRI|g" "$PROCESSED_VALUES"
-                    fi
+                        [ -n "$CRI_SOCKET" ] && sed -i "s|\$CRI_SOCKET_CONFIG|$CRI_SOCKET|g" "$PROCESSED_VALUES"
 
                     if [ -n "$REGISTRY_SERVER" ]; then
                         sed -i "s|\$REGISTRY_SERVER_CONFIG|$REGISTRY_SERVER|g" "$PROCESSED_VALUES"

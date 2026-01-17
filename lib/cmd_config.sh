@@ -180,7 +180,14 @@ cmd_config() {
 
     # 8. CRI Socket
     ui_step 9 $TOTAL_STEPS "$MSG_STEP_CRI" "$MSG_STEP_CRI_DESC"
-    ui_input "$MSG_INPUT_CRI_SOCKET" "" "$CUR_CRI"
+    local SUGGESTED_CRI="$CUR_CRI"
+    if [ -z "$SUGGESTED_CRI" ]; then
+        local RT_VER=$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.containerRuntimeVersion}' 2>/dev/null)
+        if [[ "$RT_VER" == *"containerd"* ]]; then SUGGESTED_CRI="/run/containerd/containerd.sock"; fi
+        if [[ "$RT_VER" == *"cri-o"* ]]; then SUGGESTED_CRI="/run/crio/crio.sock"; fi
+        if [[ "$RT_VER" == *"docker"* ]]; then SUGGESTED_CRI="/var/run/cri-dockerd.sock"; fi
+    fi
+    ui_input "$MSG_INPUT_CRI_SOCKET" "$SUGGESTED_CRI" "$CUR_CRI"
     CRI_SOCKET="$RET_VAL"
 
     # 9. Secrets
