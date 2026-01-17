@@ -499,16 +499,16 @@ _verify_deploy_bootstrap() {
 
 _check_kcs_exists() {
     local ns="$1"
-    # Check helm releases
+    # 1. Check for ConfigMap signal (Strongest)
+    if kubectl get cm infraconfig -n "$ns" &>/dev/null; then
+        return 0
+    fi
+    # 2. Check for Middleware pods (The "Brain")
+    if kubectl get pod -n "$ns" -l app.kubernetes.io/name=middleware --no-headers 2>/dev/null | grep -q "."; then
+        return 0
+    fi
+    # 3. Check helm releases as fallback
     if helm list -n "$ns" -q | grep -q "^kcs$"; then
-        return 0
-    fi
-    # Check if namespace has our label
-    if kubectl get ns "$ns" -o jsonpath='{.metadata.labels.provisioned-by}' 2>/dev/null | grep -q "kcspoc"; then
-        return 0
-    fi
-    # Check for any pods in namespace as fallback
-    if kubectl get pods -n "$ns" --no-headers 2>/dev/null | grep -q "."; then
         return 0
     fi
     return 1
@@ -516,19 +516,37 @@ _check_kcs_exists() {
 
 _get_installed_version() {
     local ns="$1"
-    # 1. Check namespace label
-    local ver=$(kubectl get ns "$ns" -o jsonpath='{.metadata.labels.provisioned-version}' 2>/dev/null)
+    local ver=""
+
+    # 1. Try infraconfig ConfigMap (IMAGE_TAG_MIDDLEWARE)
+    ver=$(kubectl get configmap infraconfig -n "$ns" -o jsonpath='{.data.IMAGE_TAG_MIDDLEWARE}' 2>/dev/null)
     if [ -n "$ver" ]; then
         echo "$ver"
         return
     fi
-    # 2. Check helm release metadata
+
+    # 2. Try Middleware POD image tag
+    local img=$(kubectl get pod -n "$ns" -l app.kubernetes.io/name=middleware -o jsonpath='{.items[0].spec.containers[*].image}' 2>/dev/null)
+    if [ -n "$img" ]; then
+        # Extract tag after last colon, remove leading 'v'
+        ver=$(echo "$img" | awk -F':' '{print $NF}' | sed 's/^v//')
+        [ -n "$ver" ] && echo "$ver" && return
+    fi
+
+    # 3. Check namespace label kcs-version (locally set by kcspoc)
+    ver=$(kubectl get ns "$ns" -o jsonpath='{.metadata.labels.kcs-version}' 2>/dev/null)
+    if [ -n "$ver" ]; then
+        echo "$ver"
+        return
+    fi
+    
+    # 4. Check helm release metadata
     ver=$(helm list -n "$ns" -o json | jq -r '.[] | select(.name=="kcs") | .app_version' 2>/dev/null)
     if [ -n "$ver" ] && [ "$ver" != "null" ]; then
         echo "$ver"
         return
     fi
-    # 3. Fallback
+
     echo "unknown"
 }
 
@@ -570,28 +588,28 @@ _find_global_kcs_instances() {
         done
     fi
 
-    # 2. Search for kcspoc labeled namespaces
-    local labeled_ns=$(kubectl get ns -l provisioned-by=kcspoc -o jsonpath='{.items[*].metadata.name}' 2>/dev/null)
-    if [ -n "$labeled_ns" ]; then
-        for ns in $labeled_ns; do
+    # 2. Search for infraconfig ConfigMap (Strong Signal)
+    # We get all namespaces that have this CM
+    local cm_ns=$(kubectl get cm -A --no-headers 2>/dev/null | grep "infraconfig " | awk '{print $1}' | sort | uniq)
+    if [ -n "$cm_ns" ]; then
+        for ns in $cm_ns; do
             [ "$ns" == "$target_ns" ] && continue
             [[ "$found_instances" == *"$ns"* ]] && continue
-            found_instances+="      → $ns (kcspoc Labeled)\n"
+            found_instances+="      → $ns (KCS ConfigMap: infraconfig)\n"
         done
     fi
 
-    # 3. Search for kcs-* pods (Active Instance Check)
-    # Filter out common namespaces to avoid noise
-    local kcs_pods_ns=$(kubectl get pods -A -o jsonpath='{range .items[?(@.metadata.name != "")]}{.metadata.namespace}{" "}{.metadata.name}{"\n"}{end}' 2>/dev/null | grep " kcs-" | awk '{print $1}' | sort | uniq | grep -v "^kube-system$\|^cert-manager$\|^ingress-nginx$")
-    if [ -n "$kcs_pods_ns" ]; then
-        for ns in $kcs_pods_ns; do
+    # 3. Search for Middleware component (The Brain)
+    local middleware_ns=$(kubectl get pods -A -l app.kubernetes.io/name=middleware -o jsonpath='{.items[*].metadata.namespace}' 2>/dev/null | tr ' ' '\n' | sort | uniq)
+    if [ -n "$middleware_ns" ]; then
+        for ns in $middleware_ns; do
             [ "$ns" == "$target_ns" ] && continue
             [[ "$found_instances" == *"$ns"* ]] && continue
-            found_instances+="      → $ns (Active Pods Detected)\n"
+            found_instances+="      → $ns (Active Middleware Detected)\n"
         done
     fi
 
-    echo -e "$found_instances"
+    echo -ne "$found_instances"
 }
 
 _count_local_artifacts() {
