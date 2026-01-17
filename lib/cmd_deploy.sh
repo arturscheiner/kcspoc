@@ -109,6 +109,7 @@ cmd_deploy() {
 
             if [ "$INSTALL_ERROR" -eq 0 ]; then
                 local PROCESSED_VALUES="$CONFIG_DIR/values-core-$TARGET_VER.yaml"
+                local DYNAMIC_TEMPLATE="$ARTIFACT_PATH/values-core-$TARGET_VER.yaml"
                 
                 # --- TEMPLATE PROCESSING (Skip if override provided) ---
                 if [ -n "$VALUES_OVERRIDE" ]; then
@@ -162,7 +163,10 @@ cmd_deploy() {
                         if [[ "$RT_VER" == *"docker"* ]]; then FINAL_CRI="/var/run/cri-dockerd.sock"; fi
                         echo -e "      ${DIM}CRI Auto-Detected: $FINAL_CRI${NC}" >> "$DEBUG_OUT"
                     fi
-                    sed -i "s|\$CRI_SOCKET_CONFIG|$FINAL_CRI|g" "$PROCESSED_VALUES"
+
+                    if [ -n "$FINAL_CRI" ]; then
+                        sed -i "s|\$CRI_SOCKET_CONFIG|$FINAL_CRI|g" "$PROCESSED_VALUES"
+                    fi
 
                     sed -i "s|\$REGISTRY_SERVER_CONFIG|$REGISTRY_SERVER|g" "$PROCESSED_VALUES"
                         sed -i "s|\$REGISTRY_USER_CONFIG|$REGISTRY_USER|g" "$PROCESSED_VALUES"
