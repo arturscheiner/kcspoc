@@ -48,22 +48,53 @@ cd "$INSTALL_DIR" || exit 1
 echo -e "   ${ICON_OK} Environment ready."
 echo ""
 
-# 2. Clone Repository
+# 2. Fetch Source Code
 ui_section "Fetching source code"
 REPO_URL="https://github.com/arturscheiner/kcspoc.git"
-echo -e "   ${ICON_GEAR} Cloning ${REPO_URL}..."
+ZIP_URL="https://github.com/arturscheiner/kcspoc/archive/refs/heads/main.zip"
 
 # Clean up any existing clone attempts in ~/.kcspoc/kcspoc
-rm -rf kcspoc bin
+rm -rf kcspoc bin kcspoc.zip kcspoc-main
 
-if git clone "$REPO_URL" kcspoc &>/dev/null; then
-    # Detect Version
-    DETECTED_VER=$(grep 'VERSION=' kcspoc/lib/common.sh | cut -d'"' -f2)
-    echo -e "   ${ICON_OK} Repository cloned successfully. ${DIM}(Target: v${DETECTED_VER})${NC}"
+if command -v git &>/dev/null; then
+    echo -e "   ${ICON_GEAR} Cloning ${REPO_URL} via git..."
+    if git clone "$REPO_URL" kcspoc &>/dev/null; then
+        echo -e "   ${ICON_OK} Repository cloned successfully."
+    else
+        echo -e "   ${RED}${ICON_FAIL} Failed to clone repository.${NC}"
+        exit 1
+    fi
 else
-    echo -e "   ${RED}${ICON_FAIL} Failed to clone repository.${NC}"
-    exit 1
+    echo -e "   ${YELLOW}${ICON_INFO} Git not found. Attempting ZIP download...${NC}"
+    if ! command -v unzip &>/dev/null; then
+        echo -e "   ${RED}${ICON_FAIL} Error: 'unzip' is required but not installed.${NC}"
+        exit 1
+    fi
+
+    echo -e "   ${ICON_GEAR} Downloading source from GitHub..."
+    if command -v curl &>/dev/null; then
+        curl -L "$ZIP_URL" -o kcspoc.zip &>/dev/null
+    elif command -v wget &>/dev/null; then
+        wget -q "$ZIP_URL" -O kcspoc.zip &>/dev/null
+    else
+        echo -e "   ${RED}${ICON_FAIL} Error: Neither 'curl' nor 'wget' found.${NC}"
+        exit 1
+    fi
+
+    if [ -f "kcspoc.zip" ]; then
+        unzip -q kcspoc.zip
+        mv kcspoc-main kcspoc
+        rm kcspoc.zip
+        echo -e "   ${ICON_OK} Source downloaded and extracted."
+    else
+        echo -e "   ${RED}${ICON_FAIL} Failed to download source ZIP.${NC}"
+        exit 1
+    fi
 fi
+
+# Detect Version
+DETECTED_VER=$(grep 'VERSION=' kcspoc/lib/common.sh | cut -d'"' -f2)
+echo -e "   ${ICON_OK} Ready to install version: ${BOLD}v${DETECTED_VER}${NC}"
 echo ""
 
 # 3. Rename and Organize
