@@ -68,13 +68,13 @@ cmd_deploy() {
         case "$CHECK_MODE" in
             hash)
                 local_val=$(get_config_hash)
-                label_key="provisioned-hash"
+                label_key="kcspoc.io/config-hash"
                 col_header="CONFIG HASH"
                 remote_val=$(kubectl get ns "$NAMESPACE" -o jsonpath="{.metadata.labels.$label_key}" 2>/dev/null || echo "N/A")
                 ;;
             version)
                 local_val="${KCS_VERSION:-latest}"
-                label_key="kcs-version"
+                label_key="kcspoc.io/kcs-version"
                 col_header="KCS VERSION"
                 remote_val=$(kubectl get ns "$NAMESPACE" -o jsonpath="{.metadata.labels.$label_key}" 2>/dev/null || echo "N/A")
                 ;;
@@ -205,9 +205,7 @@ cmd_deploy() {
         
         # [STEP 1] Namespace Preparation
         ui_spinner_start "[1/5] $MSG_PREPARE_STEP_1_A"
-        if kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT" && \
-           kubectl label namespace "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT" && \
-           kubectl label namespace "$NAMESPACE" provisioned-version="$target_ver" --overwrite &>> "$DEBUG_OUT"; then
+        if kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"; then
             ui_spinner_stop "PASS"
         else
             ui_spinner_stop "FAIL"
@@ -223,7 +221,7 @@ cmd_deploy() {
               --docker-password="$REGISTRY_PASS" \
               --docker-email="$REGISTRY_EMAIL" \
               -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT" && \
-              kubectl label secret kcs-registry-secret -n "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT"; then
+              kubectl label secret kcs-registry-secret -n "$NAMESPACE" "kcspoc.io/managed-by=kcspoc" --overwrite &>> "$DEBUG_OUT"; then
                 ui_spinner_stop "PASS"
             else
                 ui_spinner_stop "FAIL"
@@ -496,13 +494,12 @@ _verify_deploy_bootstrap() {
 
     # 2. Verify Labelling
     ui_spinner_start "${MSG_DEPLOY_LABEL_CHECK}"
-    if kubectl get ns "$ns" -o jsonpath='{.metadata.labels.provisioned-by}' 2>/dev/null | grep -q "kcspoc"; then
+    if kubectl get ns "$ns" -o jsonpath='{.metadata.labels.kcspoc\.io/managed-by}' 2>/dev/null | grep -q "kcspoc"; then
         ui_spinner_stop "PASS"
     else
-        # Apply labels if missing (best effort)
-        local cur_ver=$(kubectl get ns "$ns" -o jsonpath='{.metadata.labels.provisioned-version}' 2>/dev/null || echo "unknown")
-        kubectl label ns "$ns" provisioned-by=kcspoc --overwrite &>> "$DEBUG_OUT"
-        [ "$cur_ver" == "unknown" ] && kubectl label ns "$ns" provisioned-version="$((ls $ARTIFACTS_DIR/kcs | sort -V | tail -n 1) || echo 'unknown')" --overwrite &>> "$DEBUG_OUT"
+        # Apply labels if missing (best effort for legacy adoption)
+        local cur_ver=$(_get_installed_version "$ns")
+        _update_state "$ns" "stable" "install" "N/A" "$(get_config_hash)" "$cur_ver"
         ui_spinner_stop "FIXED"
     fi
 
@@ -570,8 +567,8 @@ _get_installed_version() {
         [ -n "$ver" ] && echo "$ver" && return
     fi
 
-    # 3. Check namespace label kcs-version (locally set by kcspoc)
-    ver=$(kubectl get ns "$ns" -o jsonpath='{.metadata.labels.kcs-version}' 2>/dev/null)
+    # 3. Check namespace label kcspoc.io/kcs-version
+    ver=$(kubectl get ns "$ns" -o jsonpath='{.metadata.labels.kcspoc\.io/kcs-version}' 2>/dev/null)
     if [ -n "$ver" ]; then
         echo "$ver"
         return
@@ -595,7 +592,7 @@ _verify_config_integrity() {
     [ "$local_hash" == "none" ] && return 0
     
     # Check if namespace has a hash label
-    local remote_hash=$(kubectl get ns "$ns" -o jsonpath='{.metadata.labels.provisioned-hash}' 2>/dev/null)
+    local remote_hash=$(kubectl get ns "$ns" -o jsonpath='{.metadata.labels.kcspoc\.io/config-hash}' 2>/dev/null)
     
     if [ -n "$remote_hash" ]; then
         if [ "$remote_hash" != "$local_hash" ]; then

@@ -25,7 +25,7 @@ CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
 ARTIFACTS_DIR="$CONFIG_DIR/artifacts"
 LOGS_DIR="$CONFIG_DIR/logs"
-VERSION="0.4.88"
+VERSION="0.4.89"
 
 # Execution Globals
 EXEC_HASH=""
@@ -88,11 +88,7 @@ _update_state() {
 }
 
 
-# Labelling Constants
-POC_LABEL_KEY="provisioned-by"
-POC_LABEL_VAL="kcspoc"
-POC_LABEL="${POC_LABEL_KEY}=${POC_LABEL_VAL}"
-
+# Helper: MD5 Hashing
 get_config_hash() {
     # Generate a unique hash of sensitive local configuration values
     # These values are critical for data encryption and system stability.
