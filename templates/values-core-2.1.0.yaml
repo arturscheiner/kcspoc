@@ -1,52 +1,60 @@
 ################################################################################
-# values-final-210.yaml
-# FOCO: Bootstrap da versão base com fix de Certificados (certSource)
+# values-template-210.yaml
+# Kaspersky Container Security - Automation Template for v2.1.0
+# Purpose: Optimized for baseline stability and automated mTLS bootstrap.
 ################################################################################
 
+# commonLabels: Injected into every resource. 
+# Crucial for the 'destroy' command to track and remove POC-related objects.
 commonLabels:
   provisioned-by: "kcspoc"
 
 default:
   platform: "$PLATFORM_CONFIGURED"
   domain: "$DOMAIN_CONFIGURED"
-  # --- CORREÇÃO DEFINITIVA PARA v2.1.0 (mTLS & CA) ---
-  # Estas chaves garantem que o Helm renderize o "Certificate" e o "Issuer"
-  # necessários para gerar o segredo 'cert-ca' e 'cert-kcs-s3'.
+  
+  # --- MTLS & CERTIFICATE STABILITY ---
+  # 'certSource: helm' forces the rendering of Certificate and Issuer objects.
+  # This is the primary fix for Pods hanging due to missing 'cert-ca' secrets.
   certSource: "helm"
   internalTLS:
     enabled: true
     certSource: "helm"
   
-  certManager:
-    enabled: true
+  # Integration with cert-manager to handle automated certificate issuance.
+  certManager: true
 
-  # Redução de réplicas para evitar o status 'Pending' no laboratório
+  # IH (Image Handler) replica reduction for resource-constrained Lab/PoC nodes.
   kcs-ih:
     replicaCount: 1
 
-  # --- CORREÇÃO DO ERRO networkPolicy.yaml ---
+  # Network Policies for internal microservices isolation.
   networkPolicies:
     create: true
     ingressControllerNamespaces:
-      - ingress-nginx        # Namespace onde o nosso 'porteiro' reside
+      - ingress-nginx        # Target namespace for the Nginx Ingress Controller.
 
+  # Database resources: Minimal footprints to ensure scheduling on small nodes.
   postgresql:
     resources:
       requests: { cpu: "100m", memory: "512Mi" }
       limits: { cpu: "500m", memory: "1Gi" }
-# --- AGENTE DE SEGURANÇA (VISIBILIDADE EM TEMPO REAL) ---
+
+# --- RUNTIME SECURITY (NODE AGENT) ---
 nodeAgent:
   enabled: true
-  # Caminho para o Lab (containerd)
+  # Dynamic socket path based on 'kcspoc config' (containerd vs cri-o).
   runtimeSocketPath: "$CRI_SOCKET_CONFIG"
   installStrategy: DaemonSet
 
-# --- CONTROLE DE ADMISSÃO (O "SEGURANÇA" DO CLUSTER) ---
+# --- ADMISSION CONTROLLER ---
+# Required for real-time deployment blocking based on security policies.
 admissionController:
   enabled: true
   replicaCount: 1
 
-# --- ATUALIZAÇÕES AUTOMÁTICAS ---
+# --- SCANNER UPDATES ---
+# Enables the download of vulnerability and malware signature databases.
 updates:
   enabled: true
   
@@ -54,20 +62,19 @@ configmap:
   infraconfig:
     type: fromEnvs
     envs:
-      TLS_INTERNAL: true  # Exige certificados mTLS internos
+      TLS_INTERNAL: true  # Enables internal encrypted communication.
       TLS_INGRESS: false
-      # Tags de imagem fixas para a v2.1.0
+      # Fixed tags for v2.1.0 consistency.
       KUBE_AGENT_TAG: v2.1.0
       NODE_AGENT_TAG: v2.1.0
       SCANNER_TAG: v2.1.0
       IMAGE_TAG_MIDDLEWARE: v2.1.0
 
-# O emissor local que o Cert-Manager usará para assinar a CA interna
+# Local Issuer: selfSigned: true creates the root CA for the 'kcs' namespace.
 issuer:
   create: true
   name: kcs-issuer
   kind: Issuer
-  # Na v2.1.0, esta flag ajuda a gerar a CA auto-assinada se o segredo 'cert-ca' faltar
   selfSigned: true
 
 pullSecret:
@@ -87,10 +94,6 @@ persistentVolume:
   pvc-minio: { size: 5Gi }
   pvc-clickhouse-cold: { size: 40Gi }
   pvc-clickhouse-hot: { size: 20Gi }
-
-# ----------- #
-#   Secrets   #
-# ----------- #
 
 secret:
   infracreds:
