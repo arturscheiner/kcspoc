@@ -76,23 +76,25 @@ cmd_deploy() {
                  return 0
              fi
         fi
-        # 1.0 Mandatory Config Pre-Check
-        local MANDATORY_VARS=("NAMESPACE" "DOMAIN" "REGISTRY_SERVER" "CRI_SOCKET")
-        local MISSING_CONFIG=""
-        for var in "${MANDATORY_VARS[@]}"; do
-            if [ -z "${!var}" ]; then
-                MISSING_CONFIG+="$var "
-            fi
-        done
-
-        if [ -n "$MISSING_CONFIG" ]; then
-            echo -e "\n   ${RED}${BOLD}${ICON_FAIL} Missing Mandatory Configuration${NC}"
-            echo -e "   The following variables are empty in your config file:"
-            for m in $MISSING_CONFIG; do
-                echo -e "      ${YELLOW}→ $m${NC}"
+        # 1.0 Mandatory Config Pre-Check (Skip in Expert Mode)
+        if [ -z "$VALUES_OVERRIDE" ]; then
+            local MANDATORY_VARS=("NAMESPACE" "DOMAIN" "REGISTRY_SERVER" "CRI_SOCKET")
+            local MISSING_CONFIG=""
+            for var in "${MANDATORY_VARS[@]}"; do
+                if [ -z "${!var}" ]; then
+                    MISSING_CONFIG+="$var "
+                fi
             done
-            echo -e "\n   ${DIM}Please run: ./kcspoc config${NC}\n"
-            return 1
+
+            if [ -n "$MISSING_CONFIG" ]; then
+                echo -e "\n   ${RED}${BOLD}${ICON_FAIL} Missing Mandatory Configuration${NC}"
+                echo -e "   The following variables are empty in your config file:"
+                for m in $MISSING_CONFIG; do
+                    echo -e "      ${YELLOW}→ $m${NC}"
+                done
+                echo -e "\n   ${DIM}Please run: ./kcspoc config${NC}\n"
+                return 1
+            fi
         fi
 
         ui_section "$MSG_DEPLOY_CORE"
@@ -109,8 +111,8 @@ cmd_deploy() {
             INSTALL_ERROR=1
         fi
 
-        # 1.2 Secret Setup
-        if [ "$INSTALL_ERROR" -eq 0 ]; then
+        # 1.2 Secret Setup (Skip in Expert Mode)
+        if [ "$INSTALL_ERROR" -eq 0 ] && [ -z "$VALUES_OVERRIDE" ]; then
             ui_spinner_start "$MSG_PREPARE_STEP_1_B"
             if kubectl create secret docker-registry kcs-registry-secret \
               --docker-server="$REGISTRY_SERVER" \
@@ -180,19 +182,18 @@ cmd_deploy() {
                     if [ -f "$DYNAMIC_TEMPLATE" ]; then
                         echo -e "      ${DIM}Template Source: $DYNAMIC_TEMPLATE${NC}" >> "$DEBUG_OUT"
                         cp "$DYNAMIC_TEMPLATE" "$PROCESSED_VALUES"
+                        
+                        # Apply Configuration Individually (Strict Conditional)
                         [ -n "$DOMAIN" ] && sed -i "s|\$DOMAIN_CONFIGURED|$DOMAIN|g" "$PROCESSED_VALUES"
                         [ -n "$PLATFORM" ] && sed -i "s|\$PLATFORM_CONFIGURED|$PLATFORM|g" "$PROCESSED_VALUES"
                         [ -n "$CRI_SOCKET" ] && sed -i "s|\$CRI_SOCKET_CONFIG|$CRI_SOCKET|g" "$PROCESSED_VALUES"
+                        [ -n "$REGISTRY_SERVER" ] && sed -i "s|\$REGISTRY_SERVER_CONFIG|$REGISTRY_SERVER|g" "$PROCESSED_VALUES"
+                        [ -n "$REGISTRY_USER" ] && sed -i "s|\$REGISTRY_USER_CONFIG|$REGISTRY_USER|g" "$PROCESSED_VALUES"
+                        [ -n "$REGISTRY_PASS" ] && sed -i "s|\$REGISTRY_PASS_CONFIG|$REGISTRY_PASS|g" "$PROCESSED_VALUES"
+                        [ -n "$REGISTRY_EMAIL" ] && sed -i "s|\$REGISTRY_EMAIL_CONFIG|$REGISTRY_EMAIL|g" "$PROCESSED_VALUES"
+                        [ -n "$TARGET_VER" ] && sed -i "s|\${KCS_VERSION}|$TARGET_VER|g" "$PROCESSED_VALUES"
 
-                    if [ -n "$REGISTRY_SERVER" ]; then
-                        sed -i "s|\$REGISTRY_SERVER_CONFIG|$REGISTRY_SERVER|g" "$PROCESSED_VALUES"
-                        sed -i "s|\$REGISTRY_USER_CONFIG|$REGISTRY_USER|g" "$PROCESSED_VALUES"
-                        sed -i "s|\$REGISTRY_PASS_CONFIG|$REGISTRY_PASS|g" "$PROCESSED_VALUES"
-                        sed -i "s|\$REGISTRY_EMAIL_CONFIG|$REGISTRY_EMAIL|g" "$PROCESSED_VALUES"
-                    fi
-                    sed -i "s|\${KCS_VERSION}|$TARGET_VER|g" "$PROCESSED_VALUES"
-                        
-                        # Inject Secrets
+                        # Inject Secrets Individually
                         [ -n "$POSTGRES_USER" ] && sed -i "s|\$POSTGRES_USER_CONFIG|$POSTGRES_USER|g" "$PROCESSED_VALUES"
                         [ -n "$POSTGRES_PASSWORD" ] && sed -i "s|\$POSTGRES_PASS_CONFIG|$POSTGRES_PASSWORD|g" "$PROCESSED_VALUES"
                         [ -n "$MINIO_ROOT_USER" ] && sed -i "s|\$MINIO_USER_CONFIG|$MINIO_ROOT_USER|g" "$PROCESSED_VALUES"
@@ -203,20 +204,22 @@ cmd_deploy() {
                         [ -n "$MCHD_USER" ] && sed -i "s|\$MCHD_USER_CONFIG|$MCHD_USER|g" "$PROCESSED_VALUES"
                         [ -n "$MCHD_PASS" ] && sed -i "s|\$MCHD_PASS_CONFIG|$MCHD_PASS|g" "$PROCESSED_VALUES"
                         [ -n "$APP_SECRET" ] && sed -i "s|\$APP_SECRET_CONFIG|$APP_SECRET|g" "$PROCESSED_VALUES"
-                        # 1.3.3 Validation Guard
-                        ui_spinner_start "$MSG_DEPLOY_VALIDATING"
-                        # Search for $VAR_CONFIG or ${VAR} or $VAR_CONFIGURED
-                        local MISSING_PLACEHOLDERS=$(grep -oP '\$[A-Z0-9_]+(_CONFIG|_CONFIGURED)|\$\{[A-Z0-9_]+\}' "$PROCESSED_VALUES" | sort | uniq | tr '\n' ' ')
-                        if [ -n "$MISSING_PLACEHOLDERS" ]; then
-                            ui_spinner_stop "FAIL"
-                            echo -e "\n  ${RED}${BOLD}${ICON_FAIL} $MSG_DEPLOY_ERR_MISSING_PLACEHOLDERS${NC}"
-                            for p in $MISSING_PLACEHOLDERS; do
-                                echo -e "      ${YELLOW}→ $p${NC}"
-                            done
-                            echo -e "\n  ${DIM}$MSG_DEPLOY_ERR_HINT${NC}"
-                            INSTALL_ERROR=1
-                        else
-                            ui_spinner_stop "PASS"
+                        
+                        # 1.3.3 Validation Guard (Skip in Expert Mode)
+                        if [ -z "$VALUES_OVERRIDE" ]; then
+                            ui_spinner_start "$MSG_DEPLOY_VALIDATING"
+                            local MISSING_PLACEHOLDERS=$(grep -oP '\$[A-Z0-9_]+(_CONFIG|_CONFIGURED)|\$\{[A-Z0-9_]+\}' "$PROCESSED_VALUES" | sort | uniq | tr '\n' ' ')
+                            if [ -n "$MISSING_PLACEHOLDERS" ]; then
+                                ui_spinner_stop "FAIL"
+                                echo -e "\n  ${RED}${BOLD}${ICON_FAIL} $MSG_DEPLOY_ERR_MISSING_PLACEHOLDERS${NC}"
+                                for p in $MISSING_PLACEHOLDERS; do
+                                    echo -e "      ${YELLOW}→ $p${NC}"
+                                done
+                                echo -e "\n  ${DIM}$MSG_DEPLOY_ERR_HINT${NC}"
+                                INSTALL_ERROR=1
+                            else
+                                ui_spinner_stop "PASS"
+                            fi
                         fi
                     else
                         # Fallback or error if template missing
