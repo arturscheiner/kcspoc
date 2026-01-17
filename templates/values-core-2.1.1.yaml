@@ -1,0 +1,128 @@
+################################################################################
+# values-template-211.yaml
+# Kaspersky Container Security - Automação para v2.1.1
+# Foco: mTLS robusto, NetworkPolicies obrigatórias e persistência de segredos.
+################################################################################
+
+# Metadados de rastreio para o kcspoc (Injetados no Root do Chart)
+commonLabels:
+  provisioned-by: "kcspoc"
+  provisioned-version: "$PROVISION_VERSION_CONFIG"
+  provisioned-hash: "$PROVISION_HASH_CONFIG"
+
+default:
+  platform: "$PLATFORM_CONFIGURED"
+  domain: "$DOMAIN_CONFIGURED"
+  
+  # --- INFRAESTRUTURA DE IDENTIDADE (mTLS) ---
+  # 'certSource: helm' é mandatório para que o Chart renderize os objetos Certificate.
+  certSource: "helm"
+  internalTLS:
+    enabled: true
+    certSource: "helm"
+  certManager: true
+
+  # --- COMPONENTE DE UPDATES (Caminho corrigido para v2.1.1) ---
+  # O Chart v2.1.x procura por $.Values.default.updates.enabled
+  updates:
+    enabled: true
+
+  # Otimização para Lab (Evita pods em Pending por falta de CPU/RAM)
+  kcs-ih:
+    replicaCount: 1
+
+  # --- NETWORK POLICIES (Obrigatório na v2.1.1) ---
+  # Se 'create' for true, a lista 'ingressControllerNamespaces' DEVE existir.
+  networkPolicies:
+    create: true
+    ingressControllerNamespaces:
+      - ingress-nginx
+
+  postgresql:
+    resources:
+      requests: { cpu: "100m", memory: "512Mi" }
+      limits: { cpu: "500m", memory: "1Gi" }
+
+nodeAgent:
+  enabled: true
+  runtimeSocketPath: "$CRI_SOCKET_CONFIG"
+  installStrategy: DaemonSet
+
+admissionController:
+  enabled: true
+  replicaCount: 1
+
+configmap:
+  infraconfig:
+    type: fromEnvs
+    envs:
+      TLS_INTERNAL: true
+      KUBE_AGENT_TAG: v2.1.1
+      NODE_AGENT_TAG: v2.1.1
+      SCANNER_TAG: v2.1.1
+      IMAGE_TAG_MIDDLEWARE: v2.1.1
+
+issuer:
+  create: true
+  name: kcs-issuer
+  kind: Issuer
+  selfSigned: true
+
+pullSecret:
+  kcs-pullsecret:
+    registry: "$REGISTRY_SERVER_CONFIG"
+    username: "$REGISTRY_USER_CONFIG"
+    password: "$REGISTRY_PASS_CONFIG"
+    email: "$REGISTRY_EMAIL_CONFIG"
+
+ingress:
+  kcs:
+    domain: "$DOMAIN_CONFIGURED"
+    ingressClass: "nginx"
+    annotations:
+      # Necessário para upload de imagens grandes para o Image Handler
+      nginx.ingress.kubernetes.io/proxy-body-size: "1500m"
+
+persistentVolume:
+  postgresql: { size: 20Gi }
+  pvc-minio: { size: 5Gi }
+  pvc-clickhouse-cold: { size: 40Gi }
+  pvc-clickhouse-hot: { size: 20Gi }
+
+# --- RESOURCE CAPPING (Otimização para evitar falha de agendamento em PoC) ---
+component:
+  kcs-clickhouse:
+    resources:
+      requests: { cpu: "200m", memory: "1Gi" }
+      limits: { cpu: "1", memory: "2Gi" }
+  
+  kcs-scanner:
+    container:
+      kcs-scanner:
+        resources:
+          requests: { cpu: "200m", memory: "512Mi" }
+          limits: { cpu: "500m", memory: "1Gi" }
+
+  kcs-updates:
+    container:
+      kcs-updates:
+        resources:
+          requests: { cpu: "100m", memory: "256Mi" }
+          limits: { cpu: "200m", memory: "512Mi" }
+
+secret:
+  infracreds:
+    type: fromEnvs
+    envs:
+      POSTGRES_USER: "$POSTGRES_USER_CONFIG"
+      POSTGRES_PASSWORD: "$POSTGRES_PASS_CONFIG"
+      MINIO_ROOT_USER: "$MINIO_USER_CONFIG"
+      MINIO_ROOT_PASSWORD: "$MINIO_PASS_CONFIG"
+      CLICKHOUSE_ADMIN_PASSWORD: "$CH_ADMIN_PASS_CONFIG"
+      CLICKHOUSE_WRITE_PASSWORD: "$CH_WRITE_PASS_CONFIG"
+      CLICKHOUSE_READ_PASSWORD: "$CH_READ_PASS_CONFIG"
+      MCHD_USER: "$MCHD_USER_CONFIG"
+      MCHD_PASS: "$MCHD_PASS_CONFIG"
+      # --- CHAVE MESTRE: CRÍTICO PARA EVITAR ERRO DE CIFRA (CIPHER ERROR) ---
+      # Se este valor mudar entre deploys, o banco de dados tornar-se-á ilegível.
+      APP_SECRET: "$APP_SECRET_CONFIG"
