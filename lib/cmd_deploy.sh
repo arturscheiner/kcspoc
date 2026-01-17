@@ -6,6 +6,7 @@ cmd_deploy() {
     local INSTALL_AGENTS=""
     local VALUES_OVERRIDE=""
     local CHECK_MODE=""
+    local INSTALL_ERROR=0
 
     while [[ $# -gt 0 ]]; do
         case $1 in
