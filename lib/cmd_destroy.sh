@@ -71,25 +71,27 @@ cmd_destroy() {
 
     # 1. Helm Release
     if helm status "$RELEASE_NAME" -n "$TARGET_NS" &>> "$DEBUG_OUT"; then
-        ui_spinner_start "[1/5] $MSG_DESTROY_STEP_1"
-        helm uninstall "$RELEASE_NAME" -n "$TARGET_NS" &>> "$DEBUG_OUT"
+        ui_spinner_start "[1/8] $MSG_DESTROY_STEP_1"
+        helm uninstall "$RELEASE_NAME" -n "$TARGET_NS" --wait &>> "$DEBUG_OUT"
         ui_spinner_stop "PASS"
     else
-        echo -e "   ${BLUE}${ICON_INFO} [1/5] $RELEASE_NAME: $MSG_DESTROY_NOT_FOUND${NC}"
+        echo -e "   ${BLUE}${ICON_INFO} [1/8] $RELEASE_NAME: $MSG_DESTROY_NOT_FOUND${NC}"
     fi
 
-    # 2. Namespace
+    # 2. Namespace & Certificates
     if kubectl get namespace "$TARGET_NS" &>> "$DEBUG_OUT"; then
-        ui_spinner_start "[2/5] $MSG_DESTROY_STEP_2"
+        ui_spinner_start "[2/8] $MSG_DESTROY_STEP_2"
+        # Pre-delete certificates to avoid stuck finalizers
+        kubectl delete certificate --all -n "$TARGET_NS" --timeout=30s &>> "$DEBUG_OUT" || true
         kubectl delete namespace "$TARGET_NS" --timeout=60s &>> "$DEBUG_OUT"
         wait_and_force_delete_ns "$TARGET_NS" 5
         ui_spinner_stop "PASS"
     else
-        echo -e "   ${BLUE}${ICON_INFO} [2/5] $TARGET_NS: $MSG_DESTROY_NOT_FOUND${NC}"
+        echo -e "   ${BLUE}${ICON_INFO} [2/8] $TARGET_NS: $MSG_DESTROY_NOT_FOUND${NC}"
     fi
 
     # 3. PVCs (Residual)
-    ui_spinner_start "[3/5] $MSG_DESTROY_STEP_3"
+    ui_spinner_start "[3/8] $MSG_DESTROY_STEP_3"
     # Even if NS is gone, check if any PVCs are stuck (might happen during termination) or if NS deletion failed
     local RESIDUAL_PVCS=$(kubectl get pvc -n "$TARGET_NS" --no-headers 2>> "$DEBUG_OUT" | awk '{print $1}')
     if [ -n "$RESIDUAL_PVCS" ]; then
@@ -101,7 +103,7 @@ cmd_destroy() {
     fi
  
     # 4. PVs (Orphaned)
-    ui_spinner_start "[4/5] $MSG_DESTROY_STEP_4"
+    ui_spinner_start "[4/8] $MSG_DESTROY_STEP_4"
     # Filter PVs that have claimRef to our namespace
     local KCS_PVS=$(kubectl get pv -o json 2>> "$DEBUG_OUT" | jq -r ".items[] | select(.spec.claimRef.namespace==\"$TARGET_NS\") | .metadata.name")
     
@@ -116,26 +118,34 @@ cmd_destroy() {
     fi
  
     # 5. Global Webhooks
-    ui_spinner_start "[5/5] $MSG_DESTROY_STEP_5"
+    ui_spinner_start "[5/8] $MSG_DESTROY_STEP_5"
     local WEBHOOKS="kcs-admission-controller"
     
     # Validating
-    kubectl delete validatingwebhookconfiguration "$WEBHOOKS" &>> "$DEBUG_OUT" || true
+    kubectl delete validatingwebhookconfiguration "$WEBHOOKS" --ignore-not-found &>> "$DEBUG_OUT"
     # Mutating
-    kubectl delete mutatingwebhookconfiguration "$WEBHOOKS" &>> "$DEBUG_OUT" || true
+    kubectl delete mutatingwebhookconfiguration "$WEBHOOKS" --ignore-not-found &>> "$DEBUG_OUT"
     ui_spinner_stop "PASS"
  
     # 6. Global RBAC
-    ui_spinner_start "[6/7] $MSG_DESTROY_STEP_6"
-    # Delete ClusterRoles and Bindings containing 'kcs' (broad match)
-    local KCS_CRS=$(kubectl get clusterrole -o name 2>> "$DEBUG_OUT" | grep "kcs")
-    local KCS_CRBS=$(kubectl get clusterrolebinding -o name 2>> "$DEBUG_OUT" | grep "kcs")
+    ui_spinner_start "[6/8] $MSG_DESTROY_STEP_6"
+    local TARGET_ROLES="kcs-admission-controller kcs-agent-broker kcs-scanner"
     
-    if [ -n "$KCS_CRS" ]; then echo "$KCS_CRS" | xargs -I {} kubectl delete {} &>> "$DEBUG_OUT"; fi
-    if [ -n "$KCS_CRBS" ]; then echo "$KCS_CRBS" | xargs -I {} kubectl delete {} &>> "$DEBUG_OUT"; fi
+    kubectl delete clusterrole $TARGET_ROLES --ignore-not-found &>> "$DEBUG_OUT"
+    kubectl delete clusterrolebinding $TARGET_ROLES --ignore-not-found &>> "$DEBUG_OUT"
     ui_spinner_stop "PASS"
 
-    # 7. Infrastructure Dependencies (Optional)
+    # 7. Sanity Check (Orphaned Secrets)
+    ui_spinner_start "[7/8] Sanity Check"
+    # Find any secrets matching helm release pattern across all namespaces
+    local ORPHANED_SECRETS=$(kubectl get secrets -A --no-headers 2>> "$DEBUG_OUT" | grep "sh.helm.release.v1.kcs" | awk '{print $2 " -n " $1}')
+    
+    if [ -n "$ORPHANED_SECRETS" ]; then
+        echo "$ORPHANED_SECRETS" | xargs -I {} bash -c 'kubectl delete secret {} &>> /dev/null'
+    fi
+    ui_spinner_stop "PASS"
+
+    # 8. Infrastructure Dependencies (Optional)
     if [ "$CLEANUP_DEPS" == "true" ]; then
          echo -e "\n${RED}${BOLD}=== $MSG_DESTROY_DEPS_TITLE ===${NC}"
          
@@ -166,7 +176,7 @@ cmd_destroy() {
          kubectl delete deployment metrics-server -n kube-system &>> "$DEBUG_OUT" || true
          ui_spinner_stop "PASS"
     else
-         echo -e "${BLUE}[7/7] $MSG_DESTROY_DEPS_SKIPPED${NC}"
+         echo -e "${BLUE}[8/8] $MSG_DESTROY_DEPS_SKIPPED${NC}"
     fi
 
     echo -e "\n${GREEN}${BOLD}${ICON_OK} $MSG_DESTROY_SUCCESS${NC}"
