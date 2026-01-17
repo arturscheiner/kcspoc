@@ -52,3 +52,22 @@ persistentVolume:
   pvc-minio: { size: 5Gi }
   pvc-clickhouse-cold: { size: 40Gi }
   pvc-clickhouse-hot: { size: 20Gi }
+
+# ----------- #
+#   Secrets   #
+# ----------- #
+
+secret:
+  infracreds:
+    type: fromEnvs
+    envs:
+      POSTGRES_USER: "$POSTGRES_USER_CONFIG"
+      POSTGRES_PASSWORD: "$POSTGRES_PASS_CONFIG"
+      MINIO_ROOT_USER: "$MINIO_USER_CONFIG"
+      MINIO_ROOT_PASSWORD: "$MINIO_PASS_CONFIG"
+      CLICKHOUSE_ADMIN_PASSWORD: "$CH_ADMIN_PASS_CONFIG"
+      CLICKHOUSE_WRITE_PASSWORD: "$CH_WRITE_PASS_CONFIG"
+      CLICKHOUSE_READ_PASSWORD: "$CH_READ_PASS_CONFIG"
+      MCHD_USER: "$MCHD_USER_CONFIG"
+      MCHD_PASS: "$MCHD_PASS_CONFIG"
+      APP_SECRET: "$APP_SECRET_CONFIG"

@@ -1,5 +1,12 @@
 #!/bin/bash
 
+_generate_random_secret() {
+    local length=${1:-24}
+    # Avoid complex characters that might break sed or shell if not escaped, 
+    # but keep it strong enough. Alphanumeric only is safest for this POC tool.
+    LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$length"
+}
+
 cmd_config() {
     # Args Parsing
     local SET_VER=""
@@ -44,6 +51,7 @@ cmd_config() {
     
     # Load existing config to show as "Current"
     local CUR_NS="" CUR_DOMAIN="" CUR_REG_SRV="" CUR_REG_USER="" CUR_REG_EMAIL="" CUR_IP_RANGE="" CUR_DEEP="" CUR_VER="" CUR_LANG=""
+    local CUR_PG_USER="" CUR_PG_PASS="" CUR_MINIO_USER="" CUR_MINIO_PASS="" CUR_CH_ADMIN_PASS="" CUR_CH_WRITE_PASS="" CUR_CH_READ_PASS="" CUR_MCHD_USER="" CUR_MCHD_PASS="" CUR_APP_SECRET=""
     
     if [ -f "$CONFIG_FILE" ]; then
         source "$CONFIG_FILE"
@@ -56,10 +64,21 @@ cmd_config() {
         CUR_DEEP="$ENABLE_DEEP_CHECK"
         CUR_VER="$KCS_VERSION"
         CUR_LANG="$PREFERRED_LANG"
+        # Secrets
+        CUR_PG_USER="$POSTGRES_USER"
+        CUR_PG_PASS="$POSTGRES_PASSWORD"
+        CUR_MINIO_USER="$MINIO_ROOT_USER"
+        CUR_MINIO_PASS="$MINIO_ROOT_PASSWORD"
+        CUR_CH_ADMIN_PASS="$CLICKHOUSE_ADMIN_PASSWORD"
+        CUR_CH_WRITE_PASS="$CLICKHOUSE_WRITE_PASSWORD"
+        CUR_CH_READ_PASS="$CLICKHOUSE_READ_PASSWORD"
+        CUR_MCHD_USER="$MCHD_USER"
+        CUR_MCHD_PASS="$MCHD_PASS"
+        CUR_APP_SECRET="$APP_SECRET"
         echo -e "${GREEN}${ICON_OK} $MSG_CONFIG_LOADED${NC}"
     fi
 
-    local TOTAL_STEPS=7
+    local TOTAL_STEPS=8
 
     # 0. Language (Step 1 effectively)
     ui_step 1 $TOTAL_STEPS "$MSG_STEP_LANG" "$MSG_STEP_LANG_DESC"
@@ -152,6 +171,46 @@ cmd_config() {
     ui_input "$MSG_INPUT_VERSION" "latest" "$CUR_VER"
     KCS_VERSION="$RET_VAL"
 
+    # 7. Secrets
+    ui_step 8 $TOTAL_STEPS "$MSG_STEP_SECRETS" "$MSG_STEP_SECRETS_DESC"
+    ui_input "$MSG_INPUT_SECRETS_AUTO" "y" "y"
+    local AUTO_GEN="$RET_VAL"
+
+    if [[ "$AUTO_GEN" =~ ^[yY]$ ]]; then
+        POSTGRES_USER="${CUR_PG_USER:-pguser}"
+        POSTGRES_PASSWORD="$(_generate_random_secret)"
+        MINIO_ROOT_USER="${CUR_MINIO_USER:-miniouser}"
+        MINIO_ROOT_PASSWORD="$(_generate_random_secret)"
+        CLICKHOUSE_ADMIN_PASSWORD="$(_generate_random_secret)"
+        CLICKHOUSE_WRITE_PASSWORD="$(_generate_random_secret)"
+        CLICKHOUSE_READ_PASSWORD="$(_generate_random_secret)"
+        MCHD_USER="${CUR_MCHD_USER:-mchduser}"
+        MCHD_PASS="$(_generate_random_secret)"
+        APP_SECRET="$(_generate_random_secret)"
+        echo -e "      ${DIM}${ICON_OK} Secrets generated randomly.${NC}"
+    else
+        ui_input "$MSG_INPUT_PG_USER" "pguser" "$CUR_PG_USER"
+        POSTGRES_USER="$RET_VAL"
+        ui_input "$MSG_INPUT_PG_PASS" "Ka5per5Ky!" "$CUR_PG_PASS"
+        POSTGRES_PASSWORD="$RET_VAL"
+        ui_input "$MSG_INPUT_MINIO_USER" "miniouser" "$CUR_MINIO_USER"
+        MINIO_ROOT_USER="$RET_VAL"
+        ui_input "$MSG_INPUT_MINIO_PASS" "Ka5per5Ky!" "$CUR_MINIO_PASS"
+        MINIO_ROOT_PASSWORD="$RET_VAL"
+        ui_input "$MSG_INPUT_CH_ADMIN_PASS" "Ka5per5Ky!" "$CUR_CH_ADMIN_PASS"
+        CLICKHOUSE_ADMIN_PASSWORD="$RET_VAL"
+        ui_input "$MSG_INPUT_CH_WRITE_PASS" "Ka5per5Ky!" "$CUR_CH_WRITE_PASS"
+        CLICKHOUSE_WRITE_PASSWORD="$RET_VAL"
+        ui_input "$MSG_INPUT_CH_READ_PASS" "Ka5per5Ky!" "$CUR_CH_READ_PASS"
+        CLICKHOUSE_READ_PASSWORD="$RET_VAL"
+        ui_input "$MSG_INPUT_MCHD_USER" "mchduser" "$CUR_MCHD_USER"
+        MCHD_USER="$RET_VAL"
+        ui_input "$MSG_INPUT_MCHD_PASS" "Ka5per5Ky!" "$CUR_MCHD_PASS"
+        MCHD_PASS="$RET_VAL"
+        ui_input "$MSG_INPUT_APP_SECRET" "Ka5per5Ky!" "$CUR_APP_SECRET"
+        APP_SECRET="$RET_VAL"
+    fi
+
     # Save
     cat > "$CONFIG_FILE" <<EOF
 # KCS PoC Configuration
@@ -177,6 +236,18 @@ KCS_VERSION="$KCS_VERSION"
 
 # Checks
 ENABLE_DEEP_CHECK="$ENABLE_DEEP_CHECK"
+
+# Secrets
+POSTGRES_USER="$POSTGRES_USER"
+POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
+MINIO_ROOT_USER="$MINIO_ROOT_USER"
+MINIO_ROOT_PASSWORD="$MINIO_ROOT_PASSWORD"
+CLICKHOUSE_ADMIN_PASSWORD="$CLICKHOUSE_ADMIN_PASSWORD"
+CLICKHOUSE_WRITE_PASSWORD="$CLICKHOUSE_WRITE_PASSWORD"
+CLICKHOUSE_READ_PASSWORD="$CLICKHOUSE_READ_PASSWORD"
+MCHD_USER="$MCHD_USER"
+MCHD_PASS="$MCHD_PASS"
+APP_SECRET="$APP_SECRET"
 EOF
     
     echo -e "\n${GREEN}${ICON_OK} $MSG_CONFIG_SAVED $CONFIG_FILE${NC}"
