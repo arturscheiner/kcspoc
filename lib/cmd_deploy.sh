@@ -57,7 +57,17 @@ cmd_deploy() {
         # Log version and source info
         echo -e "      ${DIM}Target Version: $target_ver${NC}" >> "$DEBUG_OUT"
         
-        if ! _check_kcs_exists "$NAMESPACE"; then
+        if _check_kcs_exists "$NAMESPACE"; then
+             local INSTALLED_VER=$(_get_installed_version "$NAMESPACE")
+             ui_banner
+             printf "   ${ICON_INFO} ${BLUE}$MSG_DEPLOY_EXISTING${NC}\n" "$INSTALLED_VER" "$NAMESPACE"
+             echo -e "   ${YELLOW}${ICON_INFO} $(printf "$MSG_DEPLOY_UPGRADE_PROMPT" "${BOLD}${target_ver}${NC}") [y/N]"
+             read -p "   > " confirm
+             if [[ ! "$confirm" =~ ^[yY]$ ]]; then
+                 echo -e "   ${DIM}Deployment cancelled by user.${NC}"
+                 return 0
+             fi
+        else
              ui_banner
              echo -e "   ${YELLOW}${ICON_INFO} ${MSG_DEPLOY_CONFIRM} ${BOLD}${target_ver}${NC}? [y/N]"
              read -p "   > " confirm
@@ -73,7 +83,8 @@ cmd_deploy() {
         ui_spinner_start "$MSG_PREPARE_STEP_1_A"
         force_delete_ns "$NAMESPACE"
         if kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT" && \
-           kubectl label namespace "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT"; then
+           kubectl label namespace "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT" && \
+           kubectl label namespace "$NAMESPACE" provisioned-version="$target_ver" --overwrite &>> "$DEBUG_OUT"; then
             ui_spinner_stop "PASS"
         else
             ui_spinner_stop "FAIL"
@@ -151,8 +162,8 @@ cmd_deploy() {
                     if [ -f "$DYNAMIC_TEMPLATE" ]; then
                         echo -e "      ${DIM}Template Source: $DYNAMIC_TEMPLATE${NC}" >> "$DEBUG_OUT"
                         cp "$DYNAMIC_TEMPLATE" "$PROCESSED_VALUES"
-                        sed -i "s|\$DOMAIN_CONFIGURED|$DOMAIN|g" "$PROCESSED_VALUES"
-                        sed -i "s|\$PLATFORM_CONFIGURED|$PLATFORM|g" "$PROCESSED_VALUES"
+                        [ -n "$DOMAIN" ] && sed -i "s|\$DOMAIN_CONFIGURED|$DOMAIN|g" "$PROCESSED_VALUES"
+                        [ -n "$PLATFORM" ] && sed -i "s|\$PLATFORM_CONFIGURED|$PLATFORM|g" "$PROCESSED_VALUES"
                     
                     # CRI Socket Auto-Detection
                     local FINAL_CRI="$CRI_SOCKET"
@@ -168,23 +179,25 @@ cmd_deploy() {
                         sed -i "s|\$CRI_SOCKET_CONFIG|$FINAL_CRI|g" "$PROCESSED_VALUES"
                     fi
 
-                    sed -i "s|\$REGISTRY_SERVER_CONFIG|$REGISTRY_SERVER|g" "$PROCESSED_VALUES"
+                    if [ -n "$REGISTRY_SERVER" ]; then
+                        sed -i "s|\$REGISTRY_SERVER_CONFIG|$REGISTRY_SERVER|g" "$PROCESSED_VALUES"
                         sed -i "s|\$REGISTRY_USER_CONFIG|$REGISTRY_USER|g" "$PROCESSED_VALUES"
                         sed -i "s|\$REGISTRY_PASS_CONFIG|$REGISTRY_PASS|g" "$PROCESSED_VALUES"
                         sed -i "s|\$REGISTRY_EMAIL_CONFIG|$REGISTRY_EMAIL|g" "$PROCESSED_VALUES"
-                        sed -i "s|\${KCS_VERSION}|$TARGET_VER|g" "$PROCESSED_VALUES"
+                    fi
+                    sed -i "s|\${KCS_VERSION}|$TARGET_VER|g" "$PROCESSED_VALUES"
                         
                         # Inject Secrets
-                        sed -i "s|\$POSTGRES_USER_CONFIG|$POSTGRES_USER|g" "$PROCESSED_VALUES"
-                        sed -i "s|\$POSTGRES_PASS_CONFIG|$POSTGRES_PASSWORD|g" "$PROCESSED_VALUES"
-                        sed -i "s|\$MINIO_USER_CONFIG|$MINIO_ROOT_USER|g" "$PROCESSED_VALUES"
-                        sed -i "s|\$MINIO_PASS_CONFIG|$MINIO_ROOT_PASSWORD|g" "$PROCESSED_VALUES"
-                        sed -i "s|\$CH_ADMIN_PASS_CONFIG|$CLICKHOUSE_ADMIN_PASSWORD|g" "$PROCESSED_VALUES"
-                        sed -i "s|\$CH_WRITE_PASS_CONFIG|$CLICKHOUSE_WRITE_PASSWORD|g" "$PROCESSED_VALUES"
-                        sed -i "s|\$CH_READ_PASS_CONFIG|$CLICKHOUSE_READ_PASSWORD|g" "$PROCESSED_VALUES"
-                        sed -i "s|\$MCHD_USER_CONFIG|$MCHD_USER|g" "$PROCESSED_VALUES"
-                        sed -i "s|\$MCHD_PASS_CONFIG|$MCHD_PASS|g" "$PROCESSED_VALUES"
-                        sed -i "s|\$APP_SECRET_CONFIG|$APP_SECRET|g" "$PROCESSED_VALUES"
+                        [ -n "$POSTGRES_USER" ] && sed -i "s|\$POSTGRES_USER_CONFIG|$POSTGRES_USER|g" "$PROCESSED_VALUES"
+                        [ -n "$POSTGRES_PASSWORD" ] && sed -i "s|\$POSTGRES_PASS_CONFIG|$POSTGRES_PASSWORD|g" "$PROCESSED_VALUES"
+                        [ -n "$MINIO_ROOT_USER" ] && sed -i "s|\$MINIO_USER_CONFIG|$MINIO_ROOT_USER|g" "$PROCESSED_VALUES"
+                        [ -n "$MINIO_ROOT_PASSWORD" ] && sed -i "s|\$MINIO_PASS_CONFIG|$MINIO_ROOT_PASSWORD|g" "$PROCESSED_VALUES"
+                        [ -n "$CLICKHOUSE_ADMIN_PASSWORD" ] && sed -i "s|\$CH_ADMIN_PASS_CONFIG|$CLICKHOUSE_ADMIN_PASSWORD|g" "$PROCESSED_VALUES"
+                        [ -n "$CLICKHOUSE_WRITE_PASSWORD" ] && sed -i "s|\$CH_WRITE_PASS_CONFIG|$CLICKHOUSE_WRITE_PASSWORD|g" "$PROCESSED_VALUES"
+                        [ -n "$CLICKHOUSE_READ_PASSWORD" ] && sed -i "s|\$CH_READ_PASS_CONFIG|$CLICKHOUSE_READ_PASSWORD|g" "$PROCESSED_VALUES"
+                        [ -n "$MCHD_USER" ] && sed -i "s|\$MCHD_USER_CONFIG|$MCHD_USER|g" "$PROCESSED_VALUES"
+                        [ -n "$MCHD_PASS" ] && sed -i "s|\$MCHD_PASS_CONFIG|$MCHD_PASS|g" "$PROCESSED_VALUES"
+                        [ -n "$APP_SECRET" ] && sed -i "s|\$APP_SECRET_CONFIG|$APP_SECRET|g" "$PROCESSED_VALUES"
 
                         # 1.3.3 Validation Guard
                         ui_spinner_start "$MSG_DEPLOY_VALIDATING"
@@ -288,7 +301,9 @@ _verify_deploy_bootstrap() {
         ui_spinner_stop "PASS"
     else
         # Apply labels if missing (best effort)
+        local cur_ver=$(kubectl get ns "$ns" -o jsonpath='{.metadata.labels.provisioned-version}' 2>/dev/null || echo "unknown")
         kubectl label ns "$ns" provisioned-by=kcspoc --overwrite &>> "$DEBUG_OUT"
+        [ "$cur_ver" == "unknown" ] && kubectl label ns "$ns" provisioned-version="$((ls $ARTIFACTS_DIR/kcs | sort -V | tail -n 1) || echo 'unknown')" --overwrite &>> "$DEBUG_OUT"
         ui_spinner_stop "FIXED"
     fi
 
@@ -326,6 +341,10 @@ _check_kcs_exists() {
     if helm list -n "$ns" -q | grep -q "^kcs$"; then
         return 0
     fi
+    # Check if namespace has our label
+    if kubectl get ns "$ns" -o jsonpath='{.metadata.labels.provisioned-by}' 2>/dev/null | grep -q "kcspoc"; then
+        return 0
+    fi
     # Check for any pods in namespace as fallback
     if kubectl get pods -n "$ns" --no-headers 2>/dev/null | grep -q "."; then
         return 0
@@ -333,6 +352,23 @@ _check_kcs_exists() {
     return 1
 }
 
+_get_installed_version() {
+    local ns="$1"
+    # 1. Check namespace label
+    local ver=$(kubectl get ns "$ns" -o jsonpath='{.metadata.labels.provisioned-version}' 2>/dev/null)
+    if [ -n "$ver" ]; then
+        echo "$ver"
+        return
+    fi
+    # 2. Check helm release metadata
+    ver=$(helm list -n "$ns" -o json | jq -r '.[] | select(.name=="kcs") | .app_version' 2>/dev/null)
+    if [ -n "$ver" ] && [ "$ver" != "null" ]; then
+        echo "$ver"
+        return
+    fi
+    # 3. Fallback
+    echo "unknown"
+}
 _count_local_artifacts() {
     local kcs_artifact_base="$ARTIFACTS_DIR/kcs"
     if [ ! -d "$kcs_artifact_base" ]; then
