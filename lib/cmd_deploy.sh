@@ -12,6 +12,10 @@ cmd_deploy() {
         case $1 in
             --core)
                 INSTALL_CORE="true"
+                if [[ "$2" =~ ^(install|update|upgrade)$ ]]; then
+                    CORE_MODE_OVERRIDE="$2"
+                    shift
+                fi
                 shift
                 ;;
             --check)
@@ -144,7 +148,9 @@ cmd_deploy() {
              printf "   ${ICON_INFO} ${BLUE}$MSG_DEPLOY_EXISTING${NC}\n" "$INSTALLED_VER" "$NAMESPACE"
              
              # Infer operation type (update or upgrade)
-             if [ "$INSTALLED_VER" == "$target_ver" ]; then
+             if [ -n "$CORE_MODE_OVERRIDE" ]; then
+                 OPERATION_TYPE="$CORE_MODE_OVERRIDE"
+             elif [ "$INSTALLED_VER" == "$target_ver" ]; then
                  OPERATION_TYPE="update"
              else
                  local latest=$(printf "%s\n%s" "$INSTALLED_VER" "$target_ver" | sort -V | tail -n 1)
@@ -163,7 +169,8 @@ cmd_deploy() {
              fi
         else
              ui_banner
-             echo -e "   ${YELLOW}${ICON_INFO} ${MSG_DEPLOY_CONFIRM} ${BOLD}${target_ver}${NC}? [y/N]"
+             [ -n "$CORE_MODE_OVERRIDE" ] && OPERATION_TYPE="$CORE_MODE_OVERRIDE"
+             echo -e "   ${YELLOW}${ICON_INFO} ${MSG_DEPLOY_CONFIRM} ${BOLD}${target_ver}${NC}? ($OPERATION_TYPE) [y/N]"
              read -p "   > " confirm
              if [[ ! "$confirm" =~ ^[yY]$ ]]; then
                  echo -e "   ${DIM}Deployment cancelled by user.${NC}"

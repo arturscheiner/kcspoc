@@ -313,5 +313,5 @@ MSG_HELP_LOGS_EX="kcspoc logs --list\nkcspoc logs --list prepare\nkcspoc logs --
 
 # Deploy Help
 MSG_HELP_DEPLOY_DESC="Deploys the Kaspersky Container Security components (Core and Agents) to your cluster."
-MSG_HELP_DEPLOY_OPTS="--core|Deploy the main KCS management console and backend.\n--agents|Deploy the security agents to your nodes (Finalizing).\n--check [hash\|version]|Verify if local config/version matches the existing cluster installation.\n--values <file>|Provide a custom values.yaml file to override the default template."
-MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --agents"
+MSG_HELP_DEPLOY_OPTS="--core [mode]|Deploy the main KCS management console and backend. Modes: install, update, upgrade.\n--agents|Deploy the security agents to your nodes (Finalizing).\n--check <target>|Verify if local config/version matches. Targets: hash, version.\n--values <file>|Provide a custom values.yaml file to override the default template."
+MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --core upgrade\nkcspoc deploy --check hash"
