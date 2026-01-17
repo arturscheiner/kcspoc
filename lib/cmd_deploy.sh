@@ -161,6 +161,12 @@ spec:
   privateKey:
     algorithm: ECDSA
     size: 256
+  secretTemplate:
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    annotations:
+      meta.helm.sh/release-name: kcs
+      meta.helm.sh/release-namespace: $NAMESPACE
   issuerRef:
     name: kcs-issuer
     kind: Issuer
@@ -261,7 +267,7 @@ EOF
                         
                         # 1.3.3 Validation Guard (Skip in Expert Mode)
                         if [ -z "$VALUES_OVERRIDE" ]; then
-                            ui_spinner_start "$MSG_DEPLOY_VALIDATING"
+                            ui_spinner_start "Validating deployment configuration"
                             local MISSING_PLACEHOLDERS=$(grep -oP '\$[A-Z0-9_]+(_CONFIG|_CONFIGURED)|\$\{[A-Z0-9_]+\}' "$PROCESSED_VALUES" | sort | uniq | tr '\n' ' ')
                             if [ -n "$MISSING_PLACEHOLDERS" ]; then
                                 ui_spinner_stop "FAIL"
