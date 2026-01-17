@@ -25,10 +25,6 @@ cmd_deploy() {
                 VALUES_OVERRIDE="$2"
                 shift; shift
                 ;;
-            --check-hash)
-                CHECK_HASH="true"
-                shift
-                ;;
             --help|help)
                 ui_help "deploy" "$MSG_HELP_DEPLOY_DESC" "$MSG_HELP_DEPLOY_OPTS" "$MSG_HELP_DEPLOY_EX"
                 return 0
@@ -112,7 +108,24 @@ cmd_deploy() {
         # Log version and source info
         echo -e "      ${DIM}Target Version: $target_ver${NC}" >> "$DEBUG_OUT"
         
-        if _check_kcs_exists "$NAMESPACE"; then
+        # Phase GA: Global Instance Guard
+        local COLLISION=$(_find_global_kcs_instances "$NAMESPACE")
+        if [ -n "$COLLISION" ]; then
+             echo -e "   ${RED}${BOLD}${ICON_WARN} GLOBAL COLLISION DETECTED!${NC}"
+             echo -e "   Kaspersky Container Security was found in other namespaces:"
+             echo -e "${DIM}$COLLISION${NC}"
+             echo -e "   ${BOLD}DANGER:${NC} Installing multiple instances may cause conflict in global"
+             echo -e "   resources (Admission Webhooks, ClusterRoles)."
+             echo -ne "   ${YELLOW}Do you want to proceed anyway? [y/N]${NC} "
+             read -r confirm
+             if [[ ! "$confirm" =~ ^[yY]$ ]]; then
+                 echo -e "   ${DIM}Deployment aborted to prevent global conflict.${NC}"
+                 return 0
+             fi
+             ui_banner
+        fi
+
+        if _check_kcs_exists "$NAMESPACE" ; then
              local INSTALLED_VER=$(_get_installed_version "$NAMESPACE")
              ui_banner
              printf "   ${ICON_INFO} ${BLUE}$MSG_DEPLOY_EXISTING${NC}\n" "$INSTALLED_VER" "$NAMESPACE"
@@ -542,6 +555,43 @@ _verify_config_integrity() {
         fi
     fi
     return 0
+}
+
+_find_global_kcs_instances() {
+    local target_ns="$1"
+    local found_instances=""
+
+    # 1. Search for Helm releases
+    local helm_instances=$(helm list -A -o json 2>/dev/null | jq -r '.[] | select(.name=="kcs") | .namespace' 2>/dev/null)
+    if [ -n "$helm_instances" ]; then
+        for ns in $helm_instances; do
+            [ "$ns" == "$target_ns" ] && continue
+            found_instances+="      → $ns (Helm Release)\n"
+        done
+    fi
+
+    # 2. Search for kcspoc labeled namespaces
+    local labeled_ns=$(kubectl get ns -l provisioned-by=kcspoc -o jsonpath='{.items[*].metadata.name}' 2>/dev/null)
+    if [ -n "$labeled_ns" ]; then
+        for ns in $labeled_ns; do
+            [ "$ns" == "$target_ns" ] && continue
+            [[ "$found_instances" == *"$ns"* ]] && continue
+            found_instances+="      → $ns (kcspoc Labeled)\n"
+        done
+    fi
+
+    # 3. Search for kcs-* pods (Active Instance Check)
+    # Filter out common namespaces to avoid noise
+    local kcs_pods_ns=$(kubectl get pods -A -o jsonpath='{range .items[?(@.metadata.name != "")]}{.metadata.namespace}{" "}{.metadata.name}{"\n"}{end}' 2>/dev/null | grep " kcs-" | awk '{print $1}' | sort | uniq | grep -v "^kube-system$\|^cert-manager$\|^ingress-nginx$")
+    if [ -n "$kcs_pods_ns" ]; then
+        for ns in $kcs_pods_ns; do
+            [ "$ns" == "$target_ns" ] && continue
+            [[ "$found_instances" == *"$ns"* ]] && continue
+            found_instances+="      → $ns (Active Pods Detected)\n"
+        done
+    fi
+
+    echo -e "$found_instances"
 }
 
 _count_local_artifacts() {
