@@ -4,8 +4,6 @@
 # Purpose: Optimized for baseline stability and automated mTLS bootstrap.
 ################################################################################
 
-# commonLabels: Injected into every resource. 
-# Crucial for the 'destroy' command to track and remove POC-related objects.
 commonLabels:
   provisioned-by: "kcspoc"
 
@@ -14,63 +12,51 @@ default:
   domain: "$DOMAIN_CONFIGURED"
   
   # --- MTLS & CERTIFICATE STABILITY ---
-  # 'certSource: helm' forces the rendering of Certificate and Issuer objects.
-  # This is the primary fix for Pods hanging due to missing 'cert-ca' secrets.
   certSource: "helm"
   internalTLS:
     enabled: true
     certSource: "helm"
   
-  # Integration with cert-manager to handle automated certificate issuance.
   certManager: true
 
-  # IH (Image Handler) replica reduction for resource-constrained Lab/PoC nodes.
+  # --- SCANNER UPDATES (FIXED PATH) ---
+  # Moved inside 'default' to match Chart's internal logic: $.Values.default.updates.enabled
+  updates:
+    enabled: true
+
   kcs-ih:
     replicaCount: 1
 
-  # Network Policies for internal microservices isolation.
   networkPolicies:
     create: true
     ingressControllerNamespaces:
-      - ingress-nginx        # Target namespace for the Nginx Ingress Controller.
+      - ingress-nginx
 
-  # Database resources: Minimal footprints to ensure scheduling on small nodes.
   postgresql:
     resources:
       requests: { cpu: "100m", memory: "512Mi" }
       limits: { cpu: "500m", memory: "1Gi" }
 
-# --- RUNTIME SECURITY (NODE AGENT) ---
 nodeAgent:
   enabled: true
-  # Dynamic socket path based on 'kcspoc config' (containerd vs cri-o).
   runtimeSocketPath: "$CRI_SOCKET_CONFIG"
   installStrategy: DaemonSet
 
-# --- ADMISSION CONTROLLER ---
-# Required for real-time deployment blocking based on security policies.
 admissionController:
   enabled: true
   replicaCount: 1
 
-# --- SCANNER UPDATES ---
-# Enables the download of vulnerability and malware signature databases.
-updates:
-  enabled: true
-  
 configmap:
   infraconfig:
     type: fromEnvs
     envs:
-      TLS_INTERNAL: true  # Enables internal encrypted communication.
+      TLS_INTERNAL: true
       TLS_INGRESS: false
-      # Fixed tags for v2.1.0 consistency.
       KUBE_AGENT_TAG: v2.1.0
       NODE_AGENT_TAG: v2.1.0
       SCANNER_TAG: v2.1.0
       IMAGE_TAG_MIDDLEWARE: v2.1.0
 
-# Local Issuer: selfSigned: true creates the root CA for the 'kcs' namespace.
 issuer:
   create: true
   name: kcs-issuer
