@@ -431,13 +431,16 @@ EOF
                         # Force a pod refresh to ensure all mounts use the fresh identity
                         kubectl delete pods -n "$NAMESPACE" --all --grace-period=0 --force &>> "$DEBUG_OUT"
                         
-                        # Phase I: Success Signaling (Status: stable)
-                        _update_state "$NAMESPACE" "stable" "$OPERATION_TYPE" "$EXEC_HASH" "$(get_config_hash)" "$TARGET_VER"
-                        
                         ui_spinner_stop "PASS"
                         
-                        # Run health check
-                        _verify_deploy_bootstrap "$NAMESPACE"
+                        # Phase J: Deployment Stability Watcher (v0.4.91)
+                        # Replaces the static 'stable' signaling with real-time monitoring
+                        if _watch_deploy_stability "$NAMESPACE" "$OPERATION_TYPE" "$EXEC_HASH" "$TARGET_VER"; then
+                            # Run health check
+                            _verify_deploy_bootstrap "$NAMESPACE"
+                        else
+                            INSTALL_ERROR=1
+                        fi
                     else
                         ui_spinner_stop "FAIL"
                         INSTALL_ERROR=1
@@ -609,6 +612,62 @@ _verify_config_integrity() {
             return 1
         fi
     fi
+    return 0
+}
+
+_watch_deploy_stability() {
+    local ns="$1"
+    local op_type="$2"
+    local exec_id="$3"
+    local target_ver="$4"
+    local timeout=900 # 15 minutes
+    local start_time=$(date +%s)
+    local local_hash=$(get_config_hash)
+
+    echo -e "\n  ${YELLOW}${ICON_GEAR} ${BOLD}PHASE 6: DEPLOYMENT STABILITY WATCHER${NC}"
+    echo -e "  ${DIM}Monitoring pod convergence (timeout: 15m)...${NC}\n"
+
+    while true; do
+        # Get pod status: Name, Ready Condition, and Phase
+        local pods_status=$(kubectl get pods -n "$ns" --no-headers 2>/dev/null)
+        
+        # Calculate totals
+        local total_pods=$(echo "$pods_status" | grep -v "^$" | wc -l)
+        local ready_pods=$(echo "$pods_status" | grep "Running" | grep -v "0/" | wc -l)
+        local completed_jobs=$(echo "$pods_status" | grep "Completed" | wc -l)
+        
+        local stable_count=$((ready_pods + completed_jobs))
+
+        # Print progress
+        if [ "$total_pods" -gt 0 ]; then
+            local percent=$((stable_count * 100 / total_pods))
+            printf "\r   ${ICON_ARROW} Progress: ${BOLD}%d/%d${NC} pods stable (${CYAN}%d%%${NC})   " "$stable_count" "$total_pods" "$percent"
+        else
+            printf "\r   ${ICON_ARROW} Waiting for pods to initialize...   "
+        fi
+
+        # Check if all pods are stable
+        if [ "$stable_count" -eq "$total_pods" ] && [ "$total_pods" -gt 0 ]; then
+            echo -e "\n\n  ${GREEN}${BOLD}${ICON_OK} DEPLOYMENT SUCCESSFUL!${NC}"
+            echo -e "  All KCS components are Running/Completed."
+            # Final transition to STABLE
+            _update_state "$ns" "stable" "$op_type" "$exec_id" "$local_hash" "$target_ver"
+            break
+        fi
+
+        # Check for timeout
+        local current_time=$(date +%s)
+        local elapsed=$((current_time - start_time))
+        if [ "$elapsed" -gt "$timeout" ]; then
+            echo -e "\n\n  ${RED}${BOLD}${ICON_FAIL} DEPLOYMENT TIMEOUT!${NC}"
+            echo -e "  Convergence took longer than 15 minutes. Checking for 'Init' or 'ImagePull' errors."
+            # Final transition to FAILED
+            _update_state "$ns" "failed" "$op_type" "$exec_id" "$local_hash" "$target_ver"
+            return 1
+        fi
+
+        sleep 5
+    done
     return 0
 }
 
