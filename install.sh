@@ -1,0 +1,116 @@
+#!/bin/bash
+
+# --- VISUAL IDENTITY (EMBEDDED) ---
+BOLD='\033[1m'
+DIM='\033[2m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+NC='\033[0m'
+
+ICON_OK="✔"
+ICON_FAIL="✘"
+ICON_INFO="ℹ"
+ICON_GEAR="⚙"
+
+ui_banner() {
+    clear
+    echo -e "${GREEN}${BOLD}"
+    echo "  _  __ _____ ____  ____   ___   ____ "
+    echo " | |/ // ____/ ___||  _ \ / _ \ / ___|"
+    echo " | ' /| |    \___ \| |_) | | | | |    "
+    echo " |  < | |___  ___) |  __/| |_| | |___ "
+    echo " |_|\_\\____/|____/|_|    \___/ \____|"
+    echo -e "${NC}"
+    echo -e "   Kaspersky Container Security PoC - Remote Installer"
+    echo ""
+    echo -e "${BLUE}  ====================================================${NC}"
+    echo -e "${DIM}  Author: Artur Scheiner${NC}"
+    echo ""
+}
+
+ui_section() {
+    echo -e "${MAGENTA}${BOLD}:: $1 ::${NC}"
+}
+
+# --- INSTALLATION LOGIC ---
+
+ui_banner
+
+# 1. Prepare Directory
+ui_section "Preparing environment"
+INSTALL_DIR="$HOME/.kcspoc"
+echo -e "   ${ICON_GEAR} Creating directory ${INSTALL_DIR}..."
+mkdir -p "$INSTALL_DIR"
+cd "$INSTALL_DIR" || exit 1
+echo -e "   ${ICON_OK} Environment ready."
+echo ""
+
+# 2. Clone Repository
+ui_section "Fetching source code"
+REPO_URL="https://github.com/arturscheiner/kuberverse-simple.git"
+echo -e "   ${ICON_GEAR} Cloning ${REPO_URL}..."
+
+# Clean up any existing clone attempts in ~/.kcspoc/kuberverse-simple or ~/.kcspoc/kcspoc
+rm -rf kuberverse-simple kcspoc bin
+
+if git clone "$REPO_URL" kcspoc &>/dev/null; then
+    echo -e "   ${ICON_OK} Repository cloned successfully."
+else
+    echo -e "   ${RED}${ICON_FAIL} Failed to clone repository.${NC}"
+    exit 1
+fi
+echo ""
+
+# 3. Rename and Organize
+ui_section "Organizing deployment"
+echo -e "   ${ICON_GEAR} Setting up binary directory..."
+if [ -d "kcspoc" ]; then
+    mv kcspoc bin
+    echo -e "   ${ICON_OK} Directory ./kcspoc renamed to ./bin"
+else
+    echo -e "   ${RED}${ICON_FAIL} Directory kcspoc not found after clone.${NC}"
+    exit 1
+fi
+echo ""
+
+# 4. Symbolic Link
+ui_section "Finalizing installation"
+BIN_PATH="$HOME/.kcspoc/bin/kcspoc"
+# Try to find a good place for the symlink
+# Priorities: /usr/local/bin (if writable), then $HOME/.local/bin, then $HOME/bin
+SYMLINK_DEST=""
+if [ -w "/usr/local/bin" ]; then
+    SYMLINK_DEST="/usr/local/bin/kcspoc"
+elif [ -d "$HOME/.local/bin" ] && [[ ":$PATH:" == *":$HOME/.local/bin:"* ]]; then
+    SYMLINK_DEST="$HOME/.local/bin/kcspoc"
+elif [ -d "$HOME/bin" ] && [[ ":$PATH:" == *":$HOME/bin:"* ]]; then
+    SYMLINK_DEST="$HOME/bin/kcspoc"
+else
+    # Fallback to /usr/local/bin but it might fail without sudo
+    SYMLINK_DEST="/usr/local/bin/kcspoc"
+fi
+
+echo -e "   ${ICON_GEAR} Creating symlink at ${SYMLINK_DEST}..."
+if ln -sf "$BIN_PATH" "$SYMLINK_DEST" 2>/dev/null; then
+    echo -e "   ${ICON_OK} Symlink created successfully."
+else
+    echo -e "   ${YELLOW}${ICON_INFO} Permission denied. Attempting with sudo...${NC}"
+    if sudo ln -sf "$BIN_PATH" "$SYMLINK_DEST"; then
+        echo -e "   ${ICON_OK} Symlink created with sudo."
+    else
+        echo -e "   ${RED}${ICON_FAIL} Failed to create symlink. Please create it manually:${NC}"
+        echo -e "      sudo ln -sf ${BIN_PATH} /usr/local/bin/kcspoc"
+    fi
+fi
+echo ""
+
+echo -e "${GREEN}${BOLD}   ${ICON_OK} KCS PoC Tool installed successfully!${NC}"
+echo -e "   You can now run '${BOLD}kcspoc${NC}' from anywhere."
+echo ""
+echo -e "   Next steps:"
+echo -e "   ${DIM}1. Run '${BOLD}kcspoc config${DIM}' to set up your environment.${NC}"
+echo -e "   ${DIM}2. Run '${BOLD}kcspoc pull${DIM}' to fetch the KCS maps.${NC}"
+echo ""
