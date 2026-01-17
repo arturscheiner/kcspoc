@@ -50,7 +50,7 @@ echo ""
 
 # 2. Clone Repository
 ui_section "Fetching source code"
-REPO_URL="https://github.com/arturscheiner/kuberverse-simple.git"
+REPO_URL="https://github.com/arturscheiner/kcspoc.git"
 echo -e "   ${ICON_GEAR} Cloning ${REPO_URL}..."
 
 # Clean up any existing clone attempts in ~/.kcspoc/kuberverse-simple or ~/.kcspoc/kcspoc
