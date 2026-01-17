@@ -9,8 +9,20 @@ commonLabels:
 default:
   platform: "$PLATFORM_CONFIGURED"
   domain: "$DOMAIN_CONFIGURED"
-  # No 2.1.0, esta flag é mandatória para renderizar os manifestos de Certificate
-  certSource: helm 
+  # --- CORREÇÃO DEFINITIVA PARA v2.1.0 (mTLS & CA) ---
+  # Estas chaves garantem que o Helm renderize o "Certificate" e o "Issuer"
+  # necessários para gerar o segredo 'cert-ca' e 'cert-kcs-s3'.
+  certSource: "helm"
+  internalTLS:
+    enabled: true
+    certSource: "helm"
+  
+  certManager:
+    enabled: true
+
+  # Redução de réplicas para evitar o status 'Pending' no laboratório
+  kcs-ih:
+    replicaCount: 1
 
   # --- CORREÇÃO DO ERRO networkPolicy.yaml ---
   networkPolicies:
@@ -35,11 +47,13 @@ configmap:
       SCANNER_TAG: v2.1.0
       IMAGE_TAG_MIDDLEWARE: v2.1.0
 
-# Cria o emissor local se não existir um ClusterIssuer
+# O emissor local que o Cert-Manager usará para assinar a CA interna
 issuer:
   create: true
   name: kcs-issuer
   kind: Issuer
+  # Na v2.1.0, esta flag ajuda a gerar a CA auto-assinada se o segredo 'cert-ca' faltar
+  selfSigned: true
 
 pullSecret:
   kcs-pullsecret:
