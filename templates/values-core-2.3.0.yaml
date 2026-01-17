@@ -1,77 +1,66 @@
-################################################################################################
-###                          VALUES CONSOLIDADO PARA UPGRADE v2.1.1                          ###
-###             MESCLA: CONFIGURACOES LAB + ESTRUTURA KCS v2.1.1 + METADADOS                 ###
-################################################################################################
+################################################################################
+# values-template-230.yaml
+# Kaspersky Container Security - Automation Template for v2.3.0
+# Purpose: High-performance resources and Vault architecture changes.
+################################################################################
 
-# Rótulo global para rastreio de todos os recursos criados pelo Helm
+# commonLabels: Injected into every resource. 
+# Used by 'kcspoc destroy' to track and remove POC-related objects.
 commonLabels:
   provisioned-by: "kcspoc"
 
 default:
   platform: "$PLATFORM_CONFIGURED"
   domain: "$DOMAIN_CONFIGURED"
-  serviceAccount: kcs
-
-  ingress:
-    create: true
-    class: "nginx"
-
-  networkPolicies:
-    create: true
-    ingressControllerNamespaces:
-      - ingress-nginx
-
-  certSource: cert-manager
+  
+  # --- MODERN MTLS STRUCTURE ---
+  # Version 2.3.x uses a more modular TLS approach.
+  certSource: "helm"
   internalTLS:
     enabled: true
-    certSource: cert-manager
+    certSource: "helm"
+  
+  certManager: true
 
-  ## RECURSOS OTIMIZADOS PARA LAB / POC REDUZIDA
+  # Image Handler replica reduction for Lab environments.
+  kcs-ih: { replicaCount: 1 }
+
+  # Version 2.3.0 significantly increases default database requirements.
+  # We use moderate limits to ensure stability while allowing lab scheduling.
   postgresql:
     resources:
-      requests:
-        cpu: "100m"
-        memory: "512Mi"
-      limits:
-        cpu: "500m"
-        memory: "1Gi"
-  # --- AGENTE DE SEGURANÇA (VISIBILIDADE EM TEMPO REAL) ---
-  nodeAgent:
-    enabled: true
-    # Caminho para o Lab (containerd)
-    runtimeSocketPath: "$CRI_SOCKET_CONFIG"
-    installStrategy: DaemonSet
+      requests: { cpu: "200m", memory: "1Gi" }
+      limits: { cpu: "1", memory: "2Gi" }
 
-  # --- CONTROLE DE ADMISSÃO (O "SEGURANÇA" DO CLUSTER) ---
-  admissionController:
-    enabled: true
-    replicaCount: 1
+# --- RUNTIME SECURITY (NODE AGENT) ---
+nodeAgent:
+  enabled: true
+  runtimeSocketPath: "$CRI_SOCKET_CONFIG"
 
-  kcs-ih:
-    replicaCount: 1
+# --- ADMISSION CONTROLLER ---
+admissionController: { enabled: true }
 
-  updates:
-    enabled: true
+# --- SCANNER UPDATES ---
+updates: { enabled: true }
+  
+configmap:
+  infraconfig:
+    type: fromEnvs
+    envs:
+      TLS_INTERNAL: true
+      # VAULT_PATH: New mandatory parameter for v2.3.x configuration management.
+      VAULT_PATH: "infraconfig"
+      KUBE_AGENT_TAG: v2.3.0
+      NODE_AGENT_TAG: v2.3.0
+      SCANNER_TAG: v2.3.0
+      IMAGE_TAG_MIDDLEWARE: v2.3.0
 
+# Local Issuer: selfSigned: true creates the root CA for the 'kcs' namespace.
 issuer:
   create: true
   name: kcs-issuer
   kind: Issuer
-  # Na v2.1.0+, esta flag ajuda a gerar a CA auto-assinada se o segredo 'cert-ca' faltar
   selfSigned: true
-  
-# ---------------- #
-#   Configuracoes  #
-# ---------------- #
-
-console:
-  adminUser:
-    email: "admin"
-    password: "Ka5per5Ky!"
-
-# ---------------- #
-#   Pull Secrets   #
-# ---------------- #
 
 pullSecret:
   kcs-pullsecret:
@@ -80,52 +69,29 @@ pullSecret:
     password: "$REGISTRY_PASS_CONFIG"
     email: "$REGISTRY_EMAIL_CONFIG"
 
-# ------------- #
-#   Ingresses   #
-# ------------- #
-
 ingress:
   kcs:
     domain: "$DOMAIN_CONFIGURED"
-    externalTrafficType: https
-    secret: cert-ingress
     ingressClass: "nginx"
     annotations:
-      nginx.ingress.kubernetes.io/proxy-body-size: 1500m
-
-# ---------------------- #
-#   Persistent Volumes   #
-# ---------------------- #
+      # Increased proxy body size for scanning large container images (>1GB).
+      nginx.ingress.kubernetes.io/proxy-body-size: "2048m"
 
 persistentVolume:
-  postgresql:
-    size: 20Gi
-  pvc-minio:
-    size: 2Gi
-  pvc-clickhouse-cold:
-    size: 40Gi
-  pvc-clickhouse-hot:
-    size: 20Gi
+  postgresql: { size: 20Gi }
+  pvc-minio: { size: 10Gi } # Increased S3 storage for version 2.3 scanning tasks.
+  pvc-clickhouse-cold: { size: 40Gi }
+  pvc-clickhouse-hot: { size: 20Gi }
 
-# -------------- #
-#   ConfigMaps   #
-# -------------- #
+# --- COMPONENT SPECIFIC OVERRIDES ---
+# Clickhouse in v2.3 requires more memory for background merging and indexing.
+component:
+  kcs-clickhouse:
+    resources:
+      requests: { cpu: "500m", memory: "2Gi" }
+      limits: { cpu: "1.5", memory: "4Gi" }
 
-configmap:
-  infraconfig:
-    type: fromEnvs
-    envs:
-      TLS_INTERNAL: true
-      TLS_INGRESS: false
-      POSTGRES_HOST: kcs-postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB_NAME: api
-      POSTGRES_VERIFY_LEVEL: verify-full
-
-# ----------- #
-#   Secrets   #
-# ----------- #
-
+# --- INFRASTRUCTURE CREDENTIALS ---
 secret:
   infracreds:
     type: fromEnvs
@@ -140,50 +106,3 @@ secret:
       MCHD_USER: "$MCHD_USER_CONFIG"
       MCHD_PASS: "$MCHD_PASS_CONFIG"
       APP_SECRET: "$APP_SECRET_CONFIG"
-
-# ---------------- #
-#    COMPONENTS    #
-# ---------------- #
-
-component:
-  kcs-clickhouse:
-    resources:
-      requests:
-        cpu: 200m
-        memory: 1Gi
-      limits:
-        cpu: "1"
-        memory: "2Gi"
-
-  kcs-ih:
-    container:
-      kcs-ih:
-        resources:
-          requests:
-            memory: "1Gi"
-            cpu: "100m"
-          limits:
-            memory: "2Gi"
-            cpu: "1"
-
-  kcs-scanner:
-    container:
-      kcs-scanner:
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "200m"
-          limits:
-            memory: "1Gi"
-            cpu: "500m"
-
-  kcs-updates:
-    container:
-      kcs-updates:
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "256Mi"
-          limits:
-            cpu: "200m"
-            memory: "512Mi"
