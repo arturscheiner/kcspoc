@@ -39,6 +39,34 @@ ui_section() {
 
 ui_banner
 
+# 0. Pre-Installation Safety Audit
+ui_section "Pre-Installation Safety Audit"
+
+# A. OS Validation
+if [[ "$OSTYPE" != "linux-gnu"* ]]; then
+    echo -e "   ${RED}${ICON_FAIL} Error: This tool is designed for Linux systems only.${NC}"
+    echo -e "      Detected OS: $OSTYPE"
+    exit 1
+fi
+
+# B. Critical Dependency Check (Source Fetching)
+MISSING_FETCH_DEPS=true
+if command -v git &>/dev/null; then
+    MISSING_FETCH_DEPS=false
+elif command -v unzip &>/dev/null && (command -v curl &>/dev/null || command -v wget &>/dev/null); then
+    MISSING_FETCH_DEPS=false
+fi
+
+if [ "$MISSING_FETCH_DEPS" = true ]; then
+    echo -e "   ${RED}${ICON_FAIL} Error: Missing critical dependencies for fetching source code.${NC}"
+    echo -e "      Please install ${BOLD}'git'${NC} (recommended) or ${BOLD}'unzip'${NC} + ${BOLD}'curl'${NC}."
+    echo -e "      Example: sudo apt update && sudo apt install -y git"
+    exit 1
+fi
+
+echo -e "   ${ICON_OK} System environment and fetch-dependencies verified."
+echo ""
+
 # 1. Prepare Directory
 ui_section "Preparing environment"
 INSTALL_DIR="$HOME/.kcspoc"

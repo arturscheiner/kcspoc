@@ -4,11 +4,11 @@
 # --- General ---
 MSG_USAGE="Usage"
 MSG_COMMANDS="Commands"
-MSG_CMD_CONFIG_DESC="Run interactive configuration wizard"
-MSG_CMD_PULL_DESC="Download KCS chart (usage: pull [--version X.X.X])"
-MSG_CMD_CHECK_DESC="Verify environment and prerequisites"
-MSG_CMD_PREPARE_DESC="Run the installation preparation (requires config)"
-MSG_CMD_DEPLOY_DESC="Launch the KCS deployment process"
+MSG_CMD_CONFIG_DESC="Initialize or update local configuration settings"
+MSG_CMD_PULL_DESC="Download and cache KCS Helm charts from the registry"
+MSG_CMD_CHECK_DESC="Execute environment diagnostics and prerequisite validation"
+MSG_CMD_PREPARE_DESC="Provision infrastructure dependencies (Ingress, Cert-Manager, Storage)"
+MSG_CMD_DEPLOY_DESC="Orchestrate KCS component deployment (Console or Agents)"
 MSG_CMD_HELP_DESC="Show this help message"
 MSG_VERSION="Version"
 MSG_AUTHOR="Author"
@@ -283,8 +283,8 @@ MSG_HELP_OPTIONS="Options"
 MSG_HELP_EXAMPLES="Examples"
 
 # Config Help
-MSG_HELP_CONFIG_DESC="Starts the interactive configuration wizard to setup or update your ~/.kcspoc/config environment variables."
-MSG_HELP_CONFIG_OPTS="--set-version <ver>|Quickly update the active KCS version without entering the wizard."
+MSG_HELP_CONFIG_DESC="Interactive wizard to manage local environment variables and deployment parameters."
+MSG_HELP_CONFIG_OPTS="--set-version <ver>|Pin the target KCS version without entering the console wizard."
 MSG_HELP_CONFIG_EX="kcspoc config\nkcspoc config --set-version 2.3.0"
 
 # Pull Help
@@ -313,11 +313,11 @@ MSG_HELP_LOGS_OPTS="--list [cmd]|Show last 10 logs (optionally filtered by comma
 MSG_HELP_LOGS_EX="kcspoc logs --list\nkcspoc logs --list prepare\nkcspoc logs --show A1B2C3\nkcspoc logs --cleanup"
 
 # Deploy Help
-MSG_HELP_DEPLOY_DESC="Deploys the Kaspersky Container Security components (Core and Agents) to your cluster."
-MSG_HELP_DEPLOY_OPTS="--core [mode]|Deploy the main KCS management console and backend. Modes: install, update, upgrade.\n--agents|Deploy the security agents to your nodes (Finalizing).\n--check <target>|Verify if local config/version matches. Targets: hash, version.\n--values <file>|Provide a custom values.yaml file to override the default template."
-MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --core upgrade\nkcspoc deploy --check hash"
+MSG_HELP_DEPLOY_DESC="Manages the deployment lifecycle of Kaspersky Container Security components."
+MSG_HELP_DEPLOY_OPTS="--core [mode]|Deploy the Management Console. Modes: install (fresh), update (patch), upgrade (version change).\n--agents|Deploy security agents to worker nodes (Requires active API Token).\n--check <target>|Verify deployment integrity. Targets: hash (config sync), version (parity).\n--values <file>|Specify a custom values.yaml override for advanced configurations."
+MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --core upgrade\nkcspoc deploy --agents\nkcspoc deploy --check hash"
 
 # Bootstrap Help
-MSG_HELP_BOOTSTRAP_DESC="Guides you through the KCS API integration by collecting and storing your API Token."
-MSG_HELP_BOOTSTRAP_OPTS="No options required. Interactive wizard."
+MSG_HELP_BOOTSTRAP_DESC="Post-installation wizard to integrate the tool with the KCS API for automated operations."
+MSG_HELP_BOOTSTRAP_OPTS="No options required. Interactive collection of the ADMIN_API_TOKEN."
 MSG_HELP_BOOTSTRAP_EX="kcspoc bootstrap"

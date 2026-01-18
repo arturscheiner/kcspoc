@@ -1,119 +1,74 @@
 # Kaspersky Container Security PoC Tool (kcspoc)
 
-**Version:** 0.4.96
+**Version:** 0.5.0 (Stable Milestone)
 
-`kcspoc` is a CLI tool designed to streamline the Proof of Concept (PoC) deployment of Kaspersky Container Security (KCS). It helps with environment verification, configuration management, chart downloading, and preparation for installation.
+`kcspoc` is a robust CLI tool designed for Pre-Sales Engineers to streamline the **Proof of Concept (PoC)** deployment of Kaspersky Container Security (KCS). It automates environment verification, infrastructure provisioning, and resilient lifecycle management.
 
-## Features
+## 🚀 Key Features
 
-*   **Interactive Configuration:** Wizard-style setup to generate `~/.kcspoc/config`.
-*   **Environment Validation:** Checks Kubernetes version, node architecture (amd64), container runtimes, CNI plugins, and cluster resources.
-*   **Deep Node Inspection:** Optionally runs privileged pods to verify kernel headers and disk space on each node.
-*   **eBPF Check:** Verifies eBPF/BTF support (`/sys/kernel/btf/vmlinux`).
-*   **Streamlined Workflow:** Modular commands for pulling charts and preparing the cluster.
-*   **Localization (i18n):** Supports multiple languages (Default: English/en_US, Available: Portuguese/pt_BR). Auto-detects based on system locale.
+### 🛡️ High-Resiliency Lifecycle
+- **Anti-Cipher Protection**: Automatically recovers and preserves `APP_SECRET` during updates/upgrades to prevent data corruption.
+- **Self-Healing Execution**: Detects StatefulSet immutability errors and automatically resolves them with `cascade=orphan` retries.
+- **Deep Safe Destruction**: Guaranteed total teardown including mandatory PVC purging for clean project restarts.
 
-## Prerequisites
+### 📊 Advanced Monitoring & Onboarding
+- **Animated Stability Watcher**: Real-time pod convergence tracking with ASCII progress bars and animated status.
+- **K8s Metadata Sync**: Real-time synchronization of deployment progress to namespace labels (`kcspoc.io/status-progress`).
+- **"Chave de Ouro" Summary**: Dynamic post-install guidance including console URLs and automated onboarding instructions.
 
-*   **OS:** Linux (Ubuntu/Debian recommended)
-*   **Shell:** Bash
-*   **Tools:**
-    *   `kubectl` (configured with cluster admin access)
-    *   `helm`
-    *   `curl`
+### ⚙️ Automation & Diagnostics
+- **Pre-flight Diagnostics**: Automated resource compliance auditing (CPU, RAM, Disk) per node.
+- **Infrastructure Provisioning**: One-touch setup of Ingress-Nginx, Cert-Manager, MetalLB, and Local Storage.
+- **Modular Architecture**: Secure credential management and modular command structure.
 
-## Installation
+## 🛠️ Quick Start
 
-The easiest way to install `kcspoc` is using the remote installer:
-
+### 1. Installation
+Install the tool safely on your system:
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/arturscheiner/kcspoc/main/install.sh)
+curl -sSL https://raw.githubusercontent.com/arturscheiner/kcspoc/main/install.sh | bash
 ```
 
-This will automatically create the necessary directories (`~/.kcspoc`), clone the repository, and set up a global symlink.
-
-### Manual Installation Options
-
-You can also run `kcspoc` directly from the source directory or install it system-wide manually.
-
-#### Option 1: Run from Source
-
-1.  Clone the repository or download the source files.
-2.  Navigate to the directory:
-    ```bash
-    cd /path/to/kcspoc
-    ```
-3.  Make the script executable:
-    ```bash
-    chmod +x kcspoc
-    ```
-4.  Deploy KCS:
-    ```bash
-    ./kcspoc deploy --core
-    ```
-
-#### Option 2: Manual System-wide Installation
-
-To use `kcspoc` from anywhere, create a symlink in your binary path (e.g., `/usr/local/bin`).
-
-1.  Navigate to the directory containing the script:
-    ```bash
-    cd /path/to/kcspoc
-    ```
-2.  Make the script executable:
-    ```bash
-    chmod +x kcspoc
-    ```
-3.  Create a symbolic link (requires sudo). **Ensure you link the main script AND keep the lib/locales folders in place relative to the real path.**
-    ```bash
-    sudo ln -s "$(pwd)/kcspoc" /usr/local/bin/kcspoc
-    ```
-4.  Verify installation:
-    ```bash
-    kcspoc help
-    ```
-
-## Usage
-
-The general workflow is: `config` -> `pull` -> `check` -> `prepare`.
-
-### Localization
-The tool automatically detects your language via `LC_ALL`, `LC_MESSAGES`, or `LANG`.
-To force a specific language (e.g., Portuguese):
-```bash
-LANG=pt_BR.UTF-8 kcspoc help
-```
-
-### 1. Configuration
-Run the interactive wizard to set up your environment variables (Namespace, Domain, Registry Credentials, etc.).
+### 2. Configuration
+Initialize your environment variables:
 ```bash
 kcspoc config
 ```
 
-### 2. Download KCS Chart
-Authenticate to the Kaspersky registry and download the KCS Helm chart.
+### 3. Deployment Flow
 ```bash
-kcspoc pull
-# Or force a specific version:
-kcspoc pull --version 1.2.0
+kcspoc check     # Verify environment
+kcspoc pull      # Download KCS charts
+kcspoc prepare   # Provision infra dependencies
+kcspoc deploy    # Launch KCS Management Console
+kcspoc bootstrap # Configure API integration
 ```
 
-### 3. Verify Environment
-Run a comprehensive check of your Kubernetes cluster to ensure it meets KCS requirements.
-```bash
-kcspoc check
-```
+## 📋 Commands
 
-### 4. Prepare Cluster
-Apply necessary configurations, create namespaces/secrets, and install dependencies (Cert-Manager, MetalLB, Ingress-Nginx, etc.).
-```bash
-kcspoc prepare
-```
+| Command | Description |
+| :--- | :--- |
+| `config` | Initialize or update local configuration settings |
+| `pull` | Download and cache KCS Helm charts |
+| `check` | Execute environment diagnostics and compliance audit |
+| `prepare` | Provision infrastructure (Ingress, Certs, Storage) |
+| `deploy` | Orchestrate KCS deployment (Console or Agents) |
+| `bootstrap` | Configure API authentication & initialize environment |
+| `destroy` | Safe and deep removal of KCS resources |
+| `logs` | Audit tool execution and debug logs |
 
-## Directory Structure
-The tool uses a modular structure:
+## 📐 Architecture
+`kcspoc` follows the **Kubernetes State Management Protocol**. All deployment metadata is stored directly in the cluster namespace labels under the `kcspoc.io/` prefix, ensuring a single source of truth for both the tool and the operator.
 
-*   `kcspoc`: Main entrypoint script.
-*   `lib/`: Contains command logic (`cmd_*.sh`) and helpers (`common.sh`).
-*   `locales/`: Localization files (`en_US.sh`, `pt_BR.sh`, etc.).
-*   `~/.kcspoc/`: User configuration and downloaded artifacts.
+## ✍️ Message from the Author
+
+This project, `kcspoc`, was created by **Artur Scheiner** to facilitate my daily work as a **Presales Manager** at Kaspersky, specifically focused on **Kaspersky Container Security (KCS)**.
+
+The primary motivation was to streamline the KCS PoC process, making it more efficient, repeatable, and resilient for my peers and the technical community I support. By automating the boilerplate environment checks and lifecycle operations, I can focus on the strategic value that KCS provides to our customers.
+
+> [!NOTE]
+> This is a **personal/hobby project** maintained independently to improve my own work efficiency. While I am a proud member of the Kaspersky team, please be aware that this project is **not** developed, officially maintained, or supported by Kaspersky. It is provided "as-is" for the benefit of the community.
+
+---
+**Author:** [Artur Scheiner](https://www.linkedin.com/in/arturscheiner/)
+**License:** Internal Use Only - Personal Hobby Project
