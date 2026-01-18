@@ -12,6 +12,7 @@ MSG_CMD_DEPLOY_DESC="Launch the KCS deployment process"
 MSG_CMD_HELP_DESC="Show this help message"
 MSG_VERSION="Version"
 MSG_AUTHOR="Author"
+MSG_CMD_BOOTSTRAP_DESC="Configure KCS API Integration (API Token)"
 MSG_ERROR_CONFIG_NOT_FOUND="Error: Configuration not found. Please run 'kcspoc config' first."
 
 # --- Helper UI ---
@@ -315,3 +316,8 @@ MSG_HELP_LOGS_EX="kcspoc logs --list\nkcspoc logs --list prepare\nkcspoc logs --
 MSG_HELP_DEPLOY_DESC="Deploys the Kaspersky Container Security components (Core and Agents) to your cluster."
 MSG_HELP_DEPLOY_OPTS="--core [mode]|Deploy the main KCS management console and backend. Modes: install, update, upgrade.\n--agents|Deploy the security agents to your nodes (Finalizing).\n--check <target>|Verify if local config/version matches. Targets: hash, version.\n--values <file>|Provide a custom values.yaml file to override the default template."
 MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --core upgrade\nkcspoc deploy --check hash"
+
+# Bootstrap Help
+MSG_HELP_BOOTSTRAP_DESC="Guides you through the KCS API integration by collecting and storing your API Token."
+MSG_HELP_BOOTSTRAP_OPTS="No options required. Interactive wizard."
+MSG_HELP_BOOTSTRAP_EX="kcspoc bootstrap"

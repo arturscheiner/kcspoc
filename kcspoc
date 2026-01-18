@@ -37,6 +37,7 @@ source "$LIB_DIR/cmd_prepare.sh"
 source "$LIB_DIR/cmd_deploy.sh"
 source "$LIB_DIR/cmd_destroy.sh"
 source "$LIB_DIR/cmd_logs.sh"
+source "$LIB_DIR/cmd_bootstrap.sh"
 
 cmd_usage() {
     ui_banner
@@ -51,6 +52,7 @@ cmd_usage() {
     printf "  ${CYAN}%-10s${NC} %s\n" "deploy"  "$MSG_CMD_DEPLOY_DESC"
     printf "  ${CYAN}%-10s${NC} %s\n" "destroy" "$MSG_DESTROY_TITLE"
     printf "  ${CYAN}%-10s${NC} %s\n" "logs"    "Manage logs (--list, --show, --cleanup)"
+    printf "  ${CYAN}%-10s${NC} %s\n" "bootstrap" "Configure KCS API Integration (API Token)"
     printf "  ${CYAN}%-10s${NC} %s\n" "help"    "$MSG_CMD_HELP_DESC"
     echo ""
 
@@ -63,6 +65,7 @@ cmd_usage() {
     echo -e "  kcspoc pull"
     echo -e "  kcspoc prepare"
     echo -e "  kcspoc deploy --core"
+    echo -e "  kcspoc bootstrap"
     echo ""
     echo -e "  ${DIM}# Troubleshooting${NC}"
     echo -e "  kcspoc logs --list"
@@ -120,6 +123,11 @@ case "$1" in
         shift
         # No logging for the logs command itself
         cmd_logs "$@"
+        ;;
+    bootstrap)
+        shift
+        cmd_needs_logging "$@" && init_logging "bootstrap"
+        cmd_bootstrap "$@"
         ;;
     help|*)
         cmd_usage
