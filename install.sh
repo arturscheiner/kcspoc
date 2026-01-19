@@ -35,6 +35,11 @@ ui_section() {
     echo -e "${MAGENTA}${BOLD}:: $1 ::${NC}"
 }
 
+cleanup_staging() {
+    # Scoped cleanup of installer-created staging files
+    rm -rf "$HOME/.kcspoc/temp" "$HOME/.kcspoc/kcspoc.zip" "$HOME/.kcspoc/kcspoc-*" "$HOME/.kcspoc/bin/.install-state.tmp" 2>/dev/null
+}
+
 # --- INSTALLATION LOGIC ---
 
 ui_banner
@@ -74,6 +79,7 @@ echo -e "   ${ICON_GEAR} Creating directory ${INSTALL_DIR}..."
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR" || exit 1
 echo -e "   ${ICON_OK} Environment ready."
+trap cleanup_staging INT TERM
 echo ""
 
 # 2. Fetch Source Code
@@ -86,6 +92,7 @@ elif command -v wget &>/dev/null; then
     RELEASE_JSON=$(wget -qO- "$RELEASE_API")
 else
     echo -e "   ${RED}${ICON_FAIL} Error: Neither 'curl' nor 'wget' found.${NC}"
+    cleanup_staging
     exit 1
 fi
 
@@ -94,6 +101,7 @@ LATEST_TAG=$(echo "$RELEASE_JSON" | grep '"tag_name"' | cut -d '"' -f4 | head -n
 if [ -z "$LATEST_TAG" ]; then
     echo -e "   ${RED}${ICON_FAIL} Error: Could not determine the latest stable release.${NC}"
     echo -e "      Reason: No GitHub Releases found or API rate-limited."
+    cleanup_staging
     exit 1
 fi
 
@@ -113,12 +121,14 @@ if command -v git &>/dev/null; then
         echo -e "   ${ICON_OK} Repository cloned successfully."
     else
         echo -e "   ${RED}${ICON_FAIL} Failed to clone tag ${LATEST_TAG}.${NC}"
+        cleanup_staging
         exit 1
     fi
 else
     echo -e "   ${YELLOW}${ICON_INFO} Git not found. Attempting ZIP download...${NC}"
     if ! command -v unzip &>/dev/null; then
         echo -e "   ${RED}${ICON_FAIL} Error: 'unzip' is required but not installed.${NC}"
+        cleanup_staging
         exit 1
     fi
 
@@ -138,10 +148,12 @@ else
             echo -e "   ${ICON_OK} Source downloaded and extracted."
         else
             echo -e "   ${RED}${ICON_FAIL} Failed to identify extracted directory.${NC}"
+            cleanup_staging
             exit 1
         fi
     else
         echo -e "   ${RED}${ICON_FAIL} Failed to download source ZIP.${NC}"
+        cleanup_staging
         exit 1
     fi
 fi
@@ -195,6 +207,7 @@ if [ -d "temp" ]; then
     echo -e "   ${ICON_OK} Runtime files deployed to ./bin"
 else
     echo -e "   ${RED}${ICON_FAIL} Source directory not found.${NC}"
+    cleanup_staging
     exit 1
 fi
 echo ""
