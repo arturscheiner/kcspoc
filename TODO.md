@@ -4,8 +4,8 @@ This file tracks immediate, short-term improvements for the `v0.5.x` release lin
 Items listed here are actionable and intended for upcoming patch releases.
 
 ## 🚀 Installer & Release (User-Facing)
-- [ ] Implement atomic writing for `~/.kcspoc/bin/.install-state` to prevent file corruption during interrupted installs.
-- [ ] Audit and refine installer messaging to clearly distinguish between "Fresh Install" and "Upgrade" flows.
+- [x] Implement atomic writing for `~/.kcspoc/bin/.install-state` to prevent file corruption during interrupted installs.
+- [x] Audit and refine installer messaging to clearly distinguish between "Fresh Install" and "Upgrade" flows.
 - [ ] Ensure `install.sh` performs a rigorous cleanup of the `temp/` staging directory even if extraction or copy fails.
 
 ## ⚙️ Operator Experience (User-Facing)
