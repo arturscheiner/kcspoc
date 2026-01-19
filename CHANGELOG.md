@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Version v0.5.0 predates the formal changelog and GitHub Releases process. This document has been created retroactively to capture the early development history.
 
-## [0.5.5] - YYYY-MM-DD
+## [0.5.5] - 2026-01-19
 ### Changed
 - Introduced stable bootstrap installer with explicit stable, dev, and version modes.
 
