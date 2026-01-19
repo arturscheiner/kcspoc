@@ -1,72 +1,71 @@
 # Kaspersky Container Security PoC Tool (kcspoc)
 
-`kcspoc` is a robust CLI tool designed for Pre-Sales Engineers to streamline the **Proof of Concept (PoC)** deployment of Kaspersky Container Security (KCS). It automates environment verification, infrastructure provisioning, and resilient lifecycle management.
+`kcspoc` is a Bash-based CLI tool designed for Pre-Sales Engineers and Technical Consultants to streamline technical Proof of Concept (PoC) deployments of **Kaspersky Container Security (KCS)** on Kubernetes or OpenShift.
 
-## 🚀 Key Features
+It automates environment diagnostics, provides resilient lifecycle management (install, update, upgrade), and ensures consistent deployment standards across enterprise Linux systems and Kubernetes clusters.
 
-### 🛡️ High-Resiliency Lifecycle
-- **Anti-Cipher Protection**: Automatically recovers and preserves `APP_SECRET` during updates/upgrades to prevent data corruption.
-- **Self-Healing Execution**: Detects StatefulSet immutability errors and automatically resolves them with `cascade=orphan` retries.
-- **Deep Safe Destruction**: Guaranteed total teardown including mandatory PVC purging for clean project restarts.
+## 🎯 Who is this for?
 
-### 📊 Advanced Monitoring & Onboarding
-- **Animated Stability Watcher**: Real-time pod convergence tracking with ASCII progress bars and animated status.
-- **K8s Metadata Sync**: Real-time synchronization of deployment progress to namespace labels (`kcspoc.io/status-progress`).
-- **"Chave de Ouro" Summary**: Dynamic post-install guidance including console URLs and automated onboarding instructions.
+- 🛡️ **Pre-Sales / Presales Engineers**
+- 🛠️ **Technical Consultants** working with KCS PoCs
+- 🧪 **Kubernetes lab** and demo environments
+- 🏗️ **Platform engineers** evaluating Kaspersky Container Security
 
-### ⚙️ Automation & Diagnostics
-- **Pre-flight Diagnostics**: Automated resource compliance auditing (CPU, RAM, Disk) per node.
-- **Infrastructure Provisioning**: One-touch setup of Ingress-Nginx, Cert-Manager, MetalLB, and Local Storage.
-- **Modular Architecture**: Secure credential management and modular command structure.
+## 🚀 Installation
 
-## 🛠️ Quick Start
+The recommended way to install `kcspoc` is via the official bootstrap script. This script handles system verification and installs the tool into your home directory (`~/.kcspoc`).
 
-### 1. Installation
-Install the latest stable version of `kcspoc` safely on your system:
+> ℹ️ The bootstrap script installs `kcspoc` under `~/.kcspoc` and creates a symbolic link in `/usr/local/bin` when permitted.
+
+### 1. ✅ Stable Installation (Recommended)
+This installs the latest validated stable release:
 ```bash
 curl -sSL https://raw.githubusercontent.com/arturscheiner/kcspoc/main/bootstrap.sh | bash
 ```
 
-### 2. Configuration
-Initialize your environment variables:
+### 2. 🧪 Development Installation
+To test upcoming features from the `main` branch:
 ```bash
-kcspoc config
+curl -sSL https://raw.githubusercontent.com/arturscheiner/kcspoc/main/bootstrap.sh | bash -s -- --dev
 ```
 
-### 3. Deployment Flow
+### 3. 🔢 Install a Specific Version
+To install a specific version from GitHub Releases:
 ```bash
-kcspoc check     # Verify environment
-kcspoc pull      # Download KCS charts
-kcspoc prepare   # Provision infra dependencies
-kcspoc deploy    # Launch KCS Management Console
-kcspoc bootstrap # Configure API integration
+curl -sSL https://raw.githubusercontent.com/arturscheiner/kcspoc/main/bootstrap.sh | bash -s -- --vX.Y.Z
 ```
 
-## 📋 Commands
+## 🛠️ Usage & Documentation
 
-| Command | Description |
-| :--- | :--- |
-| `config` | Initialize or update local configuration settings |
-| `pull` | Download and cache KCS Helm charts |
-| `check` | Execute environment diagnostics and compliance audit |
-| `prepare` | Provision infrastructure (Ingress, Certs, Storage) |
-| `deploy` | Orchestrate KCS deployment (Console or Agents) |
-| `bootstrap` | Configure API authentication & initialize environment |
-| `destroy` | Safe and deep removal of KCS resources |
-| `logs` | Audit tool execution and debug logs |
+Detailed documentation and help are provided directly through the CLI tool:
 
-## 📐 Architecture
-`kcspoc` follows the **Kubernetes State Management Protocol**. All deployment metadata is stored directly in the cluster namespace labels under the `kcspoc.io/` prefix, ensuring a single source of truth for both the tool and the operator.
+- 📖 **Command Reference**: Run `kcspoc help` or `kcspoc [command] --help`
+- 🔢 **Installed Version**: Run `kcspoc --version`
+- 📜 **Execution Logs**: Run `kcspoc logs`
 
-## ✍️ Message from the Author
+For release notes, detailed changelogs, and "What's New" information, please visit the [GitHub Releases](https://github.com/arturscheiner/kcspoc/releases) page.
 
-This project, `kcspoc`, was created by **Artur Scheiner** to facilitate my daily work as a **Presales Manager** at Kaspersky, specifically focused on **Kaspersky Container Security (KCS)**.
+## 🐞 Issues & Support
 
-The primary motivation was to streamline the KCS PoC process, making it more efficient, repeatable, and resilient for my peers and the technical community I support. By automating the boilerplate environment checks and lifecycle operations, I can focus on the strategic value that KCS provides to our customers.
+Bugs, ideas, or questions — please open an issue on GitHub to keep discussions visible and documented.
 
-> [!NOTE]
-> This is a **personal/hobby project** maintained independently to improve my own work efficiency. While I am a proud member of the Kaspersky team, please be aware that this project is **not** developed, officially maintained, or supported by Kaspersky. It is provided "as-is" for the benefit of the community.
+👉 [github.com/arturscheiner/kcspoc/issues](https://github.com/arturscheiner/kcspoc/issues)
+
+When opening an issue, please include:
+- The installed `kcspoc` version (`kcspoc --version`)
+- A short description of the problem
+- Relevant command output or logs (if applicable)
+- Your Kubernetes distribution and version
+
+> [!WARNING]
+> This project is maintained on a **best-effort basis**. There is no guaranteed response time, and support is provided as time permits.
+
+## ⚖️ Disclaimer
+
+**Personal/Hobby Project.**  
+This project, `kcspoc`, is maintained independently by **Artur Scheiner** to facilitate the KCS deployment process. 
+
+While I am a proud member of the Kaspersky team, please be aware that this project is **not** an official product of Kaspersky. It is **not** developed, maintained, supported, or endorsed by Kaspersky. Usage is subject to the License, and it is provided "as-is" without any warranties.
 
 ---
 **Author:** [Artur Scheiner](https://www.linkedin.com/in/arturscheiner/)
-**License:** Internal Use Only - Personal Hobby Project
