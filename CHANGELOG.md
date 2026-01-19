@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Version v0.5.0 predates the formal changelog and GitHub Releases process. This document has been created retroactively to capture the early development history.
 
+## [0.5.5] - YYYY-MM-DD
+### Changed
+- Introduced stable bootstrap installer with explicit stable, dev, and version modes.
+
+### Added
+- **Bootstrap**: Introduced `bootstrap.sh` to install the tool safely on your system.
+
 ## [0.5.4] - 2026-01-19
 ### Added
 - **Governance**: Introduced `TODO.md` to track short-term technical debt and planned improvements.
