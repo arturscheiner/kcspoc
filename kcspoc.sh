@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# Script: kcspoc
+# Script: kcspoc.sh
 # Description: CLI tool for Kaspersky Container Security PoC management.
 #              Provides interactive configuration, environment checking, and preparation.
 # Environment: Linux (Ubuntu/Debian preferred), K8s

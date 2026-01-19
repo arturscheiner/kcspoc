@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Version v0.5.0 predates the formal changelog and GitHub Releases process. This document has been created retroactively to capture the early development history.
 
+## [0.5.1] - 2026-01-19
+### Changed
+- **Release-Based Installation**: `install.sh` now fetches the latest stable release via GitHub API instead of downloading from the `main` branch.
+- **Dynamic Extraction**: Improved source extraction logic to automatically identify versioned directories in GitHub release archives.
+
 ## [0.5.0] - 2026-01-18
 ### Added
 - Official **v0.5.0 Stable Milestone** transition.
@@ -76,6 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Destroy Optimization**: Refactored removal logic for faster, non-blocking uninstallation.
 
 ---
+[0.5.1]: https://github.com/arturscheiner/kcspoc/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/arturscheiner/kcspoc/compare/v0.4.96...v0.5.0
 [0.4.96]: https://github.com/arturscheiner/kcspoc/compare/v0.4.95...v0.4.96
 [0.4.95]: https://github.com/arturscheiner/kcspoc/compare/v0.4.94...v0.4.95

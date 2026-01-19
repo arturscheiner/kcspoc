@@ -77,19 +77,42 @@ echo -e "   ${ICON_OK} Environment ready."
 echo ""
 
 # 2. Fetch Source Code
+ui_section "Identifying latest release"
+RELEASE_API="https://api.github.com/repos/arturscheiner/kcspoc/releases/latest"
+
+if command -v curl &>/dev/null; then
+    RELEASE_JSON=$(curl -fsSL "$RELEASE_API")
+elif command -v wget &>/dev/null; then
+    RELEASE_JSON=$(wget -qO- "$RELEASE_API")
+else
+    echo -e "   ${RED}${ICON_FAIL} Error: Neither 'curl' nor 'wget' found.${NC}"
+    exit 1
+fi
+
+LATEST_TAG=$(echo "$RELEASE_JSON" | grep '"tag_name"' | cut -d '"' -f4 | head -n1)
+
+if [ -z "$LATEST_TAG" ]; then
+    echo -e "   ${RED}${ICON_FAIL} Error: Could not determine the latest stable release.${NC}"
+    echo -e "      Reason: No GitHub Releases found or API rate-limited."
+    exit 1
+fi
+
+echo -e "   ${ICON_OK} Latest release: ${BOLD}${LATEST_TAG}${NC}"
+echo ""
+
 ui_section "Fetching source code"
 REPO_URL="https://github.com/arturscheiner/kcspoc.git"
-ZIP_URL="https://github.com/arturscheiner/kcspoc/archive/refs/heads/main.zip"
+ZIP_URL="https://github.com/arturscheiner/kcspoc/archive/refs/tags/${LATEST_TAG}.zip"
 
-# Clean up any existing clone attempts in ~/.kcspoc/kcspoc
-rm -rf kcspoc bin kcspoc.zip kcspoc-main
+# Clean up any existing attempts
+rm -rf kcspoc bin kcspoc.zip kcspoc-*
 
 if command -v git &>/dev/null; then
-    echo -e "   ${ICON_GEAR} Cloning ${REPO_URL} via git..."
-    if git clone "$REPO_URL" kcspoc &>/dev/null; then
+    echo -e "   ${ICON_GEAR} Cloning ${LATEST_TAG} via git..."
+    if git clone --depth 1 --branch "$LATEST_TAG" "$REPO_URL" kcspoc &>/dev/null; then
         echo -e "   ${ICON_OK} Repository cloned successfully."
     else
-        echo -e "   ${RED}${ICON_FAIL} Failed to clone repository.${NC}"
+        echo -e "   ${RED}${ICON_FAIL} Failed to clone tag ${LATEST_TAG}.${NC}"
         exit 1
     fi
 else
@@ -104,16 +127,21 @@ else
         curl -L "$ZIP_URL" -o kcspoc.zip &>/dev/null
     elif command -v wget &>/dev/null; then
         wget -q "$ZIP_URL" -O kcspoc.zip &>/dev/null
-    else
-        echo -e "   ${RED}${ICON_FAIL} Error: Neither 'curl' nor 'wget' found.${NC}"
-        exit 1
     fi
 
     if [ -f "kcspoc.zip" ]; then
         unzip -q kcspoc.zip
-        mv kcspoc-main kcspoc
-        rm kcspoc.zip
-        echo -e "   ${ICON_OK} Source downloaded and extracted."
+        # GitHub ZIPs for tags are named kcspoc-<tag_without_v> or kcspoc-<tag>
+        # We rename the extracted directory to 'kcspoc'
+        EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "kcspoc-*" | head -n1)
+        if [ -n "$EXTRACTED_DIR" ]; then
+            mv "$EXTRACTED_DIR" kcspoc
+            rm kcspoc.zip
+            echo -e "   ${ICON_OK} Source downloaded and extracted."
+        else
+            echo -e "   ${RED}${ICON_FAIL} Failed to identify extracted directory.${NC}"
+            exit 1
+        fi
     else
         echo -e "   ${RED}${ICON_FAIL} Failed to download source ZIP.${NC}"
         exit 1
@@ -130,7 +158,7 @@ ui_section "Organizing deployment"
 echo -e "   ${ICON_GEAR} Setting up binary directory..."
 if [ -d "kcspoc" ]; then
     # Ensure executable permissions
-    chmod +x kcspoc/kcspoc &>/dev/null
+    chmod +x kcspoc/kcspoc.sh &>/dev/null
     mv kcspoc bin
     echo -e "   ${ICON_OK} Directory ./kcspoc renamed to ./bin"
 else
@@ -141,7 +169,7 @@ echo ""
 
 # 4. Symbolic Link
 ui_section "Finalizing installation"
-BIN_PATH="$HOME/.kcspoc/bin/kcspoc"
+BIN_PATH="$HOME/.kcspoc/bin/kcspoc.sh"
 # Try to find a good place for the symlink
 # Priorities: /usr/local/bin (if writable), then $HOME/.local/bin, then $HOME/bin
 SYMLINK_DEST=""
@@ -165,7 +193,7 @@ else
         echo -e "   ${ICON_OK} Symlink created with sudo."
     else
         echo -e "   ${RED}${ICON_FAIL} Failed to create symlink. Please create it manually:${NC}"
-        echo -e "      sudo ln -sf ${BIN_PATH} /usr/local/bin/kcspoc"
+        echo -e "      sudo ln -sf ${BIN_PATH} ${SYMLINK_DEST}"
     fi
 fi
 echo ""
