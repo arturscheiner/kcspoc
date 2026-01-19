@@ -6,7 +6,7 @@ Items listed here are actionable and intended for upcoming patch releases.
 ## 🚀 Installer & Release (User-Facing)
 - [x] Implement atomic writing for `~/.kcspoc/bin/.install-state` to prevent file corruption during interrupted installs.
 - [x] Audit and refine installer messaging to clearly distinguish between "Fresh Install" and "Upgrade" flows.
-- [ ] Ensure `install.sh` performs a rigorous cleanup of the `temp/` staging directory even if extraction or copy fails.
+- [x] Ensure `install.sh` performs a rigorous cleanup of the `temp/` staging directory even if extraction or copy fails.
 
 ## ⚙️ Operator Experience (User-Facing)
 - [ ] Add `kubectl` context detection to `kcspoc config` with suggestions for fixing invalid configurations.
