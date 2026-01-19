@@ -181,12 +181,13 @@ if [ -d "temp" ]; then
     # Ensure executable permissions
     chmod +x bin/kcspoc.sh &>/dev/null
     
-    # Save install state
+    # Save install state (atomic write)
     {
         echo "installed_version=\"$DETECTED_VER\""
         echo "install_type=\"$INSTALL_TYPE\""
         echo "install_date=\"$(date)\""
-    } > "$INSTALL_STATE_FILE"
+    } > "${INSTALL_STATE_FILE}.tmp"
+    mv "${INSTALL_STATE_FILE}.tmp" "$INSTALL_STATE_FILE"
 
     # Cleanup temp
     rm -rf temp
