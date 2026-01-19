@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Version v0.5.0 predates the formal changelog and GitHub Releases process. This document has been created retroactively to capture the early development history.
 
+## [0.5.2] - YYYY-MM-DD
+### Fixed
+- Fixed inconsistent version references across documentation and CLI output.
+
 ## [0.5.1] - 2026-01-19
 ### Changed
 - **Release-Based Installation**: `install.sh` now fetches the latest stable release via GitHub API instead of downloading from the `main` branch.
