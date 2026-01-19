@@ -26,7 +26,7 @@
 ### 1. Installation
 Install the tool safely on your system:
 ```bash
-curl -sSL https://raw.githubusercontent.com/arturscheiner/kcspoc/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/arturscheiner/kcspoc/main/bootstrap.sh | bash
 ```
 
 ### 2. Configuration
