@@ -1,37 +1,21 @@
-# kcspoc – Short-term TODOs
+# kcspoc – Patch Release TODOs
 
-This file tracks short-term improvements for upcoming patch releases.
-Items here are expected to be promoted to GitHub Issues or removed once completed.
+This file tracks immediate, short-term improvements for the `v0.5.x` release line.
+Items listed here are actionable and intended for upcoming patch releases.
 
-## Installer / Release
-- [ ] Align all version references to v0.5.4
-- [ ] Improve install.sh staging cleanup
-- [ ] Validate install vs upgrade messaging
-- [ ] Ensure .install-state is always written atomically
+## 🚀 Installer & Release (User-Facing)
+- [ ] Implement atomic writing for `~/.kcspoc/bin/.install-state` to prevent file corruption during interrupted installs.
+- [ ] Audit and refine installer messaging to clearly distinguish between "Fresh Install" and "Upgrade" flows.
+- [ ] Ensure `install.sh` performs a rigorous cleanup of the `temp/` staging directory even if extraction or copy fails.
 
-## Developer Tooling
-- [ ] Finalize helper scripts under .scripts/
-- [ ] Add safety checks for working on release branches
-- [ ] Add script to prepare next patch release
+## ⚙️ Operator Experience (User-Facing)
+- [ ] Add `kubectl` context detection to `kcspoc config` with suggestions for fixing invalid configurations.
+- [ ] Refactor `kcspoc check` to inform the operator when the `kcspoc` management namespace is being created.
+- [ ] Change `kcspoc check` behavior to persist the `kcspoc` namespace after execution (defer deletion to `kcspoc destroy`).
+- [ ] Implement infrastructure dependency detection in `kcspoc prepare` to identify existing cluster components before prompting for installation.
+- [ ] Add clear "Namespace Deletion" status messages to the `kcspoc destroy` command.
 
-## kcspoc config
-- [ ] Add configuration to detect and fix kubectl context
-- [ ] Reorder config file to have the most important information first as well group related information together
-
-## kcspoc check
-- [ ] Add message to inform the operator that the kcspoc namespace will be created if it doesn't exist when running deep-check and connectivity-check
-- [ ] Do not remove kcspoc namespace when/after running deep-check and connectivity-check (only when running destroy)
-
-## kcspoc prepare
-- [ ] Remove kcs namespace creation from the prepare as it is being done in the deploy command
-- [ ] For each step in prepare, first detect if the dependecies exists on the cluster and if exist check it as present if it doesn't exist ask the operator if he wants to install it and show the exact command that kcspoc will run to install it
-
-## kcspoc deploy
-- [ ] Add message to inform the operator that the kcspoc namespace will be created if it doesn't exist
-
-## kcspoc destroy
-- [ ] Add message to inform the operator that the kcspoc namespace is being deleted
-
-## Documentation
-- [ ] Update README with new install flow description
-- [ ] Clarify stable vs development branches
+## 🛠️ Maintainer & Internal (Internal)
+- [ ] Reorganize the `~/.kcspoc/config` file structure to group related variables and prioritize critical configuration at the top.
+- [ ] Remove redundant namespace creation logic from `kcspoc prepare` and centralize it within the `deploy` command.
+- [ ] Enhance `.scripts/` helper tools with automated CHANGELOG comparison link verification (nice-to-have).

@@ -161,7 +161,13 @@ if [ -f "$INSTALL_STATE_FILE" ]; then
     INSTALL_TYPE="upgrade"
 fi
 
-echo -e "   ${ICON_GEAR} Deploying runtime files (${INSTALL_TYPE})..."
+if [ "$INSTALL_TYPE" = "upgrade" ]; then
+    echo -e "   ${ICON_OK} Project Status: ${BOLD}Existing Installation Detected (Upgrade)${NC}"
+    echo -e "   ${ICON_GEAR} Updating runtime binaries..."
+else
+    echo -e "   ${ICON_INFO} Project Status: ${BOLD}Fresh Installation${NC}"
+    echo -e "   ${ICON_GEAR} Initializing runtime environment..."
+fi
 if [ -d "temp" ]; then
     mkdir -p bin
     # Whitelist-based installation
