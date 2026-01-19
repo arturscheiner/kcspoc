@@ -8,7 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Version v0.5.0 predates the formal changelog and GitHub Releases process. This document has been created retroactively to capture the early development history.
 
-## [0.5.2] - YYYY-MM-DD
+## [0.5.3] - 2026-01-19
+### Added
+- **Maintainer Tools**: Introduced `.scripts/` directory for internal development and release automation.
+- **Install State Tracking**: `install.sh` now tracks installation state in `~/.kcspoc/bin/.install-state` to distinguish between fresh installs and upgrades.
+
+### Changed
+- **Installer Hardening**: Transitioned to a whitelist-based installation process in `install.sh`, ensuring only runtime files are deployed to the user system.
+- **Workflow Hygiene**: Excluded development-only files (.agent, .github, .scripts, etc.) from standard installations.
+
+## [0.5.2] - 2026-01-19
 ### Fixed
 - Fixed inconsistent version references across documentation and CLI output.
 
@@ -85,6 +94,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Destroy Optimization**: Refactored removal logic for faster, non-blocking uninstallation.
 
 ---
+[0.5.3]: https://github.com/arturscheiner/kcspoc/compare/v0.5.2...v0.5.3
+[0.5.2]: https://github.com/arturscheiner/kcspoc/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/arturscheiner/kcspoc/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/arturscheiner/kcspoc/compare/v0.4.96...v0.5.0
 [0.4.96]: https://github.com/arturscheiner/kcspoc/compare/v0.4.95...v0.4.96

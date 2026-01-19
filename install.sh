@@ -105,11 +105,11 @@ REPO_URL="https://github.com/arturscheiner/kcspoc.git"
 ZIP_URL="https://github.com/arturscheiner/kcspoc/archive/refs/tags/${LATEST_TAG}.zip"
 
 # Clean up any existing attempts
-rm -rf kcspoc bin kcspoc.zip kcspoc-*
+rm -rf temp bin kcspoc.zip kcspoc-*
 
 if command -v git &>/dev/null; then
     echo -e "   ${ICON_GEAR} Cloning ${LATEST_TAG} via git..."
-    if git clone --depth 1 --branch "$LATEST_TAG" "$REPO_URL" kcspoc &>/dev/null; then
+    if git clone --depth 1 --branch "$LATEST_TAG" "$REPO_URL" temp &>/dev/null; then
         echo -e "   ${ICON_OK} Repository cloned successfully."
     else
         echo -e "   ${RED}${ICON_FAIL} Failed to clone tag ${LATEST_TAG}.${NC}"
@@ -131,11 +131,9 @@ else
 
     if [ -f "kcspoc.zip" ]; then
         unzip -q kcspoc.zip
-        # GitHub ZIPs for tags are named kcspoc-<tag_without_v> or kcspoc-<tag>
-        # We rename the extracted directory to 'kcspoc'
         EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "kcspoc-*" | head -n1)
         if [ -n "$EXTRACTED_DIR" ]; then
-            mv "$EXTRACTED_DIR" kcspoc
+            mv "$EXTRACTED_DIR" temp
             rm kcspoc.zip
             echo -e "   ${ICON_OK} Source downloaded and extracted."
         else
@@ -149,20 +147,47 @@ else
 fi
 
 # Detect Version
-DETECTED_VER=$(grep 'VERSION=' kcspoc/lib/common.sh | cut -d'"' -f2)
+DETECTED_VER=$(grep 'VERSION=' temp/lib/common.sh | cut -d'"' -f2)
 echo -e "   ${ICON_OK} Ready to install version: ${BOLD}v${DETECTED_VER}${NC}"
 echo ""
 
 # 3. Rename and Organize
 ui_section "Organizing deployment"
-echo -e "   ${ICON_GEAR} Setting up binary directory..."
-if [ -d "kcspoc" ]; then
+
+# Determine install type
+INSTALL_STATE_FILE="bin/.install-state"
+INSTALL_TYPE="install"
+if [ -f "$INSTALL_STATE_FILE" ]; then
+    INSTALL_TYPE="upgrade"
+fi
+
+echo -e "   ${ICON_GEAR} Deploying runtime files (${INSTALL_TYPE})..."
+if [ -d "temp" ]; then
+    mkdir -p bin
+    # Whitelist-based installation
+    WHITELIST=("kcspoc.sh" "lib" "locales" "templates")
+    for item in "${WHITELIST[@]}"; do
+        if [ -e "temp/$item" ]; then
+            cp -rf "temp/$item" bin/
+        fi
+    done
+
     # Ensure executable permissions
-    chmod +x kcspoc/kcspoc.sh &>/dev/null
-    mv kcspoc bin
-    echo -e "   ${ICON_OK} Directory ./kcspoc renamed to ./bin"
+    chmod +x bin/kcspoc.sh &>/dev/null
+    
+    # Save install state
+    {
+        echo "installed_version=\"$DETECTED_VER\""
+        echo "install_type=\"$INSTALL_TYPE\""
+        echo "install_date=\"$(date)\""
+    } > "$INSTALL_STATE_FILE"
+
+    # Cleanup temp
+    rm -rf temp
+
+    echo -e "   ${ICON_OK} Runtime files deployed to ./bin"
 else
-    echo -e "   ${RED}${ICON_FAIL} Directory kcspoc not found after clone.${NC}"
+    echo -e "   ${RED}${ICON_FAIL} Source directory not found.${NC}"
     exit 1
 fi
 echo ""
