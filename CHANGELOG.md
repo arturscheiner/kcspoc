@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Version v0.5.0 predates the formal changelog and GitHub Releases process. This document has been created retroactively to capture the early development history.
 
+## [0.5.4] - 2026-01-19
+### Added
+- **Governance**: Introduced `TODO.md` to track short-term technical debt and planned improvements.
+
+### Changed
+- **Release Hygiene**: Refined the GitHub Release workflow to automatically extract and format release notes from the CHANGELOG.
+- **Maintainer Tooling**: Finalized and hardened development helper scripts under `.scripts/` with explicit branch and consistency checks.
+
 ## [0.5.3] - 2026-01-19
 ### Added
 - **Maintainer Tools**: Introduced `.scripts/` directory for internal development and release automation.
@@ -94,6 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Destroy Optimization**: Refactored removal logic for faster, non-blocking uninstallation.
 
 ---
+[0.5.4]: https://github.com/arturscheiner/kcspoc/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/arturscheiner/kcspoc/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/arturscheiner/kcspoc/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/arturscheiner/kcspoc/compare/v0.5.0...v0.5.1

@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   release:
@@ -16,8 +16,19 @@ jobs:
       - name: Extract release notes from CHANGELOG
         id: changelog
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          awk "/## \\[$VERSION\\]/,/^## \\[/" CHANGELOG.md | sed '$d' > RELEASE_NOTES.md
+          awk '
+            BEGIN { section=0 }
+            /^## \[/ {
+              section++
+              if (section > 1) exit
+            }
+            section == 1 { print }
+          ' CHANGELOG.md > RELEASE_NOTES.md
+
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "❌ Failed to extract latest release notes from CHANGELOG.md"
+            exit 1
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

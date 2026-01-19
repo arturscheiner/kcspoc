@@ -5,7 +5,7 @@
 # Description: CLI tool for Kaspersky Container Security PoC management.
 #              Provides interactive configuration, environment checking, and preparation.
 # Environment: Linux (Ubuntu/Debian preferred), K8s
-# Version: 0.5.3 (Stable Milestone)
+# Version: 0.5.4 (Stable Milestone)
 # ==============================================================================
 
 set -e
