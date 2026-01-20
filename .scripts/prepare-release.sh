@@ -32,13 +32,14 @@ if [[ -n "$TARGET_VER" ]]; then
 
     # B. Update CHANGELOG.md Header
     if ! grep -q "## \[$CLEAN_VER\]" CHANGELOG.md; then
-        # Insert after the retro note or after the first line if no note
-        if grep -q "v0.5.0 predates the formal changelog" CHANGELOG.md; then
-            LINE_NUM=$(grep -n "v0.5.0 predates the formal changelog" CHANGELOG.md | cut -d: -f1)
-            LINE_NUM=$((LINE_NUM + 2))
-            sed -i "${LINE_NUM}a \n## [$CLEAN_VER] - $DATE\n### Added\n- [TBD]\n" CHANGELOG.md
+        # Find the line of the first version header
+        FIRST_HEADER_LINE=$(grep -n "^## \[" CHANGELOG.md | head -n1 | cut -d: -f1)
+        if [[ -n "$FIRST_HEADER_LINE" ]]; then
+            # Insert before the first header with a newline
+            sed -i "${FIRST_HEADER_LINE}i ## [$CLEAN_VER] - $DATE\n### Added\n- [TBD]\n" CHANGELOG.md
         else
-            sed -i "9a \n## [$CLEAN_VER] - $DATE\n### Added\n- [TBD]\n" CHANGELOG.md
+            # Fallback for empty changelog or missing headers
+            echo -e "\n## [$CLEAN_VER] - $DATE\n### Added\n- [TBD]\n" >> CHANGELOG.md
         fi
         echo "✅ Created CHANGELOG.md section for v$CLEAN_VER"
     fi
