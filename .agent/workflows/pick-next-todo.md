@@ -1,43 +1,59 @@
 ---
-description: Pick Next TODO
+description: Pick Next TODO (Development Mode)
 ---
 
-Purpose:
-Help decide which TODO item to work on next, based on impact, complexity, and roadmap alignment.
+## Purpose
+Select the next **high-value development task** to work on while operating in the `main` branch.
 
-This workflow is advisory only.
-It MUST NOT modify any file or start implementation.
+This workflow favors **features, refactors, and roadmap-driven improvements**, while excluding patch-only work.
 
-Steps:
-1. Read TODO.md.
-2. Identify the current branch context:
-   - release/* → stabilization & bugfix
-   - main → development & roadmap evolution
-3. Classify TODO items by:
-   - Scope (installer, operator UX, tooling, config, deploy, docs)
-   - Risk (low / medium / high)
-   - Complexity (low / medium / high)
-   - Alignment (current roadmap vs future)
-4. Exclude TODOs that do not align with the current branch.
-5. Propose:
-   - 1 primary TODO to work on today
-   - 1 backup TODO (in case the first is blocked)
+---
 
-Output format:
-## Context
-- Current branch:
-- Active roadmap phase:
+## Step 1 — Detect Current Branch
 
-## Recommended TODO (Primary)
-- TODO item:
-- Why this one now:
-- Expected complexity:
-- Risk level:
+Confirm the active branch:
+```bash
+git branch --show-current
 
-## Alternative TODO (Backup)
-- TODO item:
-- Why it’s a good fallback:
+If the branch is NOT main, STOP and explain that this workflow is intended for development work only.
 
-## Notes
-- Dependencies or prerequisites
-- Warnings or suggestions before starting
+## Step 2 — Load Sources of Truth
+Use the following inputs:
+- TODO.md
+- .roadmap/0.6.0-dev.md
+- .roadmap/future-capabilities.md
+Ignore:
+- .roadmap/0.5.x-stabilization.md
+
+## Step 3 — Filter Eligible TODOs
+Prefer TODO items that involve:
+- feature development
+- refactoring
+- architectural improvements
+- long-term maintainability
+
+Deprioritize or ignore:
+- small bugfixes
+- installer-only tweaks
+- patch-level work
+
+## Step 4 — Prioritization Logic
+Rank candidates using this order:
+1. Roadmap-aligned development tasks
+2. Tasks that unblock multiple future items
+3. Refactors with clear ROI
+4. Developer-experience improvements
+
+## Step 5 — Propose the Next Task
+Present:
+- The selected TODO item
+- Why it fits the main branch
+- Which roadmap goal it supports
+- Expected scope and risks
+
+Ask for confirmation before starting.
+
+## Guardrails
+- Never suggest patch-only work.
+- Never downgrade stabilization tasks into dev scope.
+- If all TODOs are patch-level, recommend switching to release/0.5.
