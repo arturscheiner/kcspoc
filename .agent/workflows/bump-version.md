@@ -1,14 +1,60 @@
 ---
-description: Update kcspoc version consistently across the repository.
+description: Bump Version (Development Mode)
 ---
 
-Steps:
-1. Ask for the target version (e.g., v0.5.1, v0.6.0-dev).
-2. Locate all existing version references.
-3. Update all references consistently.
-4. Verify CHANGELOG.md contains an entry for the target version.
-5. Report all updated files.
+## Purpose
+Guide **minor or major version bumps** while operating on the `main` branch.
 
-Constraints:
-- Do not modify functional code unless version references require it.
-- Do not create Git tags or releases.
+This workflow ensures version changes reflect **intentional development milestones**, not incidental changes.
+
+---
+
+## Step 1 — Detect Current Branch
+
+Confirm the active branch:
+```bash
+git branch --show-current
+
+If the branch is NOT main, STOP and instruct the operator to switch to main.
+
+## Step 2 — Validate Allowed Version Change
+
+Allowed version changes here:
+- minor (e.g. 0.5 → 0.6)
+- major (future)
+
+Patch-only bumps (e.g. 0.5.7 → 0.5.8) should be done on release/0.5.
+
+## Step 3 — Intent Validation
+
+Before bumping:
+- Confirm this version bump corresponds to:
+  - new features
+  - architectural changes
+  - breaking behavior
+
+- Ensure roadmap alignment:
+  - .roadmap/0.6.0-dev.md
+
+If not aligned, STOP and propose a roadmap update.
+
+## Step 4 — Version Alignment
+Guide updates to:
+- lib/common.sh
+- CHANGELOG.md
+- documentation where needed
+
+Present a clear list of expected changes.
+
+## Step 5 — Release Strategy
+Explain next steps:
+- merging into release branches (when applicable)
+- tagging strategy
+- compatibility expectations
+
+Do NOT create tags automatically.
+
+## Guardrails
+- Never perform patch-only bumps on main.
+- Never bump versions without roadmap justification.
+- Never mix version bump with unrelated changes.
