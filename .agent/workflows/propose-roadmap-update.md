@@ -2,16 +2,14 @@
 description: Propose Roadmap Update
 ---
 
-Propose a structured update to the kcspoc roadmap, ensuring that changes are applied **only to the correct branch and roadmap file**.
+Propose structured updates to the kcspoc roadmap related to **development, refactoring, and future capabilities**, ensuring that changes are applied **only on the correct branch and roadmap file**.
 
-This workflow is **branch-aware** and enforces strict separation between:
-- stabilization / patch work (release/0.5)
-- development / future work (main)
+This workflow prevents stabilization or patch-related work from being incorrectly applied to development roadmaps.
 
 ---
 
 ## Step 1 — Understand the Requirement
-- Summarize the requirement in one sentence.
+- Summarize the requirement in **one concise sentence**.
 - Classify it into **exactly one** category:
   - bugfix
   - patch
@@ -45,8 +43,8 @@ If the current branch is NOT main:
 
 - STOP execution immediately.
 - Clearly explain:
-  -why the requirement belongs to release/0.5
-  -why continuing on the current branch would be incorrect or risky
+  -why the requirement belongs to main
+  -why continuing on the current branch would be incorrect
 - Propose the exact corrective command:
   git checkout main
 - Ask for explicit user confirmation before continuing.
