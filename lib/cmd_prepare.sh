@@ -95,8 +95,6 @@ cmd_prepare() {
         exit 1
     fi
 
-    fi
-    
     # POC Label Definitions
     POC_LABEL_KEY="kcspoc.io/managed-by"
     POC_LABEL_VAL="kcspoc"

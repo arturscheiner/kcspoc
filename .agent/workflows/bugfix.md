@@ -52,7 +52,8 @@ Ensure:
 - The bug is reproducible before the fix
 - The fix resolves the issue
 - No side effects are introduced
-
+- create a commit message and ask permission to run
+  - git commit -m 
 Document the fix intent briefly for CHANGELOG inclusion.
 
 ## Guardrails
