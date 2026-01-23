@@ -27,6 +27,11 @@ ARTIFACTS_DIR="$CONFIG_DIR/artifacts"
 LOGS_DIR="$CONFIG_DIR/logs"
 VERSION="0.5.11"
 
+# Project Labels
+POC_LABEL_KEY="kcspoc.io/managed-by"
+POC_LABEL_VAL="kcspoc"
+POC_LABEL="$POC_LABEL_KEY=$POC_LABEL_VAL"
+
 # Execution Globals
 EXEC_HASH=""
 EXEC_LOG_FILE=""

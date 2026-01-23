@@ -219,9 +219,11 @@ cmd_deploy() {
         
         # [STEP 1] Namespace Preparation
         ui_spinner_start "$(printf "$MSG_DEPLOY_NS_NOTICE" "$NAMESPACE")"
-        if kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"; then
+        if kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT" && \
+           kubectl label namespace "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT"; then
             # Attempt 2: Immediately after creation (to catch fresh namespace)
             _update_state "$NAMESPACE" "deploying" "$OPERATION_TYPE" "$EXEC_HASH" "$(get_config_hash)" "$target_ver"
+            check_k8s_label "namespace" "$NAMESPACE"
             ui_spinner_stop "PASS"
         else
             ui_spinner_stop "FAIL"

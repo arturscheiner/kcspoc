@@ -95,11 +95,6 @@ cmd_prepare() {
         exit 1
     fi
 
-    # POC Label Definitions
-    POC_LABEL_KEY="kcspoc.io/managed-by"
-    POC_LABEL_VAL="kcspoc"
-    POC_LABEL="$POC_LABEL_KEY=$POC_LABEL_VAL"
-
     echo -e "${YELLOW}${ICON_GEAR} $MSG_PREPARE_START${NC}"
     if [ "$UNATTENDED" = true ]; then
         echo -e "   ${DIM}$MSG_PREPARE_UNATTENDED_RUN${NC}"
@@ -116,20 +111,12 @@ cmd_prepare() {
     
     local PREPARE_ERROR=0
 
-    # 1. Namespace
+    # 1. Namespace Check Only
     if _check_dependency "Namespace" "$NAMESPACE"; then
         echo -e "   ${GREEN}${ICON_OK} ${MSG_PREPARE_STEP_1_A}: ${DIM}${MSG_CHECK_INFRA_INSTALLED}${NC}"
-    elif confirm_step "Namespace" "$MSG_PREPARE_STEP_1_A" "Setup of $NAMESPACE." "$UNATTENDED" "Create Namespace $NAMESPACE? [y/N] "; then
-        ui_spinner_start "$MSG_PREPARE_STEP_1_A"
-        force_delete_ns "$NAMESPACE"
-        if kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT" && \
-           kubectl label namespace "$NAMESPACE" $POC_LABEL --overwrite &>> "$DEBUG_OUT"; then
-            ui_spinner_stop "PASS"
-            check_k8s_label "namespace" "$NAMESPACE"
-        else
-            ui_spinner_stop "FAIL"
-            PREPARE_ERROR=1
-        fi
+    else
+        echo -e "   ${YELLOW}${ICON_INFO} ${MSG_PREPARE_STEP_1_A}: ${DIM}${MSG_CHECK_INFRA_MISSING}${NC}"
+        echo -e "      ${DIM}Namespace $NAMESPACE will be automatically created during 'kcspoc deploy'${NC}"
     fi
 
     # 1.1 Registry Auth
