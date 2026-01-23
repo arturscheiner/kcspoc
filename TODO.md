@@ -10,10 +10,11 @@ Items listed here are actionable and intended for upcoming patch releases.
 
 ## ⚙️ Operator Experience (User-Facing)
 - [x] Add `kubectl` context detection to `kcspoc config` with suggestions for fixing invalid configurations.
-- [ ] Refactor `kcspoc check` to inform the operator when the `kcspoc` management namespace is being created.
-- [ ] Change `kcspoc check` behavior to persist the `kcspoc` namespace after execution (defer deletion to `kcspoc destroy`).
+- [x] Refactor `kcspoc check` to inform the operator when the `kcspoc` management namespace is being created.
+- [x] Change `kcspoc check` behavior to persist the `kcspoc` namespace after execution (defer deletion to `kcspoc destroy`).
 - [x] Implement infrastructure dependency detection in `kcspoc prepare` to identify existing cluster components before prompting for installation.
-- [ ] Add clear "Namespace Deletion" status messages to the `kcspoc destroy` command.
+- [x] Add clear "Namespace Deletion" status messages to the `kcspoc destroy` command.
+- [x] Add message to inform the operator that the kcspoc namespace will be created if it doesn't exist (in `deploy`).
 
 ## 🛠️ Maintainer & Internal (Internal)
 - [x] Reorganize the `~/.kcspoc/config` file structure to group related variables and prioritize critical configuration at the top.

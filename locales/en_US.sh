@@ -129,8 +129,9 @@ MSG_CHECK_DEEP_SKIP="(Deep Check Disabled: Basic info only)"
 MSG_CHECK_REPO_CONN="Checking Repo Connectivity"
 MSG_CHECK_GLOBAL_TOTALS="Global Cluster Totals"
 MSG_CHECK_ALL_PASS="All checks passed."
-MSG_CHECK_ALL_PASS="All checks passed."
 MSG_CHECK_FINAL_FAIL="Checks failed. Please address the issues above."
+MSG_CHECK_NS_CREATING="Creating management namespace: %s"
+MSG_CHECK_NS_PERSISTED="Management namespace %s is now persistent for future operations."
 
 MSG_CHECK_CLOUD_TITLE="Cloud Provider & Topology"
 MSG_CHECK_CLOUD_PROVIDER="Provider"
@@ -246,6 +247,7 @@ MSG_DESTROY_REMOVED="Removed"
 MSG_DESTROY_NOT_FOUND="Not Found (Skipped)"
 MSG_DESTROY_SUCCESS="KCS has been completely removed from the cluster."
 MSG_DESTROY_HINT="Dependencies (MetalLB, Cert-Manager) were preserved."
+MSG_DESTROY_NS_NOTICE="Deleting namespace %s and all its resources. This may take a while..."
 
 # --- Deploy Command ---
 MSG_DEPLOY_TITLE="Deployment of Kaspersky Container Security"
@@ -276,6 +278,7 @@ MSG_DEPLOY_TEMPLATE_UPDATED="A newer version of the template is available online
 MSG_DEPLOY_TEMPLATE_PROMPT="Do you want to backup the current one and download the new version? [y/N]"
 MSG_DEPLOY_TEMPLATE_BACKUP="Backup created:"
 MSG_DEPLOY_TEMPLATE_DOWNLOAD_OK="Template updated successfully."
+MSG_DEPLOY_NS_NOTICE="Target namespace %s will be created or updated as needed."
 
 # --- Help System ---
 MSG_HELP_DESCRIPTION="Description"

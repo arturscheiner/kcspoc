@@ -116,8 +116,12 @@ cmd_check() {
     fi
  
     # Create dedicated namespace for kcspoc check operations (isolation)
-    force_delete_ns "$DEEP_NS"
-    kubectl create namespace "$DEEP_NS" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
+    ui_spinner_start "$(printf "$MSG_CHECK_NS_CREATING" "$DEEP_NS")"
+    if kubectl create namespace "$DEEP_NS" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"; then
+        ui_spinner_stop "PASS"
+    else
+        ui_spinner_stop "FAIL"
+    fi
 
     # --- [3] Cluster Topology ---
     ui_section "3. Cluster Topology"
@@ -556,11 +560,8 @@ EOF
 
     echo ""
     
-    # Final Cleanup of isolated namespace
-    echo -ne "   ${ICON_GEAR} Cleaning residue... "
-    kubectl delete namespace "$DEEP_NS" --wait=false &>> "$DEBUG_OUT"
-    wait_and_force_delete_ns "$DEEP_NS" 3
-    echo -e "${DIM}Done${NC}"
+    # Final Cleanup of isolated nodes data
+    echo -e "   ${ICON_OK} $(printf "$MSG_CHECK_NS_PERSISTED" "${BOLD}${DEEP_NS}${NC}")"
 
     if [ $ERROR -eq 0 ]; then
         echo -e "${GREEN}${BOLD}${ICON_OK} $MSG_CHECK_ALL_PASS${NC}"

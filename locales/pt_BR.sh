@@ -129,6 +129,8 @@ MSG_CHECK_REPO_CONN="Verificando Conectividade com Repositório"
 MSG_CHECK_GLOBAL_TOTALS="Totais Globais do Cluster"
 MSG_CHECK_ALL_PASS="Todas as verificações passaram."
 MSG_CHECK_FINAL_FAIL="Verificações falharam. Por favor corrija os problemas acima."
+MSG_CHECK_NS_CREATING="Criando namespace de gestão: %s"
+MSG_CHECK_NS_PERSISTED="Namespace de gestão %s agora é persistente para futuras operações."
 
 MSG_CHECK_CLOUD_TITLE="Provedor de Nuvem & Topologia"
 MSG_CHECK_CLOUD_PROVIDER="Provedor"
@@ -243,6 +245,7 @@ MSG_DESTROY_REMOVED="Removido"
 MSG_DESTROY_NOT_FOUND="Não Encontrado (Pulado)"
 MSG_DESTROY_SUCCESS="O KCS foi completamente removido do cluster."
 MSG_DESTROY_HINT="Dependências (MetalLB, Cert-Manager) foram preservadas."
+MSG_DESTROY_NS_NOTICE="Excluindo namespace %s e todos os seus recursos. Isso pode levar um tempo..."
 
 # --- Deploy Command ---
 MSG_DEPLOY_TITLE="Implantação do Kaspersky Container Security"
@@ -273,6 +276,7 @@ MSG_DEPLOY_TEMPLATE_UPDATED="Uma versão mais recente do template está disponí
 MSG_DEPLOY_TEMPLATE_PROMPT="Deseja fazer backup do atual e baixar a nova versão? [y/N]"
 MSG_DEPLOY_TEMPLATE_BACKUP="Backup criado:"
 MSG_DEPLOY_TEMPLATE_DOWNLOAD_OK="Template atualizado com sucesso."
+MSG_DEPLOY_NS_NOTICE="O namespace alvo %s será criado ou atualizado conforme necessário."
 
 # --- Help System ---
 MSG_HELP_DESCRIPTION="Descrição"

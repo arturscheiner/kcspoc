@@ -93,7 +93,7 @@ cmd_destroy() {
 
     # 3. Namespace & Certificates
     if kubectl get namespace "$TARGET_NS" &>> "$DEBUG_OUT"; then
-        ui_spinner_start "[3/8] $MSG_DESTROY_STEP_2"
+        ui_spinner_start "$(printf "$MSG_DESTROY_NS_NOTICE" "$TARGET_NS")"
         # Pre-delete certificates to avoid stuck finalizers
         kubectl delete certificate --all -n "$TARGET_NS" --timeout=30s &>> "$DEBUG_OUT" || true
         kubectl delete namespace "$TARGET_NS" --timeout=120s &>> "$DEBUG_OUT"
