@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Version v0.5.0 predates the formal changelog and GitHub Releases process. This document has been created retroactively to capture the early development history.
 
+## [0.5.12] - 2026-01-23
+### Changed
+- Centralized Kubernetes namespace creation logic in `deploy` to ensure consistent labeling.
+- Simplified `prepare` command by removing redundant provisioning logic.
+
 ## [0.5.11] - 2026-01-23
 ### Added
 - Management namespace persistence in `kcspoc check`.
@@ -140,6 +145,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Destroy Optimization**: Refactored removal logic for faster, non-blocking uninstallation.
 
 ---
+[0.5.12]: https://github.com/arturscheiner/kcspoc/compare/v0.5.11...v0.5.12
 [0.5.11]: https://github.com/arturscheiner/kcspoc/compare/v0.5.10...v0.5.11
 [0.5.10]: https://github.com/arturscheiner/kcspoc/compare/v0.5.9...v0.5.10
 [0.5.9]: https://github.com/arturscheiner/kcspoc/compare/v0.5.8...v0.5.9
