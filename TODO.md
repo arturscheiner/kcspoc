@@ -16,6 +16,6 @@ Items listed here are actionable and intended for upcoming patch releases.
 - [ ] Add clear "Namespace Deletion" status messages to the `kcspoc destroy` command.
 
 ## 🛠️ Maintainer & Internal (Internal)
-- [ ] Reorganize the `~/.kcspoc/config` file structure to group related variables and prioritize critical configuration at the top.
+- [x] Reorganize the `~/.kcspoc/config` file structure to group related variables and prioritize critical configuration at the top.
 - [ ] Remove redundant namespace creation logic from `kcspoc prepare` and centralize it within the `deploy` command.
 - [ ] Enhance `.scripts/` helper tools with automated CHANGELOG comparison link verification (nice-to-have).
