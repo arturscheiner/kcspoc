@@ -32,6 +32,41 @@ confirm_step() {
     fi
 }
 
+_check_dependency() {
+    local component="$1"
+    local ns="$2"
+    local found=1
+
+    case "$component" in
+        "Namespace")
+            kubectl get ns "$ns" &>/dev/null && found=0
+            ;;
+        "Registry Auth")
+            kubectl get secret kcs-registry-secret -n "$ns" &>/dev/null && found=0
+            ;;
+        "Cert-Manager")
+            kubectl get deployment -n cert-manager cert-manager &>/dev/null && found=0
+            ;;
+        "Local Path Storage")
+            kubectl get sc local-path &>/dev/null && found=0
+            ;;
+        "Metrics Server")
+            kubectl get deployment -n kube-system metrics-server &>/dev/null && found=0
+            ;;
+        "MetalLB")
+            kubectl get ns metallb-system &>/dev/null && found=0
+            ;;
+        "Ingress-Nginx")
+            kubectl get ns ingress-nginx &>/dev/null && found=0
+            ;;
+        "Kernel Headers")
+            dpkg -l linux-headers-$(uname -r) &>/dev/null && found=0
+            ;;
+    esac
+
+    return $found
+}
+
 cmd_prepare() {
     # --- Argument Parsing ---
     local UNATTENDED=false
@@ -60,6 +95,13 @@ cmd_prepare() {
         exit 1
     fi
 
+    fi
+    
+    # POC Label Definitions
+    POC_LABEL_KEY="kcspoc.io/managed-by"
+    POC_LABEL_VAL="kcspoc"
+    POC_LABEL="$POC_LABEL_KEY=$POC_LABEL_VAL"
+
     echo -e "${YELLOW}${ICON_GEAR} $MSG_PREPARE_START${NC}"
     if [ "$UNATTENDED" = true ]; then
         echo -e "   ${DIM}$MSG_PREPARE_UNATTENDED_RUN${NC}"
@@ -77,7 +119,9 @@ cmd_prepare() {
     local PREPARE_ERROR=0
 
     # 1. Namespace
-    if confirm_step "Namespace" "$MSG_PREPARE_STEP_1_A" "Setup of $NAMESPACE." "$UNATTENDED" "Create Namespace $NAMESPACE? [y/N] "; then
+    if _check_dependency "Namespace" "$NAMESPACE"; then
+        echo -e "   ${GREEN}${ICON_OK} ${MSG_PREPARE_STEP_1_A}: ${DIM}${MSG_CHECK_INFRA_INSTALLED}${NC}"
+    elif confirm_step "Namespace" "$MSG_PREPARE_STEP_1_A" "Setup of $NAMESPACE." "$UNATTENDED" "Create Namespace $NAMESPACE? [y/N] "; then
         ui_spinner_start "$MSG_PREPARE_STEP_1_A"
         force_delete_ns "$NAMESPACE"
         if kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT" && \
@@ -91,7 +135,9 @@ cmd_prepare() {
     fi
 
     # 1.1 Registry Auth
-    if confirm_step "Registry Auth" "$MSG_PREPARE_STEP_1_B" "Setup of Docker Registry credentials." "$UNATTENDED"; then
+    if _check_dependency "Registry Auth" "$NAMESPACE"; then
+        echo -e "   ${GREEN}${ICON_OK} ${MSG_PREPARE_STEP_1_B}: ${DIM}${MSG_CHECK_INFRA_INSTALLED}${NC}"
+    elif confirm_step "Registry Auth" "$MSG_PREPARE_STEP_1_B" "Setup of Docker Registry credentials." "$UNATTENDED"; then
         ui_spinner_start "$MSG_PREPARE_STEP_1_B"
         if kubectl create secret docker-registry kcs-registry-secret \
           --docker-server="$REGISTRY_SERVER" \
@@ -109,7 +155,9 @@ cmd_prepare() {
     fi
 
     # 2. Cert-Manager
-    if confirm_step "Cert-Manager" "$MSG_PREPARE_WHY_CERT_TITLE" "$MSG_PREPARE_WHY_CERT_DESC" "$UNATTENDED"; then
+    if _check_dependency "Cert-Manager"; then
+        echo -e "   ${GREEN}${ICON_OK} Cert-Manager: ${DIM}${MSG_CHECK_INFRA_INSTALLED}${NC}"
+    elif confirm_step "Cert-Manager" "$MSG_PREPARE_WHY_CERT_TITLE" "$MSG_PREPARE_WHY_CERT_DESC" "$UNATTENDED"; then
         ui_spinner_start "$MSG_PREPARE_INSTALL_CERT"
         force_delete_ns "cert-manager"
         local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
@@ -137,7 +185,9 @@ cmd_prepare() {
     fi
 
     # 3. Local Path Storage
-    if confirm_step "Local Path Storage" "$MSG_PREPARE_WHY_STORAGE_TITLE" "$MSG_PREPARE_WHY_STORAGE_DESC" "$UNATTENDED"; then
+    if _check_dependency "Local Path Storage"; then
+        echo -e "   ${GREEN}${ICON_OK} Local Path Storage: ${DIM}${MSG_CHECK_INFRA_INSTALLED}${NC}"
+    elif confirm_step "Local Path Storage" "$MSG_PREPARE_WHY_STORAGE_TITLE" "$MSG_PREPARE_WHY_STORAGE_DESC" "$UNATTENDED"; then
         download_artifact "local-path-provisioner" "https://github.com/rancher/local-path-provisioner.git"
         
         ui_spinner_start "$MSG_PREPARE_INSTALL_LOCAL"
@@ -159,7 +209,9 @@ cmd_prepare() {
     fi
 
     # 4. Metrics Server
-    if confirm_step "Metrics Server" "$MSG_PREPARE_WHY_METRICS_TITLE" "$MSG_PREPARE_WHY_METRICS_DESC" "$UNATTENDED"; then
+    if _check_dependency "Metrics Server"; then
+        echo -e "   ${GREEN}${ICON_OK} Metrics Server: ${DIM}${MSG_CHECK_INFRA_INSTALLED}${NC}"
+    elif confirm_step "Metrics Server" "$MSG_PREPARE_WHY_METRICS_TITLE" "$MSG_PREPARE_WHY_METRICS_DESC" "$UNATTENDED"; then
         local MANIFEST_URL="https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml"
         download_artifact "metrics-server" "$MANIFEST_URL"
         
@@ -179,7 +231,9 @@ cmd_prepare() {
     fi
 
     # 5. MetalLB
-    if confirm_step "MetalLB" "$MSG_PREPARE_WHY_METALLB_TITLE" "$MSG_PREPARE_WHY_METALLB_DESC" "$UNATTENDED"; then
+    if _check_dependency "MetalLB"; then
+        echo -e "   ${GREEN}${ICON_OK} MetalLB: ${DIM}${MSG_CHECK_INFRA_INSTALLED}${NC}"
+    elif confirm_step "MetalLB" "$MSG_PREPARE_WHY_METALLB_TITLE" "$MSG_PREPARE_WHY_METALLB_DESC" "$UNATTENDED"; then
         ui_spinner_start "$MSG_PREPARE_STEP_3"
         force_delete_ns "metallb-system"
         local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
@@ -229,7 +283,9 @@ EOF
     fi
 
     # 6. Ingress-Nginx
-    if confirm_step "Ingress-Nginx" "$MSG_PREPARE_WHY_INGRESS_TITLE" "$MSG_PREPARE_WHY_INGRESS_DESC" "$UNATTENDED"; then
+    if _check_dependency "Ingress-Nginx"; then
+        echo -e "   ${GREEN}${ICON_OK} Ingress-Nginx: ${DIM}${MSG_CHECK_INFRA_INSTALLED}${NC}"
+    elif confirm_step "Ingress-Nginx" "$MSG_PREPARE_WHY_INGRESS_TITLE" "$MSG_PREPARE_WHY_INGRESS_DESC" "$UNATTENDED"; then
         ui_spinner_start "$MSG_PREPARE_STEP_4"
         force_delete_ns "ingress-nginx"
         local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
@@ -254,7 +310,9 @@ EOF
     fi
 
     # 7. Kernel Headers
-    if confirm_step "Kernel Headers" "$MSG_PREPARE_WHY_HEADERS_TITLE" "$MSG_PREPARE_WHY_HEADERS_DESC" "$UNATTENDED"; then
+    if _check_dependency "Kernel Headers"; then
+        echo -e "   ${GREEN}${ICON_OK} Kernel Headers: ${DIM}${MSG_CHECK_INFRA_INSTALLED}${NC}"
+    elif confirm_step "Kernel Headers" "$MSG_PREPARE_WHY_HEADERS_TITLE" "$MSG_PREPARE_WHY_HEADERS_DESC" "$UNATTENDED"; then
         ui_spinner_start "$MSG_PREPARE_STEP_5"
         if command -v sudo &>> "$DEBUG_OUT"; then
             if sudo apt update &>> "$DEBUG_OUT" && sudo apt install linux-headers-$(uname -r) -y &>> "$DEBUG_OUT"; then
