@@ -14,55 +14,64 @@ _validate_k8s_context() {
     if ! command -v kubectl &>/dev/null; then
         echo -e "   ${RED}${ICON_FAIL} ${MSG_CONFIG_CTX_ERR_NO_CTX}${NC}"
         echo -e "   ${DIM}${MSG_CONFIG_CTX_ERR_NO_CTX_DESC}${NC}"
-        return 1
+        return 0 # Non-blocking if kubectl is missing, maybe they don't have it yet
     fi
 
-    # 2. Get current context
-    local context=$(kubectl config current-context 2>/dev/null)
-    if [ -z "$context" ]; then
-        echo -e "   ${RED}${ICON_FAIL} ${MSG_CONFIG_CTX_ERR_NO_CTX}${NC}"
+    # 2. List available contexts
+    local contexts=($(kubectl config get-contexts -o name 2>/dev/null))
+    local current_context=$(kubectl config current-context 2>/dev/null)
+
+    if [ ${#contexts[@]} -eq 0 ]; then
+        echo -e "   ${YELLOW}${ICON_WARN} ${MSG_CONFIG_CTX_ERR_NO_CTX}${NC}"
         echo -e "   ${DIM}${MSG_CONFIG_CTX_ERR_NO_CTX_DESC}${NC}"
-        echo -e "   ${YELLOW}${MSG_CONFIG_CTX_ERR_NO_CTX_FIX}${NC}"
-        return 1
+        return 0
     fi
 
-    echo -e "   ${ICON_INFO} ${MSG_CONFIG_CTX_DETECTED} ${BOLD}${CYAN}${context}${NC}"
-
-    # 3. Verify connectivity
-    ui_spinner_start "Verifying connectivity"
-    if kubectl cluster-info --request-timeout=5s &>> "$DEBUG_OUT"; then
-        ui_spinner_stop "PASS"
-        echo -e "      ${GREEN}${ICON_OK} ${MSG_CONFIG_CTX_CONN_OK}${NC}"
-    else
-        ui_spinner_stop "FAIL"
-        echo -e "      ${RED}${ICON_FAIL} $(printf "$MSG_CONFIG_CTX_ERR_CONN" "$context")${NC}"
-        echo -e "      ${DIM}${MSG_CONFIG_CTX_ERR_CONN_DESC}${NC}"
-        echo -e "      ${YELLOW}${MSG_CONFIG_CTX_ERR_CONN_FIX}${NC}"
-        return 1
-    fi
-
-    # 4. Check for risky context
-    local risk_keywords=("prod" "production" "live" "main")
-    local cloud_keywords=("eks" "gke" "aks")
-    local is_risky=false
-
-    for kw in "${risk_keywords[@]}" "${cloud_keywords[@]}"; do
-        if [[ "${context,,}" == *"$kw"* ]]; then
-            is_risky=true
-            break
+    echo -e "   ${ICON_INFO} ${MSG_CONFIG_CTX_DISC}"
+    echo ""
+    
+    local i=1
+    for ctx in "${contexts[@]}"; do
+        local marker=" "
+        if [ "$ctx" == "$current_context" ]; then
+            marker="${GREEN}*${NC}"
         fi
+        echo -e "      [$i] $marker $ctx"
+        ((i++))
     done
+    echo ""
 
-    if [ "$is_risky" = true ]; then
-        echo -e "\n   ${YELLOW}${ICON_WARN} ${MSG_CONFIG_CTX_RISK_WARN} ${NC}${BOLD}${RED}${context}${NC}"
-        echo -ne "   ${ICON_QUESTION} ${MSG_CONFIG_CTX_RISK_PROMPT} "
-        read -r confirm
-        if [[ ! "$confirm" =~ ^[yY]$ ]]; then
-            echo -e "   Total configuration aborted.${NC}"
-            return 1
+    echo -ne "   ${ICON_QUESTION} ${MSG_CONFIG_CTX_PROMPT} "
+    echo -ne "${CYAN}[${current_context}]${NC}: "
+    read -r choice
+
+    local selected_context="$current_context"
+    if [ -n "$choice" ]; then
+        # Check if choice is a number
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#contexts[@]} ]; then
+            selected_context="${contexts[$((choice-1))]}"
+        else
+            # Assume choice is a context name, verify if it's in the list
+            local found=false
+            for ctx in "${contexts[@]}"; do
+                if [ "$ctx" == "$choice" ]; then
+                    found=true
+                    selected_context="$ctx"
+                    break
+                fi
+            done
+            if [ "$found" = false ]; then
+                echo -e "   ${YELLOW}${ICON_WARN} ${MSG_CONFIG_CTX_INVALID_SEL} ${selected_context}${NC}"
+            fi
         fi
     fi
 
+    # Switch context if different
+    if [ "$selected_context" != "$current_context" ]; then
+        kubectl config use-context "$selected_context" &>/dev/null
+    fi
+
+    echo -e "   ${ICON_OK} ${MSG_CONFIG_CTX_HINT}"
     echo ""
     return 0
 }
@@ -107,10 +116,6 @@ cmd_config() {
     echo -e "$MSG_CONFIG_WIZARD_DESC"
     echo ""
 
-    if ! _validate_k8s_context; then
-        exit 1
-    fi
-
     mkdir -p "$CONFIG_DIR"
     
     # Load existing config to show as "Current"
@@ -144,106 +149,31 @@ cmd_config() {
         echo -e "${GREEN}${ICON_OK} $MSG_CONFIG_LOADED${NC}"
     fi
 
-    local TOTAL_STEPS=10
-
-    # 0. Language (Step 1 effectively)
-    ui_step 1 $TOTAL_STEPS "$MSG_STEP_LANG" "$MSG_STEP_LANG_DESC"
+    # --- [1] INTERACTION & IDENTITY ---
+    ui_section "1. Interaction & Identity"
     
-    # List available
-    # We find .sh files in locales/ and strip path/extension
+    # Language
     AVAIL_LOCALES=$(ls "$SCRIPT_DIR/locales/"*.sh 2>/dev/null | xargs -n 1 basename | sed 's/\.sh//')
-    # Format list
     AVAIL_STR=$(echo "$AVAIL_LOCALES" | tr '\n' ' ')
     echo -e "   ${DIM}${MSG_LANG_AVAILABLE}: [ $AVAIL_STR]${NC}"
-
-    # Determine default for prompt: Current Config > System/Detected (from load_locale scope)
-    # common.sh calculates LANG_CODE, but local scope might not see it if not exported.
-    # Re-detect roughly or rely on what load_locale did?
-    # load_locale set vars but didn't export LANG_CODE.
-    # Let's re-calculate simple default if CUR_LANG is empty.
-    
-    local DEF_LANG="en_US"
-    if [ -n "$CUR_LANG" ]; then
-        DEF_LANG="$CUR_LANG"
-    elif [ -n "$LC_ALL" ] || [ -n "$LANG" ]; then
-         # Try to match detected system lang to available list?
-         # Simplified: Defaults to en_US for the prompt if no config. 
-         # Or we can grep what load_locale found.
-         # Let's just default to 'en_US' if not configured, or if the user is seeing this in Portuguese, 
-         # it means load_locale worked.
-         # So we should default to the CURRENTLY LOADED language code.
-         # We can infer it by checking which file was loaded? No.
-         # Let's iterate available and check if MSG_USAGE is defined? No.
-         : # No-op
-    fi
-   
-    # If we are here, we are already speaking some language.
-    # Let's assume en_US as the visual default prompt if nothing is saved.
-    
     ui_input "$MSG_INPUT_LANG" "en_US" "$CUR_LANG"
     PREFERRED_LANG="$RET_VAL"
 
     # --- HOT-SWAP LOCALE ---
-    # If user selected a new language, load it immediately so next steps use it.
     NEW_LOCALE_FILE="$SCRIPT_DIR/locales/${PREFERRED_LANG}.sh"
-    if [ -f "$NEW_LOCALE_FILE" ]; then
-        source "$NEW_LOCALE_FILE"
-        # Optional: update visual confirmation if needed, but the next step title will be enough proof.
-    fi
-    # -----------------------
+    if [ -f "$NEW_LOCALE_FILE" ]; then source "$NEW_LOCALE_FILE"; fi
 
-    # 1. Namespace
-    ui_step 2 $TOTAL_STEPS "$MSG_STEP_NS" "$MSG_STEP_NS_DESC"
-    ui_input "$MSG_INPUT_NS" "kcs" "$CUR_NS"
-    NAMESPACE="$RET_VAL"
-
-    # 2. Domain
-    ui_step 3 $TOTAL_STEPS "$MSG_STEP_DOMAIN" "$MSG_STEP_DOMAIN_DESC"
-    ui_input "$MSG_INPUT_DOMAIN" "kcs.cluster.lab" "$CUR_DOMAIN"
-    DOMAIN="$RET_VAL"
-
-    # 3. Registry
-    ui_step 4 $TOTAL_STEPS "$MSG_STEP_REG" "$MSG_STEP_REG_DESC"
+    # --- [2] ENVIRONMENT & CLUSTER ---
+    ui_section "2. Environment & Cluster"
     
-    ui_input "$MSG_INPUT_REG_URL" "repo.kcs.kaspersky.com" "$CUR_REG_SRV"
-    REGISTRY_SERVER="$RET_VAL"
-    
-    ui_input "$MSG_INPUT_REG_USER" "" "$CUR_REG_USER"
-    REGISTRY_USER="$RET_VAL"
-    
-    ui_input "$MSG_INPUT_REG_PASS" "" "****" "yes"
-    # If user hit enter (empty) and we had a previous password (**** aka set), keep old param
-    if [ "$RET_VAL" == "****" ]; then
-         REGISTRY_PASS="$REGISTRY_PASS" # Keep existing global variable
-    else
-         REGISTRY_PASS="$RET_VAL"
-    fi
-    
-    ui_input "$MSG_INPUT_REG_EMAIL" "" "$CUR_REG_EMAIL"
-    REGISTRY_EMAIL="$RET_VAL"
+    # Context Selection
+    _validate_k8s_context
 
-    # 4. MetalLB
-    ui_step 5 $TOTAL_STEPS "$MSG_STEP_METALLB" "$MSG_STEP_METALLB_DESC"
-    ui_input "$MSG_INPUT_IP_RANGE" "" "$CUR_IP_RANGE"
-    IP_RANGE="$RET_VAL"
-
-    # 5. Deep Check
-    ui_step 6 $TOTAL_STEPS "$MSG_STEP_DEEP" "$MSG_STEP_DEEP_DESC"
-    ui_input "$MSG_INPUT_DEEP" "false" "$CUR_DEEP"
-    ENABLE_DEEP_CHECK="$RET_VAL"
-
-    # 6. Version
-    ui_step 7 $TOTAL_STEPS "$MSG_STEP_VERSION" "$MSG_STEP_VERSION_DESC"
-    ui_input "$MSG_INPUT_VERSION" "latest" "$CUR_VER"
-    KCS_VERSION="$RET_VAL"
-
-    # 7. Platform
-    ui_step 8 $TOTAL_STEPS "$MSG_STEP_PLATFORM" "$MSG_STEP_PLATFORM_DESC"
+    # Platform
     ui_input "$MSG_INPUT_PLATFORM" "kubernetes" "$CUR_PLAT"
     PLATFORM="$RET_VAL"
 
-    # 8. CRI Socket
-    ui_step 9 $TOTAL_STEPS "$MSG_STEP_CRI" "$MSG_STEP_CRI_DESC"
+    # CRI Socket
     local SUGGESTED_CRI="$CUR_CRI"
     if [ -z "$SUGGESTED_CRI" ]; then
         local RT_VER=$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.containerRuntimeVersion}' 2>/dev/null)
@@ -254,8 +184,50 @@ cmd_config() {
     ui_input "$MSG_INPUT_CRI_SOCKET" "$SUGGESTED_CRI" "$CUR_CRI"
     CRI_SOCKET="$RET_VAL"
 
-    # 9. Secrets
-    ui_step 10 $TOTAL_STEPS "$MSG_STEP_SECRETS" "$MSG_STEP_SECRETS_DESC"
+    # Namespace
+    ui_input "$MSG_INPUT_NS" "kcs" "$CUR_NS"
+    NAMESPACE="$RET_VAL"
+
+    # Domain
+    ui_input "$MSG_INPUT_DOMAIN" "kcs.cluster.lab" "$CUR_DOMAIN"
+    DOMAIN="$RET_VAL"
+
+    # --- [3] REGISTRY & ARTIFACTS ---
+    ui_section "3. Registry & Artifacts"
+    
+    ui_input "$MSG_INPUT_REG_URL" "repo.kcs.kaspersky.com" "$CUR_REG_SRV"
+    REGISTRY_SERVER="$RET_VAL"
+    
+    ui_input "$MSG_INPUT_REG_USER" "" "$CUR_REG_USER"
+    REGISTRY_USER="$RET_VAL"
+    
+    ui_input "$MSG_INPUT_REG_PASS" "" "****" "yes"
+    if [ "$RET_VAL" == "****" ]; then
+         REGISTRY_PASS="$REGISTRY_PASS"
+    else
+         REGISTRY_PASS="$RET_VAL"
+    fi
+    
+    ui_input "$MSG_INPUT_REG_EMAIL" "" "$CUR_REG_EMAIL"
+    REGISTRY_EMAIL="$RET_VAL"
+
+    # Version
+    ui_input "$MSG_INPUT_VERSION" "latest" "$CUR_VER"
+    KCS_VERSION="$RET_VAL"
+
+    # --- [4] INFRASTRUCTURE & TUNING ---
+    ui_section "4. Infrastructure & Tuning"
+
+    # MetalLB
+    ui_input "$MSG_INPUT_IP_RANGE" "" "$CUR_IP_RANGE"
+    IP_RANGE="$RET_VAL"
+
+    # Deep Check
+    ui_input "$MSG_INPUT_DEEP" "false" "$CUR_DEEP"
+    ENABLE_DEEP_CHECK="$RET_VAL"
+
+    # --- [5] SECURITY & PASSWORDS ---
+    ui_section "5. Security & Passwords"
     ui_input "$MSG_INPUT_SECRETS_AUTO" "y" "y"
     local AUTO_GEN="$RET_VAL"
 
