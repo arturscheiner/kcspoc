@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Version v0.5.0 predates the formal changelog and GitHub Releases process. This document has been created retroactively to capture the early development history.
 
+## [0.5.9] - 2026-01-23
+### Added
+- Infrastructure dependency detection in `kcspoc prepare` (Cert-Manager, MetalLB, etc.).
+
 ## [0.5.8] - 2026-01-23
 ### Added
 - Improved kubectl context validation during kcspoc config.
@@ -127,75 +131,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Destroy Optimization**: Refactored removal logic for faster, non-blocking uninstallation.
 
 ---
+[0.5.9]: https://github.com/arturscheiner/kcspoc/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
+[0.5.6]: https://github.com/arturscheiner/kcspoc/compare/v0.5.5...v0.5.6
+[0.5.5]: https://github.com/arturscheiner/kcspoc/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/arturscheiner/kcspoc/compare/v0.5.3...v0.5.4
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.5.3]: https://github.com/arturscheiner/kcspoc/compare/v0.5.2...v0.5.3
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.5.2]: https://github.com/arturscheiner/kcspoc/compare/v0.5.1...v0.5.2
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.5.1]: https://github.com/arturscheiner/kcspoc/compare/v0.5.0...v0.5.1
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.5.0]: https://github.com/arturscheiner/kcspoc/compare/v0.4.96...v0.5.0
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.4.96]: https://github.com/arturscheiner/kcspoc/compare/v0.4.95...v0.4.96
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.4.95]: https://github.com/arturscheiner/kcspoc/compare/v0.4.94...v0.4.95
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.4.94]: https://github.com/arturscheiner/kcspoc/compare/v0.4.93...v0.4.94
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.4.93]: https://github.com/arturscheiner/kcspoc/compare/v0.4.92...v0.4.93
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.4.92]: https://github.com/arturscheiner/kcspoc/compare/v0.4.91...v0.4.92
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.4.91]: https://github.com/arturscheiner/kcspoc/compare/v0.4.90...v0.4.91
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.4.90]: https://github.com/arturscheiner/kcspoc/compare/v0.4.89...v0.4.90
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.4.89]: https://github.com/arturscheiner/kcspoc/compare/v0.4.88...v0.4.89
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.4.88]: https://github.com/arturscheiner/kcspoc/compare/v0.4.87...v0.4.88
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.4.87]: https://github.com/arturscheiner/kcspoc/compare/v0.4.86...v0.4.87
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.4.86]: https://github.com/arturscheiner/kcspoc/compare/v0.4.85...v0.4.86
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.4.85]: https://github.com/arturscheiner/kcspoc/compare/v0.4.84...v0.4.85
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
-[0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
 [0.4.84]: https://github.com/arturscheiner/kcspoc/compare/v0.4.79...v0.4.84
