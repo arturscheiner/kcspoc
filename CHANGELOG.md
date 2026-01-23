@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Version v0.5.0 predates the formal changelog and GitHub Releases process. This document has been created retroactively to capture the early development history.
 
+## [0.5.10] - 2026-01-23
+### Fixed
+- Syntax error in `lib/cmd_prepare.sh` introduced in v0.5.9.
+
 ## [0.5.9] - 2026-01-23
 ### Added
 - Infrastructure dependency detection in `kcspoc prepare` (Cert-Manager, MetalLB, etc.).
@@ -131,9 +135,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Destroy Optimization**: Refactored removal logic for faster, non-blocking uninstallation.
 
 ---
+[0.5.10]: https://github.com/arturscheiner/kcspoc/compare/v0.5.9...v0.5.10
 [0.5.9]: https://github.com/arturscheiner/kcspoc/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/arturscheiner/kcspoc/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/arturscheiner/kcspoc/compare/v0.5.6...v0.5.7
 [0.5.6]: https://github.com/arturscheiner/kcspoc/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/arturscheiner/kcspoc/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/arturscheiner/kcspoc/compare/v0.5.3...v0.5.4
