@@ -7,6 +7,66 @@ _generate_random_secret() {
     LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$length"
 }
 
+_validate_k8s_context() {
+    ui_section "$MSG_CONFIG_CTX_TITLE"
+    
+    # 1. Check if kubectl exists
+    if ! command -v kubectl &>/dev/null; then
+        echo -e "   ${RED}${ICON_FAIL} ${MSG_CONFIG_CTX_ERR_NO_CTX}${NC}"
+        echo -e "   ${DIM}${MSG_CONFIG_CTX_ERR_NO_CTX_DESC}${NC}"
+        return 1
+    fi
+
+    # 2. Get current context
+    local context=$(kubectl config current-context 2>/dev/null)
+    if [ -z "$context" ]; then
+        echo -e "   ${RED}${ICON_FAIL} ${MSG_CONFIG_CTX_ERR_NO_CTX}${NC}"
+        echo -e "   ${DIM}${MSG_CONFIG_CTX_ERR_NO_CTX_DESC}${NC}"
+        echo -e "   ${YELLOW}${MSG_CONFIG_CTX_ERR_NO_CTX_FIX}${NC}"
+        return 1
+    fi
+
+    echo -e "   ${ICON_INFO} ${MSG_CONFIG_CTX_DETECTED} ${BOLD}${CYAN}${context}${NC}"
+
+    # 3. Verify connectivity
+    ui_spinner_start "Verifying connectivity"
+    if kubectl cluster-info --request-timeout=5s &>> "$DEBUG_OUT"; then
+        ui_spinner_stop "PASS"
+        echo -e "      ${GREEN}${ICON_OK} ${MSG_CONFIG_CTX_CONN_OK}${NC}"
+    else
+        ui_spinner_stop "FAIL"
+        echo -e "      ${RED}${ICON_FAIL} $(printf "$MSG_CONFIG_CTX_ERR_CONN" "$context")${NC}"
+        echo -e "      ${DIM}${MSG_CONFIG_CTX_ERR_CONN_DESC}${NC}"
+        echo -e "      ${YELLOW}${MSG_CONFIG_CTX_ERR_CONN_FIX}${NC}"
+        return 1
+    fi
+
+    # 4. Check for risky context
+    local risk_keywords=("prod" "production" "live" "main")
+    local cloud_keywords=("eks" "gke" "aks")
+    local is_risky=false
+
+    for kw in "${risk_keywords[@]}" "${cloud_keywords[@]}"; do
+        if [[ "${context,,}" == *"$kw"* ]]; then
+            is_risky=true
+            break
+        fi
+    done
+
+    if [ "$is_risky" = true ]; then
+        echo -e "\n   ${YELLOW}${ICON_WARN} ${MSG_CONFIG_CTX_RISK_WARN} ${NC}${BOLD}${RED}${context}${NC}"
+        echo -ne "   ${ICON_QUESTION} ${MSG_CONFIG_CTX_RISK_PROMPT} "
+        read -r confirm
+        if [[ ! "$confirm" =~ ^[yY]$ ]]; then
+            echo -e "   Total configuration aborted.${NC}"
+            return 1
+        fi
+    fi
+
+    echo ""
+    return 0
+}
+
 cmd_config() {
     # Args Parsing
     local SET_VER=""
@@ -46,6 +106,10 @@ cmd_config() {
     ui_section "$MSG_CONFIG_WIZARD_TITLE"
     echo -e "$MSG_CONFIG_WIZARD_DESC"
     echo ""
+
+    if ! _validate_k8s_context; then
+        exit 1
+    fi
 
     mkdir -p "$CONFIG_DIR"
     

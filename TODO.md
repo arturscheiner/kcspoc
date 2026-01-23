@@ -9,7 +9,7 @@ Items listed here are actionable and intended for upcoming patch releases.
 - [x] Ensure `install.sh` performs a rigorous cleanup of the `temp/` staging directory even if extraction or copy fails.
 
 ## ⚙️ Operator Experience (User-Facing)
-- [ ] Add `kubectl` context detection to `kcspoc config` with suggestions for fixing invalid configurations.
+- [x] Add `kubectl` context detection to `kcspoc config` with suggestions for fixing invalid configurations.
 - [ ] Refactor `kcspoc check` to inform the operator when the `kcspoc` management namespace is being created.
 - [ ] Change `kcspoc check` behavior to persist the `kcspoc` namespace after execution (defer deletion to `kcspoc destroy`).
 - [ ] Implement infrastructure dependency detection in `kcspoc prepare` to identify existing cluster components before prompting for installation.
