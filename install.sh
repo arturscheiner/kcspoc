@@ -168,7 +168,7 @@ fi
 
 # Detect Version
 if [ -f "temp/lib/model/version_model.sh" ]; then
-    DETECTED_VER=$(grep '^VERSION=' temp/lib/model/version_model.sh | cut -d'"' -f2)
+    DETECTED_VER=$(grep '^VERSION_BASE=' temp/lib/model/version_model.sh | cut -d'"' -f2)
 else
     DETECTED_VER=$(grep '^VERSION=' temp/lib/common.sh | cut -d'"' -f2)
 fi
