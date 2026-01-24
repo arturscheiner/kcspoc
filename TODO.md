@@ -1,3 +1,7 @@
+> ⚠️ This TODO applies to the v0.5.x stabilization cycle.
+> It is kept for historical reference only.
+> Active development is tracked in `.roadmap/`.
+
 # kcspoc – Short-term TODOs
 
 This file tracks short-term improvements for upcoming patch releases.
