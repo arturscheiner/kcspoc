@@ -63,13 +63,16 @@ EXTRACT_ROOT="$(find "$TMP_DIR" -maxdepth 1 -type d ! -path "$TMP_DIR" | head -n
 
 if [[ -n "$EXTRACT_ROOT" ]]; then
   echo "🏷️ Fetching version metadata"
-  # Try to get SHA for the reference (branch or tag)
   REF="main"
   [[ "$MODE" == "version" ]] && REF="$REQUESTED_TAG"
   [[ "$MODE" == "stable" ]] && REF="$LATEST_TAG"
   
-  COMMIT_SHA=$(curl -s "https://api.github.com/repos/${REPO}/commits/${REF}" | grep '"sha"' | head -n1 | cut -d'"' -f 4 | cut -c1-7 || echo "unknown")
-  echo "$COMMIT_SHA" > "$EXTRACT_ROOT/.version_sha"
+  # Fetch SHA from GitHub API
+  COMMIT_SHA=$(curl -s "https://api.github.com/repos/${REPO}/commits/${REF}" | grep '"sha"' | head -n1 | cut -d'"' -f 4 | cut -c1-7 || echo "")
+  
+  if [[ -n "$COMMIT_SHA" ]]; then
+    echo "$COMMIT_SHA" > "$EXTRACT_ROOT/.version_sha"
+  fi
 fi
 
 INSTALLER="$(find "$TMP_DIR" -maxdepth 2 -name install.sh | head -n1)"

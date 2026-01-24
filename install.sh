@@ -95,6 +95,16 @@ if [[ "$MODE" == "dev" ]]; then
     ui_section "Development Mode"
     echo -e "   ${YELLOW}${ICON_INFO} Using local source files from: ${SOURCE_DIR}${NC}"
     LATEST_TAG="dev"
+
+    # Extract SHA from source before any movement
+    ver_sha="unknown"
+    if [ -d "$SOURCE_DIR/.git" ]; then
+        ver_sha=$(cd "$SOURCE_DIR" && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+    elif [ -f "$SOURCE_DIR/.version_sha" ]; then
+        ver_sha=$(cat "$SOURCE_DIR/.version_sha")
+    fi
+    echo "$ver_sha" > "$SOURCE_DIR/.version_sha" # Persist it back to source if found
+
     mkdir -p temp
     # Copy inclusive of hidden files
     cp -rf "$SOURCE_DIR"/. temp/
@@ -191,15 +201,24 @@ fi
         mkdir -p bin
 
         # Extract SHA before cleaning up temp
-        ver_sha="unknown"
+        final_sha="unknown"
         # 1. Prefer existing .version_sha (provided by bootstrap or dev copy)
         if [ -f "temp/.version_sha" ]; then
-            ver_sha=$(cat "temp/.version_sha")
-        # 2. Fallback to Git extraction (if .git exists)
-        elif [ -d "temp/.git" ]; then
-            ver_sha=$(cd temp && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+            candidate=$(cat "temp/.version_sha")
+            # If candidate is valid (not empty and not 'unknown')
+            if [[ -z "$candidate" ]] || [[ "$candidate" == "unknown" ]]; then
+                final_sha="unknown"
+            else
+                final_sha="$candidate"
+            fi
         fi
-        echo "$ver_sha" > bin/.version_sha
+
+        # 2. Fallback to Git extraction (if final_sha is still unknown and .git exists)
+        if [[ "$final_sha" == "unknown" ]] && [ -d "temp/.git" ]; then
+            final_sha=$(cd temp && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        fi
+        
+        echo "$final_sha" > bin/.version_sha
 
         # Whitelist-based installation
         WHITELIST=("kcspoc.sh" "lib" "locales" "templates" ".version_sha")
