@@ -26,6 +26,9 @@ EXEC_STATUS="UNKNOWN"
 DEBUG_OUT="/dev/null"
 KCS_DEBUG=false
 
+# TODO: Remove legacy spinner PID from facade after full command migration
+_SPINNER_PID=0 
+
 # --- LOGGING & LIFECYCLE ---
 
 init_logging() {
@@ -41,7 +44,7 @@ _update_state() {
 }
 
 get_config_hash() {
-    model_config_get_hash "$APP_SECRET" "$POSTGRES_PASSWORD" "$MINIO_ROOT_PASSWORD" "$CLICKHOUSE_ADMIN_PASSWORD"
+    model_config_get_hash
 }
 
 setup_debug() {
@@ -81,8 +84,8 @@ ui_help() {
 
 # --- UI SPINNER (DELEGATED TO SERVICE) ---
 
-_SPINNER_PID=0 # Needed for legacy trap interaction
-
+# TODO: In v0.6.x, this trap must migrate to execution_service.sh 
+# and the facade should only call service_exec_register_traps.
 _ui_spinner_cleanup() {
     service_spinner_cleanup "$?" "$EXEC_LOG_FILE" "$EXEC_HASH"
 }
@@ -90,7 +93,6 @@ trap _ui_spinner_cleanup EXIT
 
 ui_spinner_start() {
     service_spinner_start "$1"
-    # Ensure legacy _SPINNER_PID is visible (variable is local to service_spinner_start but shared in shell)
 }
 
 ui_spinner_stop() {
@@ -100,15 +102,7 @@ ui_spinner_stop() {
 # --- K8S & CLUSTER OPERATIONS ---
 
 check_k8s_label() {
-    # Wrapped to maintain indented UI behavior
-    echo -ne "      ${ICON_GEAR} Checking Label ($POC_LABEL_KEY=$POC_LABEL_VAL)... "
-    if model_ns_check_label "$1" "$2" "$3" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
-        echo -e "[ ${GREEN}${ICON_OK}${NC} ]"
-        return 0
-    else
-        echo -e "[ ${RED}${ICON_FAIL}${NC} ]"
-        return 1
-    fi
+    service_ns_check_label_with_ui "$1" "$2" "$3"
 }
 
 force_delete_ns() {

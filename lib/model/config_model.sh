@@ -7,13 +7,9 @@
 # ==============================================================================
 
 model_config_get_hash() {
-    local app_secret="$1"
-    local pg_pass="$2"
-    local minio_pass="$3"
-    local ch_admin_pass="$4"
-
-    if [ -n "$app_secret" ]; then
-        echo -n "${app_secret}${pg_pass}${minio_pass}${ch_admin_pass}" | md5sum | awk '{print $1}'
+    # Decoupled from facade arguments; use global secrets directly
+    if [ -n "$APP_SECRET" ]; then
+        echo -n "${APP_SECRET}${POSTGRES_PASSWORD}${MINIO_ROOT_PASSWORD}${CLICKHOUSE_ADMIN_PASSWORD}" | md5sum | awk '{print $1}'
     else
         echo "none"
     fi
