@@ -43,18 +43,10 @@ source "$LIB_DIR/common.sh"
 # Register Lifecycle Traps (v0.6.0+)
 service_exec_register_traps
 
-# Source Commands
-source "$LIB_DIR/cmd_config.sh"
-source "$LIB_DIR/cmd_pull.sh"
-source "$LIB_DIR/cmd_check.sh"
-source "$LIB_DIR/cmd_prepare.sh"
-source "$LIB_DIR/cmd_deploy.sh"
-source "$LIB_DIR/cmd_destroy.sh"
-source "$LIB_DIR/cmd_logs.sh"
-source "$LIB_DIR/cmd_bootstrap.sh"
+# Source Commands (Decommissioned lib/cmd_*.sh wrappers, calling controllers directly)
 
 cmd_usage() {
-    ui_banner
+    view_ui_banner "$VERSION" "$EXEC_HASH"
     echo -e "${BLUE}${BOLD}${MSG_USAGE}:${NC}"
     echo -e "  kcspoc <command> [options]\n"
 
@@ -106,42 +98,42 @@ case "$1" in
     config)
         shift
         cmd_needs_logging "$@" && init_logging "config"
-        cmd_config "$@"
+        config_controller "$@"
         ;;
     pull)
         shift
         cmd_needs_logging "$@" && init_logging "pull"
-        cmd_pull "$@"
+        pull_controller "$@"
         ;;
     check)
         shift
         cmd_needs_logging "$@" && init_logging "check"
-        cmd_check "$@"
+        check_controller "$@"
         ;;
     prepare)
         shift
         cmd_needs_logging "$@" && init_logging "prepare"
-        cmd_prepare "$@"
+        prepare_controller "$@"
         ;;
     deploy)
         shift
         cmd_needs_logging "$@" && init_logging "deploy"
-        cmd_deploy "$@"
+        deploy_controller "$@"
         ;;
     destroy)
         shift
         cmd_needs_logging "$@" && init_logging "destroy"
-        cmd_destroy "$@"
+        destroy_controller "$@"
         ;;
     logs)
         shift
         # No logging for the logs command itself
-        cmd_logs "$@"
+        logs_controller "$@"
         ;;
     bootstrap)
         shift
         cmd_needs_logging "$@" && init_logging "bootstrap"
-        cmd_bootstrap "$@"
+        bootstrap_controller "$@"
         ;;
     help|*)
         cmd_usage
