@@ -58,6 +58,20 @@ curl -sSL "$ZIP_URL" -o "$TMP_DIR/kcspoc.zip"
 
 unzip -q "$TMP_DIR/kcspoc.zip" -d "$TMP_DIR"
 
+# Find extraction root (e.g., kcspoc-main or kcspoc-0.5.12)
+EXTRACT_ROOT="$(find "$TMP_DIR" -maxdepth 1 -type d ! -path "$TMP_DIR" | head -n1)"
+
+if [[ -n "$EXTRACT_ROOT" ]]; then
+  echo "🏷️ Fetching version metadata"
+  # Try to get SHA for the reference (branch or tag)
+  REF="main"
+  [[ "$MODE" == "version" ]] && REF="$REQUESTED_TAG"
+  [[ "$MODE" == "stable" ]] && REF="$LATEST_TAG"
+  
+  COMMIT_SHA=$(curl -s "https://api.github.com/repos/${REPO}/commits/${REF}" | grep '"sha"' | head -n1 | cut -d'"' -f 4 | cut -c1-7 || echo "unknown")
+  echo "$COMMIT_SHA" > "$EXTRACT_ROOT/.version_sha"
+fi
+
 INSTALLER="$(find "$TMP_DIR" -maxdepth 2 -name install.sh | head -n1)"
 
 if [[ -z "$INSTALLER" ]]; then

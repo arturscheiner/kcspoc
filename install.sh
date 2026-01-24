@@ -192,19 +192,22 @@ fi
 
         # Extract SHA before cleaning up temp
         ver_sha="unknown"
-        if [ -d "temp/.git" ]; then
-            ver_sha=$(cd temp && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-        elif [ -f "temp/.version_sha" ]; then
+        # 1. Prefer existing .version_sha (provided by bootstrap or dev copy)
+        if [ -f "temp/.version_sha" ]; then
             ver_sha=$(cat "temp/.version_sha")
+        # 2. Fallback to Git extraction (if .git exists)
+        elif [ -d "temp/.git" ]; then
+            ver_sha=$(cd temp && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
         fi
         echo "$ver_sha" > bin/.version_sha
 
         # Whitelist-based installation
         WHITELIST=("kcspoc.sh" "lib" "locales" "templates" ".version_sha")
         for item in "${WHITELIST[@]}"; do
-            if [ -e "temp/$item" ]; then
-                cp -rf "temp/$item" bin/
-            fi
+             # Use -P to handle hidden files/dots if needed, but temp is already populated
+             if [ -e "temp/$item" ]; then
+                 cp -rf "temp/$item" bin/
+             fi
         done
 
     # Ensure executable permissions
