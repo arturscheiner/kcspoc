@@ -7,7 +7,7 @@
 # ==============================================================================
 
 view_bootstrap_intro() {
-    ui_section "KCS API Integration Bootstrap"
+    view_ui_section "KCS API Integration Bootstrap"
 
     echo -e "   This command will guide you through the initial KCS API configuration."
     echo -e "   The API token is required for automated agent deployment and management.\n"
@@ -36,11 +36,11 @@ view_bootstrap_warn_short() {
 }
 
 view_bootstrap_saving_start() {
-    ui_spinner_start "Saving configuration to $CONFIG_FILE"
+    service_spinner_start "Saving configuration to $CONFIG_FILE"
 }
 
 view_bootstrap_saving_stop() {
-    ui_spinner_stop "PASS"
+    service_spinner_stop "PASS"
 }
 
 view_bootstrap_success() {

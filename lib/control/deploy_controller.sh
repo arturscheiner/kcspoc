@@ -36,11 +36,11 @@ deploy_controller() {
                 shift; shift
                 ;;
             --help|help)
-                ui_help "deploy" "$MSG_HELP_DEPLOY_DESC" "$MSG_HELP_DEPLOY_OPTS" "$MSG_HELP_DEPLOY_EX"
+                view_ui_help "deploy" "$MSG_HELP_DEPLOY_DESC" "$MSG_HELP_DEPLOY_OPTS" "$MSG_HELP_DEPLOY_EX" "$VERSION"
                 return 0
                 ;;
             *)
-                ui_help "deploy" "$MSG_HELP_DEPLOY_DESC" "$MSG_HELP_DEPLOY_OPTS" "$MSG_HELP_DEPLOY_EX"
+                view_ui_help "deploy" "$MSG_HELP_DEPLOY_DESC" "$MSG_HELP_DEPLOY_OPTS" "$MSG_HELP_DEPLOY_EX" "$VERSION"
                 return 1
                 ;;
         esac
@@ -48,12 +48,12 @@ deploy_controller() {
 
     # Default to help
     if [ -z "$install_core" ] && [ -z "$install_agents" ] && [ -z "$check_mode" ]; then
-        ui_help "deploy" "$MSG_HELP_DEPLOY_DESC" "$MSG_HELP_DEPLOY_OPTS" "$MSG_HELP_DEPLOY_EX"
+        view_ui_help "deploy" "$MSG_HELP_DEPLOY_DESC" "$MSG_HELP_DEPLOY_OPTS" "$MSG_HELP_DEPLOY_EX" "$VERSION"
         return 1
     fi
 
     # Load config
-    if ! load_config &>> "$DEBUG_OUT"; then
+    if ! model_fs_load_config &>> "$DEBUG_OUT"; then
         echo -e "${RED}${MSG_ERROR_CONFIG_NOT_FOUND}${NC}"
         return 1
     fi

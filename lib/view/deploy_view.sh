@@ -7,19 +7,19 @@
 # ==============================================================================
 
 view_deploy_banner() {
-    ui_banner
+    view_ui_banner "$VERSION" "$EXEC_HASH"
 }
 
 view_deploy_section() {
-    ui_section "$1"
+    view_ui_section "$1"
 }
 
 view_deploy_step_start() {
-    ui_spinner_start "$1"
+    service_spinner_start "$1"
 }
 
 view_deploy_step_stop() {
-    ui_spinner_stop "$1"
+    service_spinner_stop "$1"
 }
 
 view_deploy_info() {

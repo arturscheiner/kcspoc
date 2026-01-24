@@ -7,11 +7,11 @@
 # ==============================================================================
 
 config_view_banner() {
-    ui_banner
+    view_ui_banner "$VERSION" "$EXEC_HASH"
 }
 
 config_view_wizard_intro() {
-    ui_section "$MSG_CONFIG_WIZARD_TITLE"
+    view_ui_section "$MSG_CONFIG_WIZARD_TITLE"
     echo -e "$MSG_CONFIG_WIZARD_DESC"
     echo ""
 }
@@ -26,9 +26,9 @@ config_view_step_lang() {
     local def_lang="$3"
     local cur_lang="$4"
 
-    ui_step 1 "$total_steps" "$MSG_STEP_LANG" "$MSG_STEP_LANG_DESC"
+    view_ui_step 1 "$total_steps" "$MSG_STEP_LANG" "$MSG_STEP_LANG_DESC"
     echo -e "   ${DIM}${MSG_LANG_AVAILABLE}: [ $avail_str]${NC}"
-    ui_input "$MSG_INPUT_LANG" "$def_lang" "$cur_lang"
+    view_ui_input "$MSG_INPUT_LANG" "$def_lang" "$cur_lang"
 }
 
 config_view_step_generic() {
@@ -41,8 +41,8 @@ config_view_step_generic() {
     local current_val="$7"
     local is_secret="${8:-no}"
 
-    ui_step "$step_num" "$total_steps" "$title" "$desc"
-    ui_input "$input_label" "$default_val" "$current_val" "$is_secret"
+    view_ui_step "$step_num" "$total_steps" "$title" "$desc"
+    view_ui_input "$input_label" "$default_val" "$current_val" "$is_secret"
 }
 
 config_view_secrets_generated() {
@@ -56,7 +56,7 @@ config_view_config_saved() {
 }
 
 config_view_version_update_header() {
-    ui_section "$MSG_CONFIG_VER_UPDATED"
+    view_ui_section "$MSG_CONFIG_VER_UPDATED"
 }
 
 config_view_version_update_success() {

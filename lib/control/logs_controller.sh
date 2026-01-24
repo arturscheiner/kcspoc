@@ -32,18 +32,18 @@ logs_controller() {
                 shift 1
                 ;;
             --help|help)
-                ui_help "logs" "$MSG_HELP_LOGS_DESC" "$MSG_HELP_LOGS_OPTS" "$MSG_HELP_LOGS_EX"
+                view_ui_help "logs" "$MSG_HELP_LOGS_DESC" "$MSG_HELP_LOGS_OPTS" "$MSG_HELP_LOGS_EX" "$VERSION"
                 return 0
                 ;;
             *)
-                ui_help "logs" "$MSG_HELP_LOGS_DESC" "$MSG_HELP_LOGS_OPTS" "$MSG_HELP_LOGS_EX"
+                view_ui_help "logs" "$MSG_HELP_LOGS_DESC" "$MSG_HELP_LOGS_OPTS" "$MSG_HELP_LOGS_EX" "$VERSION"
                 return 1
                 ;;
         esac
     done
 
     if [ -z "$action" ]; then
-        ui_help "logs" "$MSG_HELP_LOGS_DESC" "$MSG_HELP_LOGS_OPTS" "$MSG_HELP_LOGS_EX"
+        view_ui_help "logs" "$MSG_HELP_LOGS_DESC" "$MSG_HELP_LOGS_OPTS" "$MSG_HELP_LOGS_EX" "$VERSION"
         return 1
     fi
 

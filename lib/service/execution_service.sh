@@ -74,3 +74,28 @@ service_exec_wait_and_force_delete_ns() {
     # If still there (likely Terminating), force it
     model_ns_force_delete "$ns"
 }
+
+# --- Lifecycle & Traps ---
+
+service_exec_cleanup() {
+    local exit_code="$1"
+    
+    # Ensure cursor is visible
+    tput cnorm 2>/dev/null || true
+    
+    # Cleanup spinner if running
+    service_spinner_cleanup "$exit_code" "$EXEC_LOG_FILE" "$EXEC_HASH"
+    
+    # Final state sync
+    if [ "$exit_code" -ne 0 ]; then
+        service_exec_save_status "FAIL"
+    else
+        service_exec_save_status "SUCCESS"
+    fi
+}
+
+service_exec_register_traps() {
+    # Centralized trap for script exit
+    trap 'service_exec_cleanup $?' EXIT
+    trap 'service_exec_cleanup 1' SIGINT SIGTERM
+}

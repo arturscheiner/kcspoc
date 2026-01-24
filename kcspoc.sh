@@ -34,8 +34,14 @@ for layer in model view service control; do
     fi
 done
 
+# Initialize Version State (v0.6.0+)
+VERSION=$(model_version_get)
+
 # Source Legacy Common Facade
 source "$LIB_DIR/common.sh"
+
+# Register Lifecycle Traps (v0.6.0+)
+service_exec_register_traps
 
 # Source Commands
 source "$LIB_DIR/cmd_config.sh"

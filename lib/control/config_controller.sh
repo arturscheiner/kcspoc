@@ -13,11 +13,11 @@ config_controller() {
         case $1 in
             --set-version) SET_VER="$2"; shift ;;
             --help|help)
-                ui_help "config" "$MSG_HELP_CONFIG_DESC" "$MSG_HELP_CONFIG_OPTS" "$MSG_HELP_CONFIG_EX"
+                view_ui_help "config" "$MSG_HELP_CONFIG_DESC" "$MSG_HELP_CONFIG_OPTS" "$MSG_HELP_CONFIG_EX" "$VERSION"
                 return 0
                 ;;
             *)
-                ui_help "config" "$MSG_HELP_CONFIG_DESC" "$MSG_HELP_CONFIG_OPTS" "$MSG_HELP_CONFIG_EX"
+                view_ui_help "config" "$MSG_HELP_CONFIG_DESC" "$MSG_HELP_CONFIG_OPTS" "$MSG_HELP_CONFIG_EX" "$VERSION"
                 return 1
                 ;;
         esac

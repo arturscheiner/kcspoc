@@ -7,11 +7,11 @@
 # ==============================================================================
 
 view_logs_banner() {
-    ui_banner
+    view_ui_banner "$VERSION" "$EXEC_HASH" "$VERSION" "$EXEC_HASH"
 }
 
 view_logs_section() {
-    ui_section "$1"
+    view_ui_section "$1"
 }
 
 view_logs_list_header() {
@@ -65,13 +65,13 @@ view_logs_hash_not_found() {
 }
 
 view_logs_cleanup_start() {
-    ui_spinner_start "Cleaning all log files"
+    service_spinner_start "Cleaning all log files"
 }
 
 view_logs_cleanup_stop() {
     local status="$1"
     local empty="${2:-false}"
-    ui_spinner_stop "$status"
+    service_spinner_stop "$status"
     if [ "$status" == "PASS" ]; then
         if [ "$empty" == "true" ]; then
             echo -e "      ${DIM}No logs found to clean.${NC}"

@@ -13,11 +13,11 @@ check_controller() {
         case $1 in
             -d|--deep) deep_override="true"; shift ;;
             --help|help)
-                ui_help "check" "$MSG_HELP_CHECK_DESC" "$MSG_HELP_CHECK_OPTS" "$MSG_HELP_CHECK_EX"
+                view_ui_help "check" "$MSG_HELP_CHECK_DESC" "$MSG_HELP_CHECK_OPTS" "$MSG_HELP_CHECK_EX" "$VERSION"
                 return 0
                 ;;
             *)
-                ui_help "check" "$MSG_HELP_CHECK_DESC" "$MSG_HELP_CHECK_OPTS" "$MSG_HELP_CHECK_EX"
+                view_ui_help "check" "$MSG_HELP_CHECK_DESC" "$MSG_HELP_CHECK_OPTS" "$MSG_HELP_CHECK_EX" "$VERSION"
                 return 1
                 ;;
         esac

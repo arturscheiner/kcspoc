@@ -16,11 +16,11 @@ destroy_controller() {
                 shift
                 ;;
             --help|help)
-                ui_help "destroy" "$MSG_HELP_DESTROY_DESC" "$MSG_HELP_DESTROY_OPTS" "$MSG_HELP_DESTROY_EX"
+                view_ui_help "destroy" "$MSG_HELP_DESTROY_DESC" "$MSG_HELP_DESTROY_OPTS" "$MSG_HELP_DESTROY_EX" "$VERSION"
                 return 0
                 ;;
             *)
-                ui_help "destroy" "$MSG_HELP_DESTROY_DESC" "$MSG_HELP_DESTROY_OPTS" "$MSG_HELP_DESTROY_EX"
+                view_ui_help "destroy" "$MSG_HELP_DESTROY_DESC" "$MSG_HELP_DESTROY_OPTS" "$MSG_HELP_DESTROY_EX" "$VERSION"
                 return 1
                 ;;
         esac
@@ -31,7 +31,7 @@ destroy_controller() {
     local target_ns="kcs"
     local cleanup_deps=false
     
-    if load_config; then
+    if model_fs_load_config; then
         target_ns="${NAMESPACE:-kcs}"
     fi
 

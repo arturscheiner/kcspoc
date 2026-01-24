@@ -15,11 +15,11 @@ pull_controller() {
             --version) force_version="$2"; shift ;;
             --list-local) list_local="true" ;;
             --help|help)
-                ui_help "pull" "$MSG_HELP_PULL_DESC" "$MSG_HELP_PULL_OPTS" "$MSG_HELP_PULL_EX"
+                view_ui_help "pull" "$MSG_HELP_PULL_DESC" "$MSG_HELP_PULL_OPTS" "$MSG_HELP_PULL_EX" "$VERSION"
                 return 0
                 ;;
             *)
-                ui_help "pull" "$MSG_HELP_PULL_DESC" "$MSG_HELP_PULL_OPTS" "$MSG_HELP_PULL_EX"
+                view_ui_help "pull" "$MSG_HELP_PULL_DESC" "$MSG_HELP_PULL_OPTS" "$MSG_HELP_PULL_EX" "$VERSION"
                 return 1
                 ;;
         esac
@@ -27,7 +27,7 @@ pull_controller() {
     done
 
     # Load Config
-    if ! load_config; then
+    if ! model_fs_load_config; then
         echo -e "${RED}${ICON_FAIL} ${MSG_ERROR_CONFIG_NOT_FOUND}${NC}"
         exit 1
     fi

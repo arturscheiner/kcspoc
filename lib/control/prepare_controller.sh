@@ -11,7 +11,7 @@ prepare_controller() {
     while [[ "$#" -gt 0 ]]; do
         case $1 in
             --help|help)
-                ui_help "prepare" "$MSG_HELP_PREPARE_DESC" "$MSG_HELP_PREPARE_OPTS" "$MSG_HELP_PREPARE_EX"
+                view_ui_help "prepare" "$MSG_HELP_PREPARE_DESC" "$MSG_HELP_PREPARE_OPTS" "$MSG_HELP_PREPARE_EX" "$VERSION"
                 return 0
                 ;;
             *)
@@ -26,7 +26,7 @@ prepare_controller() {
     view_prepare_banner
     
     # Load config (Service will check requirements)
-    if ! load_config &>> "$DEBUG_OUT"; then
+    if ! model_fs_load_config &>> "$DEBUG_OUT"; then
         echo -e "${RED}${ICON_FAIL} ${MSG_ERROR_CONFIG_NOT_FOUND}${NC}"
         return 1
     fi

@@ -7,11 +7,11 @@
 # ==============================================================================
 
 view_pull_banner() {
-    ui_banner
+    view_ui_banner "$VERSION" "$EXEC_HASH"
 }
 
 view_pull_section_title() {
-    ui_section "$MSG_PULL_TITLE"
+    view_ui_section "$MSG_PULL_TITLE"
 }
 
 view_pull_local_list_header() {
@@ -45,11 +45,11 @@ view_pull_local_list_item() {
 }
 
 view_pull_auth_start() {
-    ui_spinner_start "$MSG_PULL_AUTH"
+    service_spinner_start "$MSG_PULL_AUTH"
 }
 
 view_pull_auth_fallback_start() {
-    ui_spinner_start "${MSG_PULL_AUTH} (Fallback)"
+    service_spinner_start "${MSG_PULL_AUTH} (Fallback)"
 }
 
 view_pull_login_fail_hint() {
@@ -81,7 +81,7 @@ view_pull_cache_hit() {
 }
 
 view_pull_download_start() {
-    ui_spinner_start "$MSG_PULL_DOWNLOADING"
+    service_spinner_start "$MSG_PULL_DOWNLOADING"
 }
 
 view_pull_config_updated() {
@@ -104,7 +104,7 @@ view_pull_error_fail() {
 
 view_pull_template_fetch_start() {
     local ver="$1"
-    ui_spinner_start "Fetching Remote Template ($ver)"
+    service_spinner_start "Fetching Remote Template ($ver)"
 }
 
 view_pull_template_cached() {
