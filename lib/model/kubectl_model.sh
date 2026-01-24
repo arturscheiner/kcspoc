@@ -134,3 +134,61 @@ model_kubectl_delete_orphaned_secrets() {
         echo "$ORPHANED_SECRETS" | xargs -I {} bash -c 'kubectl delete secret {} &>> /dev/null'
     fi
 }
+
+model_kubectl_get_label() {
+    local type="$1"
+    local name="$2"
+    local ns="$3"
+    local label_key="$4"
+    if [ -n "$ns" ]; then
+        kubectl get "$type" "$name" -n "$ns" -o jsonpath="{.metadata.labels.$(echo $label_key | sed 's/\./\\./g')}" 2>/dev/null
+    else
+        kubectl get "$type" "$name" -o jsonpath="{.metadata.labels.$(echo $label_key | sed 's/\./\\./g')}" 2>/dev/null
+    fi
+}
+
+model_kubectl_get_secret_value() {
+    local name="$1"
+    local ns="$2"
+    local key="$3"
+    kubectl get secret "$name" -n "$ns" -o jsonpath="{.data.$(echo $key | sed 's/\./\\./g')}" 2>/dev/null | base64 -d 2>/dev/null
+}
+
+model_kubectl_wait_certificate() {
+    local name="$1"
+    local ns="$2"
+    local timeout="${3:-60s}"
+    kubectl wait --for=condition=Ready certificate "$name" -n "$ns" --timeout="$timeout" &>> "$DEBUG_OUT"
+}
+
+model_kubectl_wait_all_certificates() {
+    local ns="$1"
+    local timeout="${2:-60s}"
+    kubectl wait --for=condition=Ready certificate --all -n "$ns" --timeout="$timeout" &>> "$DEBUG_OUT"
+}
+
+model_kubectl_delete_pods_force() {
+    local ns="$1"
+    kubectl delete pods -n "$ns" --all --grace-period=0 --force &>> "$DEBUG_OUT"
+}
+
+model_kubectl_get_pods_info() {
+    local ns="$1"
+    kubectl get pods -n "$ns" --no-headers 2>/dev/null
+}
+
+model_kubectl_get_ingress_domain() {
+    local ns="$1"
+    kubectl get ingress -n "$ns" -o jsonpath='{.items[0].spec.rules[0].host}' 2>/dev/null
+}
+
+model_kubectl_get_resource_exists() {
+    local type="$1"
+    local name="$2"
+    local ns="$3"
+    if [ -n "$ns" ]; then
+        kubectl get "$type" "$name" -n "$ns" &>/dev/null
+    else
+        kubectl get "$type" "$name" &>/dev/null
+    fi
+}
