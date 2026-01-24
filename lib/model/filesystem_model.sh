@@ -40,3 +40,36 @@ model_fs_load_config() {
     fi
     return 1
 }
+
+model_fs_list_artifact_versions() {
+    local base_path="$1"
+    if [ -d "$base_path" ]; then
+        ls -F "$base_path" 2>/dev/null | grep "/" | sed 's|/||g' | sort -V
+    fi
+}
+
+model_fs_save_download_metadata() {
+    local path="$1"
+    date +'%Y-%m-%d %H:%M' > "$path/.downloaded"
+}
+
+model_fs_move_artifact() {
+    local src="$1"
+    local dest="$2"
+    mv "$src" "$dest"
+}
+
+model_fs_fetch_remote_file() {
+    local url="$1"
+    local dest="$2"
+    curl -sSf "$url" -o "$dest" &>> "$DEBUG_OUT"
+}
+
+model_fs_update_config_version() {
+    local ver="$1"
+    if [ -f "$CONFIG_FILE" ]; then
+        sed -i "s|KCS_VERSION=.*|KCS_VERSION=\"$ver\"|g" "$CONFIG_FILE"
+        return 0
+    fi
+    return 1
+}
