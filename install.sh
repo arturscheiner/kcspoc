@@ -37,6 +37,17 @@ ui_section() {
 
 # --- INSTALLATION LOGIC ---
 
+# Argument Parsing
+MODE="stable"
+for arg in "$@"; do
+    case $arg in
+        --dev) MODE="dev" ;;
+    esac
+done
+
+# Capture script source directory before cd
+SOURCE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 ui_banner
 
 # 0. Pre-Installation Safety Audit
@@ -77,78 +88,91 @@ echo -e "   ${ICON_OK} Environment ready."
 echo ""
 
 # 2. Fetch Source Code
-ui_section "Identifying latest release"
-RELEASE_API="https://api.github.com/repos/arturscheiner/kcspoc/releases/latest"
-
-if command -v curl &>/dev/null; then
-    RELEASE_JSON=$(curl -fsSL "$RELEASE_API")
-elif command -v wget &>/dev/null; then
-    RELEASE_JSON=$(wget -qO- "$RELEASE_API")
-else
-    echo -e "   ${RED}${ICON_FAIL} Error: Neither 'curl' nor 'wget' found.${NC}"
-    exit 1
-fi
-
-LATEST_TAG=$(echo "$RELEASE_JSON" | grep '"tag_name"' | cut -d '"' -f4 | head -n1)
-
-if [ -z "$LATEST_TAG" ]; then
-    echo -e "   ${RED}${ICON_FAIL} Error: Could not determine the latest stable release.${NC}"
-    echo -e "      Reason: No GitHub Releases found or API rate-limited."
-    exit 1
-fi
-
-echo -e "   ${ICON_OK} Latest release: ${BOLD}${LATEST_TAG}${NC}"
-echo ""
-
-ui_section "Fetching source code"
-REPO_URL="https://github.com/arturscheiner/kcspoc.git"
-ZIP_URL="https://github.com/arturscheiner/kcspoc/archive/refs/tags/${LATEST_TAG}.zip"
-
 # Clean up any existing attempts
 rm -rf temp bin kcspoc.zip kcspoc-*
 
-if command -v git &>/dev/null; then
-    echo -e "   ${ICON_GEAR} Cloning ${LATEST_TAG} via git..."
-    if git clone --depth 1 --branch "$LATEST_TAG" "$REPO_URL" temp &>/dev/null; then
-        echo -e "   ${ICON_OK} Repository cloned successfully."
-    else
-        echo -e "   ${RED}${ICON_FAIL} Failed to clone tag ${LATEST_TAG}.${NC}"
-        exit 1
-    fi
+if [[ "$MODE" == "dev" ]]; then
+    ui_section "Development Mode"
+    echo -e "   ${YELLOW}${ICON_INFO} Using local source files from: ${SOURCE_DIR}${NC}"
+    LATEST_TAG="dev"
+    mkdir -p temp
+    cp -rf "$SOURCE_DIR"/* temp/
+    echo -e "   ${ICON_OK} Source files copied to temp."
 else
-    echo -e "   ${YELLOW}${ICON_INFO} Git not found. Attempting ZIP download...${NC}"
-    if ! command -v unzip &>/dev/null; then
-        echo -e "   ${RED}${ICON_FAIL} Error: 'unzip' is required but not installed.${NC}"
+    ui_section "Identifying latest release"
+    RELEASE_API="https://api.github.com/repos/arturscheiner/kcspoc/releases/latest"
+
+    if command -v curl &>/dev/null; then
+        RELEASE_JSON=$(curl -fsSL "$RELEASE_API")
+    elif command -v wget &>/dev/null; then
+        RELEASE_JSON=$(wget -qO- "$RELEASE_API")
+    else
+        echo -e "   ${RED}${ICON_FAIL} Error: Neither 'curl' nor 'wget' found.${NC}"
         exit 1
     fi
 
-    echo -e "   ${ICON_GEAR} Downloading source from GitHub..."
-    if command -v curl &>/dev/null; then
-        curl -L "$ZIP_URL" -o kcspoc.zip &>/dev/null
-    elif command -v wget &>/dev/null; then
-        wget -q "$ZIP_URL" -O kcspoc.zip &>/dev/null
+    LATEST_TAG=$(echo "$RELEASE_JSON" | grep '"tag_name"' | cut -d '"' -f4 | head -n1)
+
+    if [ -z "$LATEST_TAG" ]; then
+        echo -e "   ${RED}${ICON_FAIL} Error: Could not determine the latest stable release.${NC}"
+        echo -e "      Reason: No GitHub Releases found or API rate-limited."
+        exit 1
     fi
 
-    if [ -f "kcspoc.zip" ]; then
-        unzip -q kcspoc.zip
-        EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "kcspoc-*" | head -n1)
-        if [ -n "$EXTRACTED_DIR" ]; then
-            mv "$EXTRACTED_DIR" temp
-            rm kcspoc.zip
-            echo -e "   ${ICON_OK} Source downloaded and extracted."
+    echo -e "   ${ICON_OK} Latest release: ${BOLD}${LATEST_TAG}${NC}"
+    echo ""
+
+    ui_section "Fetching source code"
+    REPO_URL="https://github.com/arturscheiner/kcspoc.git"
+    ZIP_URL="https://github.com/arturscheiner/kcspoc/archive/refs/tags/${LATEST_TAG}.zip"
+
+    if command -v git &>/dev/null; then
+        echo -e "   ${ICON_GEAR} Cloning ${LATEST_TAG} via git..."
+        if git clone --depth 1 --branch "$LATEST_TAG" "$REPO_URL" temp &>/dev/null; then
+            echo -e "   ${ICON_OK} Repository cloned successfully."
         else
-            echo -e "   ${RED}${ICON_FAIL} Failed to identify extracted directory.${NC}"
+            echo -e "   ${RED}${ICON_FAIL} Failed to clone tag ${LATEST_TAG}.${NC}"
             exit 1
         fi
     else
-        echo -e "   ${RED}${ICON_FAIL} Failed to download source ZIP.${NC}"
-        exit 1
+        echo -e "   ${YELLOW}${ICON_INFO} Git not found. Attempting ZIP download...${NC}"
+        if ! command -v unzip &>/dev/null; then
+            echo -e "   ${RED}${ICON_FAIL} Error: 'unzip' is required but not installed.${NC}"
+            exit 1
+        fi
+
+        echo -e "   ${ICON_GEAR} Downloading source from GitHub..."
+        if command -v curl &>/dev/null; then
+            curl -L "$ZIP_URL" -o kcspoc.zip &>/dev/null
+        elif command -v wget &>/dev/null; then
+            wget -q "$ZIP_URL" -O kcspoc.zip &>/dev/null
+        fi
+
+        if [ -f "kcspoc.zip" ]; then
+            unzip -q kcspoc.zip
+            EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "kcspoc-*" | head -n1)
+            if [ -n "$EXTRACTED_DIR" ]; then
+                mv "$EXTRACTED_DIR" temp
+                rm kcspoc.zip
+                echo -e "   ${ICON_OK} Source downloaded and extracted."
+            else
+                echo -e "   ${RED}${ICON_FAIL} Failed to identify extracted directory.${NC}"
+                exit 1
+            fi
+        else
+            echo -e "   ${RED}${ICON_FAIL} Failed to download source ZIP.${NC}"
+            exit 1
+        fi
     fi
 fi
 
 # Detect Version
-DETECTED_VER=$(grep 'VERSION=' temp/lib/common.sh | cut -d'"' -f2)
-echo -e "   ${ICON_OK} Ready to install version: ${BOLD}v${DETECTED_VER}${NC}"
+if [ -f "temp/lib/model/version_model.sh" ]; then
+    DETECTED_VER=$(grep '^VERSION=' temp/lib/model/version_model.sh | cut -d'"' -f2)
+else
+    DETECTED_VER=$(grep '^VERSION=' temp/lib/common.sh | cut -d'"' -f2)
+fi
+echo -e "   ${ICON_OK} Ready to install version: ${BOLD}v${DETECTED_VER:-unknown}${NC}"
 echo ""
 
 # 3. Rename and Organize

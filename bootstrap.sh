@@ -66,4 +66,4 @@ if [[ -z "$INSTALLER" ]]; then
 fi
 
 echo "🚀 Executing installer"
-bash "$INSTALLER"
+bash "$INSTALLER" "$@"
