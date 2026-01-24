@@ -1,25 +1,9 @@
 #!/bin/bash
 
-# --- VISUAL IDENTITY & CONSTANTS ---
-# Colors
-BOLD='\033[1m'
-DIM='\033[2m'
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
-NC='\033[0m'
+# Visual Identity & Constants (Legacy Facade)
+# These are now hosted in lib/view/base_view.sh
+# They will be available once base_view.sh is sourced by the main script.
 
-# Icons
-ICON_OK="✔"
-ICON_FAIL="✘"
-ICON_INFO="ℹ"
-ICON_WARN="⚠"
-ICON_QUESTION="?"
-ICON_ARROW="➜"
-ICON_GEAR="⚙"
 
 CONFIG_DIR="$HOME/.kcspoc"
 CONFIG_FILE="$CONFIG_DIR/config"
@@ -165,73 +149,24 @@ load_locale
 # --- HELPER FUNCTIONS ---
 
 ui_banner() {
-    clear
-    echo -e "${GREEN}${BOLD}"
-    echo "  _  __ _____ ____  ____   ___   ____ "
-    echo " | |/ // ____/ ___||  _ \ / _ \ / ___|"
-    echo " | ' /| |    \___ \| |_) | | | | |    "
-    echo " |  < | |___  ___) |  __/| |_| | |___ "
-    echo " |_|\_\\____/|____/|_|    \___/ \____|"
-    echo -e "${NC}"
-    echo -e "   Kaspersky Container Security PoC Tool - v${VERSION}"
-    if [ -n "$EXEC_HASH" ]; then
-        echo -e "   ${DIM}Execution ID: ${BOLD}${EXEC_HASH}${NC}"
-    fi
-    echo ""
-    echo -e "${BLUE}  ====================================================${NC}"
-    echo -e "${DIM}  Version: ${VERSION}${NC}"
-    echo -e "${DIM}  ${MSG_AUTHOR}: Artur Scheiner${NC}"
-    echo ""
+    view_ui_banner "$VERSION" "$EXEC_HASH"
 }
+
 
 ui_section() {
-    local title="$1"
-    echo -e "${MAGENTA}${BOLD}:: ${title} ::${NC}"
-    echo -e "${DIM}------------------------------------------------------${NC}"
+    view_ui_section "$1"
 }
+
 
 ui_step() {
-    local current="$1"
-    local total="$2"
-    local title="$3"
-    local desc="$4"
-    echo -e "\n${BOLD}[${current}/${total}] ${title}${NC}"
-    if [ -n "$desc" ]; then
-        echo -e "${DIM}   ${desc}${NC}"
-    fi
+    view_ui_step "$1" "$2" "$3" "$4"
 }
 
+
 ui_input() {
-    local label="$1"
-    local default_val="$2"
-    local current_val="$3"
-    local is_secret="$4"
-    
-    echo -ne "   ${ICON_ARROW} ${label}"
-    
-    if [ -n "$default_val" ]; then
-        echo -ne " ${DIM}(${MSG_DEFAULT}: ${default_val})${NC}"
-    fi
-    
-    local prompt_val="${current_val:-$default_val}"
-    
-    echo -ne " ${CYAN}[${prompt_val}]${NC}: "
-    
-    if [ "$is_secret" == "yes" ]; then
-        stty -echo
-        read -r user_in
-        stty echo
-        echo ""
-    else
-        read -r user_in
-    fi
-    
-    if [ -z "$user_in" ]; then
-        RET_VAL="$prompt_val"
-    else
-        RET_VAL="$user_in"
-    fi
+    view_ui_input "$1" "$2" "$3" "$4"
 }
+
 
 # --- UI SPINNER ---
 
@@ -247,35 +182,23 @@ _ui_spinner_cleanup() {
         kill "$_SPINNER_PID" &>/dev/null || true
         wait "$_SPINNER_PID" &>/dev/null || true
         _SPINNER_PID=0
-        tput cnorm 2>/dev/null || true
-        echo ""
-        # If we are cleaning up deeply (on crash), show fail in UI
-        if [ $exit_code -ne 0 ]; then
-             echo -e "[ ${RED}${ICON_FAIL}${NC} ] (Script Interrupted)"
-        fi
+        view_ui_spinner_cleanup "$exit_code"
     fi
 
     # 2. Log Finalization (If logging was active)
     if [ -n "$EXEC_LOG_FILE" ]; then
         local status="SUCCESS"
-        if [ $exit_code -ne 0 ]; then
-            status="FAIL"
-        fi
+        [ $exit_code -ne 0 ] && status="FAIL"
         
         save_log_status "$status"
-        
-        echo -e "\n${DIM}${ICON_INFO} Log saved (Hash: ${BOLD}$EXEC_HASH${DIM}). View with:${NC}"
-        echo -e "${DIM}   ./kcspoc logs --show $EXEC_HASH${NC}\n"
+        view_ui_log_info "$EXEC_HASH"
     fi
 }
+
 trap _ui_spinner_cleanup EXIT
 
 ui_spinner_start() {
-    local msg="$1"
-    echo -ne "   ${ICON_GEAR} $msg... "
-    
-    # Hide cursor
-    tput civis 2>/dev/null || true
+    view_ui_spinner_start "$1"
     
     (
         local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
@@ -290,27 +213,12 @@ ui_spinner_start() {
     _SPINNER_PID=$!
 }
 
+
 ui_spinner_stop() {
-    local status="$1" # PASS or FAIL
-    
-    if [ "$_SPINNER_PID" -ne 0 ]; then
-        kill "$_SPINNER_PID" &>/dev/null || true
-        wait "$_SPINNER_PID" &>/dev/null || true
-        _SPINNER_PID=0
-    fi
-    
-    # Show cursor
-    tput cnorm 2>/dev/null || true
-    
-    # Clean last frame and print status
-    echo -ne "\b \b" # Overwrite frame with space then move back
-    
-    if [ "$status" = "PASS" ]; then
-        echo -e "[ ${GREEN}${ICON_OK}${NC} ]"
-    else
-        echo -e "[ ${RED}${ICON_FAIL}${NC} ]"
-    fi
+    view_ui_spinner_stop "$1"
+    _SPINNER_PID=0
 }
+
 
 check_k8s_label() {
     local res_type="$1"
@@ -401,32 +309,6 @@ load_config() {
 }
 
 ui_help() {
-    local cmd="$1"
-    local desc="$2"
-    local opts="$3" # format: "opt|desc\nopt|desc"
-    local examples="$4" # format: "ex1\nex2"
-
-    ui_banner
-    
-    echo -e "${BLUE}${BOLD}${MSG_USAGE}:${NC}"
-    echo -e "   kcspoc $cmd [options]\n"
-
-    echo -e "${BLUE}${BOLD}${MSG_HELP_DESCRIPTION}:${NC}"
-    echo -e "   $desc\n"
-
-    if [ -n "$opts" ]; then
-        echo -e "${BLUE}${BOLD}${MSG_HELP_OPTIONS}:${NC}"
-        echo -e "$opts" | while IFS='|' read -r opt odesc; do
-            printf "   ${CYAN}%-18s${NC} %s\n" "$opt" "$odesc"
-        done
-        echo ""
-    fi
-
-    if [ -n "$examples" ]; then
-        echo -e "${BLUE}${BOLD}${MSG_HELP_EXAMPLES}:${NC}"
-        echo -e "$examples" | while read -r line; do
-            echo -e "   ${DIM}$line${NC}"
-        done
-        echo ""
-    fi
+    view_ui_help "$1" "$2" "$3" "$4" "$VERSION"
 }
+
