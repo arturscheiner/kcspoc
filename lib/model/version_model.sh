@@ -10,8 +10,12 @@ VERSION_BASE="0.6.0-dev"
 
 model_version_get() {
     local sha="unknown"
-    # Try to get short SHA if inside a git repo
-    if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+
+    # 1. Try to read from persisted SHA (if installed)
+    if [ -f "${SCRIPT_DIR}/.version_sha" ]; then
+        sha=$(cat "${SCRIPT_DIR}/.version_sha")
+    # 2. Fallback to Git (if in source tree)
+    elif command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         sha=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
     fi
     

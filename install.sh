@@ -96,7 +96,8 @@ if [[ "$MODE" == "dev" ]]; then
     echo -e "   ${YELLOW}${ICON_INFO} Using local source files from: ${SOURCE_DIR}${NC}"
     LATEST_TAG="dev"
     mkdir -p temp
-    cp -rf "$SOURCE_DIR"/* temp/
+    # Copy inclusive of hidden files
+    cp -rf "$SOURCE_DIR"/. temp/
     echo -e "   ${ICON_OK} Source files copied to temp."
 else
     ui_section "Identifying latest release"
@@ -185,16 +186,26 @@ if [ -f "$INSTALL_STATE_FILE" ]; then
     INSTALL_TYPE="upgrade"
 fi
 
-echo -e "   ${ICON_GEAR} Deploying runtime files (${INSTALL_TYPE})..."
-if [ -d "temp" ]; then
-    mkdir -p bin
-    # Whitelist-based installation
-    WHITELIST=("kcspoc.sh" "lib" "locales" "templates")
-    for item in "${WHITELIST[@]}"; do
-        if [ -e "temp/$item" ]; then
-            cp -rf "temp/$item" bin/
+    echo -e "   ${ICON_GEAR} Deploying runtime files (${INSTALL_TYPE})..."
+    if [ -d "temp" ]; then
+        mkdir -p bin
+
+        # Extract SHA before cleaning up temp
+        ver_sha="unknown"
+        if [ -d "temp/.git" ]; then
+            ver_sha=$(cd temp && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        elif [ -f "temp/.version_sha" ]; then
+            ver_sha=$(cat "temp/.version_sha")
         fi
-    done
+        echo "$ver_sha" > bin/.version_sha
+
+        # Whitelist-based installation
+        WHITELIST=("kcspoc.sh" "lib" "locales" "templates" ".version_sha")
+        for item in "${WHITELIST[@]}"; do
+            if [ -e "temp/$item" ]; then
+                cp -rf "temp/$item" bin/
+            fi
+        done
 
     # Ensure executable permissions
     chmod +x bin/kcspoc.sh &>/dev/null
