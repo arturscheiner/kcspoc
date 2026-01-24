@@ -49,3 +49,15 @@ model_helm_upgrade_install_local() {
     helm upgrade --install "$release" "$chart_path" \
         --namespace "$ns" --create-namespace &>> "$DEBUG_OUT"
 }
+
+model_helm_uninstall() {
+    local release="$1"
+    local ns="$2"
+    helm uninstall "$release" -n "$ns" &>> "$DEBUG_OUT"
+}
+
+model_helm_status() {
+    local release="$1"
+    local ns="$2"
+    helm status "$release" -n "$ns" &>> "$DEBUG_OUT"
+}

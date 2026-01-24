@@ -76,3 +76,61 @@ model_kubectl_apply_stdin() {
 model_kubectl_get_ingress_ip() {
     kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>> "$DEBUG_OUT" || echo "Pending..."
 }
+
+model_kubectl_get_current_context() {
+    kubectl config current-context 2>/dev/null || echo "unknown-cluster"
+}
+
+model_kubectl_delete_namespace() {
+    local ns="$1"
+    local timeout="${2:-120s}"
+    kubectl delete namespace "$ns" --timeout="$timeout" &>> "$DEBUG_OUT"
+}
+
+model_kubectl_delete_pvc_all() {
+    local ns="$1"
+    local timeout="${2:-60s}"
+    kubectl delete pvc --all -n "$ns" --timeout="$timeout" &>> "$DEBUG_OUT"
+}
+
+model_kubectl_delete_certificate_all() {
+    local ns="$1"
+    local timeout="${2:-30s}"
+    kubectl delete certificate --all -n "$ns" --timeout="$timeout" &>> "$DEBUG_OUT"
+}
+
+model_kubectl_get_pv_by_ns() {
+    local ns="$1"
+    kubectl get pv -o json 2>> "$DEBUG_OUT" | jq -r ".items[] | select(.spec.claimRef.namespace==\"$ns\") | .metadata.name"
+}
+
+model_kubectl_delete_pv() {
+    local name="$1"
+    local timeout="${2:-30s}"
+    kubectl delete pv "$name" --timeout="$timeout" &>> "$DEBUG_OUT"
+}
+
+model_kubectl_delete_webhook() {
+    local type="$1" # validating or mutating
+    local name="$2"
+    kubectl delete "${type}webhookconfiguration" "$name" --ignore-not-found &>> "$DEBUG_OUT"
+}
+
+model_kubectl_delete_clusterrole() {
+    local names="$1"
+    kubectl delete clusterrole $names --ignore-not-found &>> "$DEBUG_OUT"
+}
+
+model_kubectl_delete_clusterrolebinding() {
+    local names="$1"
+    kubectl delete clusterrolebinding $names --ignore-not-found &>> "$DEBUG_OUT"
+}
+
+model_kubectl_delete_orphaned_secrets() {
+    local ns_arg="$1" # "-A" or "-n ns"
+    local pattern="$2"
+    local ORPHANED_SECRETS=$(kubectl get secrets $ns_arg --no-headers 2>> "$DEBUG_OUT" | grep "$pattern" | awk '{print $2 " -n " $1}')
+    if [ -n "$ORPHANED_SECRETS" ]; then
+        echo "$ORPHANED_SECRETS" | xargs -I {} bash -c 'kubectl delete secret {} &>> /dev/null'
+    fi
+}
