@@ -1,59 +1,70 @@
 ---
-description: Pick Next TODO (Development Mode)
+description: Pick Next TODO
 ---
 
 ## Purpose
-Select the next **high-value development task** to work on while operating in the `main` branch.
 
-This workflow favors **features, refactors, and roadmap-driven improvements**, while excluding patch-only work.
+Provide situational awareness about the current project phase, roadmap, and source of truth,
+without proposing tasks or performing any actions.
+
+This workflow is informational only.
 
 ---
 
 ## Step 1 — Detect Current Branch
 
-Confirm the active branch:
+Determine the active branch:
+
 ```bash
 git branch --show-current
+```
 
-If the branch is NOT main, STOP and explain that this workflow is intended for development work only.
+---
 
-## Step 2 — Load Sources of Truth
-Use the following inputs:
-- TODO.md
-- .roadmap/0.6.0-dev.md
-- .roadmap/future-capabilities.md
-Ignore:
-- .roadmap/0.5.x-stabilization.md
+## Step 2 — Determine Active Planning Source
 
-## Step 3 — Filter Eligible TODOs
-Prefer TODO items that involve:
-- feature development
-- refactoring
-- architectural improvements
-- long-term maintainability
+Based on the branch:
 
-Deprioritize or ignore:
-- small bugfixes
-- installer-only tweaks
-- patch-level work
+* If branch is `main`:
 
-## Step 4 — Prioritization Logic
-Rank candidates using this order:
-1. Roadmap-aligned development tasks
-2. Tasks that unblock multiple future items
-3. Refactors with clear ROI
-4. Developer-experience improvements
+  * The active planning source is `.roadmap/`
+  * The project is in **development / evolution mode**
+  * Structural changes, refactors, and new features may be planned
 
-## Step 5 — Propose the Next Task
-Present:
-- The selected TODO item
-- Why it fits the main branch
-- Which roadmap goal it supports
-- Expected scope and risks
+* If branch matches `release/*`:
 
-Ask for confirmation before starting.
+  * The active planning source is `TODO.md`
+  * The project is in **stabilization / patch mode**
+  * Only safe bugfixes and improvements are expected
+
+---
+
+## Step 3 — Explain Current Phase
+
+Clearly explain to the user:
+
+* which phase the project is in
+* what kind of work is appropriate
+* what kind of work is discouraged
+
+Do not suggest specific tasks.
+
+---
+
+## Step 4 — Point to Next Actions
+
+Suggest *one or more* of the following commands, without executing them:
+
+* `/pick-next-todo` — to choose a task aligned with the current phase
+* `/refactor` — if on `main` and architectural work is intended
+* `/feature` — if on `main` and new behavior is desired
+* `/prepare-release` — if on a release branch and closing a patch
+
+---
 
 ## Guardrails
-- Never suggest patch-only work.
-- Never downgrade stabilization tasks into dev scope.
-- If all TODOs are patch-level, recommend switching to release/0.5.
+
+* Do not modify files
+* Do not switch branches
+* Do not execute shell commands beyond inspection
+* Do not infer tasks automatically
