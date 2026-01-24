@@ -38,6 +38,15 @@ source "$LIB_DIR/cmd_destroy.sh"
 source "$LIB_DIR/cmd_logs.sh"
 source "$LIB_DIR/cmd_bootstrap.sh"
 
+# Source MVC Components (v0.6.0+)
+for layer in model view service control; do
+    if [ -d "$LIB_DIR/$layer" ]; then
+        for component in "$LIB_DIR/$layer"/*.sh; do
+            [ -f "$component" ] && source "$component"
+        done
+    fi
+done
+
 cmd_usage() {
     ui_banner
     echo -e "${BLUE}${BOLD}${MSG_USAGE}:${NC}"

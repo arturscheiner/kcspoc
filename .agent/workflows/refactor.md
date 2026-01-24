@@ -1,5 +1,5 @@
 ---
-description: Workflow: Refactor (Architecture / MVC)
+description: Refactor (Architecture / MVC)
 ---
 
 ## Intent
