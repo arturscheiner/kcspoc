@@ -21,12 +21,12 @@ BRANCH=$(git branch --show-current)
 }
 
 echo "🔎 Checking version consistency"
-VERSION=$(grep '^VERSION=' lib/common.sh | cut -d'"' -f2)
+VERSION_BASE=$(grep '^VERSION_BASE=' lib/model/version_model.sh | cut -d'"' -f2)
 CHANGELOG_VER=$(grep "^## \[" CHANGELOG.md | head -n1 | cut -d'[' -f2 | cut -d']' -f1)
 
 if [[ "$VERSION" != "$CHANGELOG_VER" ]]; then
   echo "❌ Version mismatch detected!"
-  echo "   lib/common.sh:  v$VERSION"
+  echo "   lib/model/version_model.sh:  v$VERSION"
   echo "   CHANGELOG.md:   v$CHANGELOG_VER"
   exit 1
 fi

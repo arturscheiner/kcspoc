@@ -30,7 +30,7 @@ This information is used only for contextual messaging.
 
 Verify that version references are coherent:
 
-* `lib/common.sh` VERSION matches the latest version entry in `CHANGELOG.md`
+* `lib/model/version_model.sh` VERSION_BASE matches the latest version entry in `CHANGELOG.md`
 * No conflicting or duplicated version declarations exist
 
 If a mismatch is detected, report it clearly.

@@ -34,13 +34,9 @@ for layer in model view service control; do
     fi
 done
 
-# Initialize Version State (v0.6.0+)
+# Initialize Infrastructure (v0.6.0+)
 VERSION=$(model_version_get)
-
-# Source Legacy Common Facade
-source "$LIB_DIR/common.sh"
-
-# Register Lifecycle Traps (v0.6.0+)
+service_locale_load
 service_exec_register_traps
 
 # Source Commands (Decommissioned lib/cmd_*.sh wrappers, calling controllers directly)
@@ -81,7 +77,7 @@ cmd_usage() {
 
 # --- CLI Logic ---
 
-# Global Debug is now ALWAYS ON by default (handled by init_logging)
+# Global Debug is now ALWAYS ON by default (handled by service_exec_service_exec_init_logging)
 KCS_DEBUG=true
 
 # Helper to check if help is requested (to avoid creating log files)
@@ -97,32 +93,32 @@ cmd_needs_logging() {
 case "$1" in
     config)
         shift
-        cmd_needs_logging "$@" && init_logging "config"
+        cmd_needs_logging "$@" && service_exec_service_exec_init_logging "config"
         config_controller "$@"
         ;;
     pull)
         shift
-        cmd_needs_logging "$@" && init_logging "pull"
+        cmd_needs_logging "$@" && service_exec_service_exec_init_logging "pull"
         pull_controller "$@"
         ;;
     check)
         shift
-        cmd_needs_logging "$@" && init_logging "check"
+        cmd_needs_logging "$@" && service_exec_service_exec_init_logging "check"
         check_controller "$@"
         ;;
     prepare)
         shift
-        cmd_needs_logging "$@" && init_logging "prepare"
+        cmd_needs_logging "$@" && service_exec_service_exec_init_logging "prepare"
         prepare_controller "$@"
         ;;
     deploy)
         shift
-        cmd_needs_logging "$@" && init_logging "deploy"
+        cmd_needs_logging "$@" && service_exec_service_exec_init_logging "deploy"
         deploy_controller "$@"
         ;;
     destroy)
         shift
-        cmd_needs_logging "$@" && init_logging "destroy"
+        cmd_needs_logging "$@" && service_exec_service_exec_init_logging "destroy"
         destroy_controller "$@"
         ;;
     logs)
@@ -132,7 +128,7 @@ case "$1" in
         ;;
     bootstrap)
         shift
-        cmd_needs_logging "$@" && init_logging "bootstrap"
+        cmd_needs_logging "$@" && service_exec_service_exec_init_logging "bootstrap"
         bootstrap_controller "$@"
         ;;
     help|*)

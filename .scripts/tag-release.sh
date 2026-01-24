@@ -4,7 +4,7 @@ set -e
 # Ensure we've passed the preparation checks
 ./.scripts/prepare-release.sh
 
-VERSION=$(grep '^VERSION=' lib/common.sh | cut -d'"' -f2)
+VERSION_BASE=$(grep '^VERSION_BASE=' lib/model/version_model.sh | cut -d'"' -f2)
 TAG="v$VERSION"
 
 echo "🚀 Tagging release $TAG"

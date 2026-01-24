@@ -53,7 +53,7 @@ If justification is vague or unclear, STOP.
 
 List all locations where the version must be updated:
 
-* `lib/common.sh`
+* `lib/model/version_model.sh`
 * `CHANGELOG.md`
 * any additional version references (if applicable)
 

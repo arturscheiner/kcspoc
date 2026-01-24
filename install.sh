@@ -180,8 +180,6 @@ fi
 # Detect Version
 if [ -f "temp/lib/model/version_model.sh" ]; then
     DETECTED_VER=$(grep '^VERSION_BASE=' temp/lib/model/version_model.sh | cut -d'"' -f2)
-else
-    DETECTED_VER=$(grep '^VERSION=' temp/lib/common.sh | cut -d'"' -f2)
 fi
 echo -e "   ${ICON_OK} Ready to install version: ${BOLD}v${DETECTED_VER:-unknown}${NC}"
 echo ""

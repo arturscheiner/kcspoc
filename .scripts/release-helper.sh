@@ -1,7 +1,7 @@
 #!/bin/bash
 # Internal release helper - NOT for distribution
 
-VERSION=$(grep '^VERSION=' lib/common.sh | cut -d'"' -f2)
+VERSION_BASE=$(grep '^VERSION_BASE=' lib/model/version_model.sh | cut -d'"' -f2)
 echo "Current project version: v$VERSION"
 
 check_consistency() {
