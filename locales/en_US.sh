@@ -203,6 +203,9 @@ MSG_PREPARE_INTERACTIVE_WARN="The tool will install several infrastructure compo
 
 MSG_PREPARE_PROMPT_INSTALL="Install %s? [y/N] "
 
+MSG_PREPARE_WHY_REGISTRY_TITLE="Why Registry Secret?"
+MSG_PREPARE_WHY_REGISTRY_DESC="KCS components need to pull container images from the Kaspersky registry. This secret stores the required credentials."
+
 MSG_PREPARE_WHY_CERT_TITLE="Why Cert-Manager?"
 MSG_PREPARE_WHY_CERT_DESC="KCS requires HTTPS for the Admission Controller. Cert-Manager automates certificates for internal mTLS and the Web Console."
 

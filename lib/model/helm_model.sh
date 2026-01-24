@@ -22,3 +22,30 @@ model_helm_pull() {
 
     helm pull "oci://$server/charts/kcs" $version_args --destination "$destination" 2>&1
 }
+
+model_helm_repo_add() {
+    local name="$1"
+    local url="$2"
+    helm repo add "$name" "$url" --force-update &>> "$DEBUG_OUT"
+}
+
+model_helm_upgrade_install() {
+    local release="$1"
+    local chart="$2"
+    local ns="$3"
+    local timeout="${4:-300s}"
+    local err_file="$5"
+    shift 5
+    # Pass all remaining arguments to helm
+    helm upgrade --install "$release" "$chart" \
+        --namespace "$ns" --create-namespace \
+        --wait --timeout "$timeout" "$@" &> "$err_file"
+}
+
+model_helm_upgrade_install_local() {
+    local release="$1"
+    local chart_path="$2"
+    local ns="$3"
+    helm upgrade --install "$release" "$chart_path" \
+        --namespace "$ns" --create-namespace &>> "$DEBUG_OUT"
+}
