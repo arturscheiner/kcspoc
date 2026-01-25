@@ -138,6 +138,42 @@ view_ui_help() {
     fi
 }
 
+view_ui_usage() {
+    local version="$1"
+    local exec_hash="$2"
+
+    view_ui_banner "$version" "$exec_hash"
+    echo -e "${BLUE}${BOLD}${MSG_USAGE}:${NC}"
+    echo -e "  kcspoc <command> [options]\n"
+
+    echo -e "${BLUE}${BOLD}${MSG_COMMANDS}:${NC}"
+    printf "  ${CYAN}%-10s${NC} %s\n" "config"  "$MSG_CMD_CONFIG_DESC"
+    printf "  ${CYAN}%-10s${NC} %s\n" "pull"    "$MSG_CMD_PULL_DESC"
+    printf "  ${CYAN}%-10s${NC} %s\n" "check"   "$MSG_CMD_CHECK_DESC"
+    printf "  ${CYAN}%-10s${NC} %s\n" "prepare" "$MSG_CMD_PREPARE_DESC"
+    printf "  ${CYAN}%-10s${NC} %s\n" "deploy"  "$MSG_CMD_DEPLOY_DESC"
+    printf "  ${CYAN}%-10s${NC} %s\n" "destroy" "$MSG_DESTROY_TITLE"
+    printf "  ${CYAN}%-10s${NC} %s\n" "logs"    "Manage logs (--list, --show, --cleanup)"
+    printf "  ${CYAN}%-10s${NC} %s\n" "bootstrap" "Configure KCS API Integration (API Token)"
+    printf "  ${CYAN}%-10s${NC} %s\n" "help"    "$MSG_CMD_HELP_DESC"
+    echo ""
+
+    echo -e "${BLUE}${BOLD}${MSG_HELP_EXAMPLES}:${NC}"
+    echo -e "  ${DIM}# Start here${NC}"
+    echo -e "  kcspoc config"
+    echo -e "  kcspoc check"
+    echo ""
+    echo -e "  ${DIM}# Installation flow${NC}"
+    echo -e "  kcspoc pull"
+    echo -e "  kcspoc prepare"
+    echo -e "  kcspoc deploy --core"
+    echo -e "  kcspoc bootstrap"
+    echo ""
+    echo -e "  ${DIM}# Troubleshooting${NC}"
+    echo -e "  kcspoc logs --list"
+    echo ""
+}
+
 # --- SPINNER COMPONENTS ---
 
 view_ui_spinner_start() {
