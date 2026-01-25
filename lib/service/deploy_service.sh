@@ -12,7 +12,7 @@ service_deploy_core() {
     local mode_override="$2"
     local ns="$NAMESPACE"
     local exec_id="$EXEC_HASH"
-    local local_hash=$(get_config_hash)
+    local local_hash=$(model_config_get_hash)
 
     # 1. Pre-flight Diagnostics
     view_deploy_section "Pre-flight Diagnostics"
@@ -28,7 +28,6 @@ service_deploy_core() {
             view_deploy_info "Deployment aborted to prevent global conflict."
             return 0
         fi
-        view_deploy_banner
         view_deploy_section "Pre-flight Diagnostics"
     fi
 
@@ -41,7 +40,6 @@ service_deploy_core() {
     local op_type="install"
     if [ "$kcs_exists" == "true" ]; then
         local installed_ver=$(model_deploy_get_installed_version "$ns")
-        view_deploy_banner
         view_deploy_info "KCS version $installed_ver is already installed in namespace $ns."
         
         if [ -n "$mode_override" ]; then
@@ -58,7 +56,6 @@ service_deploy_core() {
             return 0
         fi
     else
-        view_deploy_banner
         [ -n "$mode_override" ] && op_type="$mode_override"
         if ! view_deploy_prompt_install "$target_ver" "$op_type"; then
             view_deploy_info "Deployment cancelled by user."
@@ -260,7 +257,7 @@ service_deploy_watch_stability() {
             for ((i=0; i<empty; i++)); do bar+="-"; done
             bar+="]"
 
-            _update_state "$ns" "deploying" "$op_type" "$exec_id" "$local_hash" "$target_ver" "$percent"
+            _update_state "$ns" "deploying" "$op_type" "$exec_id" "$(model_config_get_hash)" "$target_ver" "$percent"
             poll_counter=0
         fi
 
@@ -329,7 +326,7 @@ service_deploy_check_integrity() {
 
     case "$mode" in
         hash)
-            local_val=$(get_config_hash)
+            local_val=$(model_config_get_hash)
             label_key="kcspoc.io/config-hash"
             col_header="CONFIG HASH"
             ;;

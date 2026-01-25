@@ -12,7 +12,7 @@ service_destroy_run() {
     local release_name="${3:-kcs}"
 
     # Phase I: Transition Signaling
-    _update_state "$target_ns" "cleaning" "destroy" "$EXEC_HASH" "$(get_config_hash)" ""
+    _update_state "$target_ns" "cleaning" "destroy" "$EXEC_HASH" "$(model_config_get_hash)" ""
 
     view_destroy_start_msg
 
@@ -34,7 +34,7 @@ service_destroy_run() {
     view_destroy_step_start "[3/8] $MSG_DESTROY_STEP_2"
     model_kubectl_delete_certificate_all "$target_ns" "30s"
     model_kubectl_delete_namespace "$target_ns" "120s"
-    wait_and_force_delete_ns "$target_ns" 5
+    service_exec_wait_and_force_delete_ns "$target_ns" 5
     view_destroy_step_stop "PASS"
 
     # 4. PVs (Orphaned)
@@ -77,21 +77,21 @@ service_destroy_run() {
          view_destroy_step_start "$MSG_DESTROY_DEPS_INGRESS"
          model_helm_uninstall "ingress-nginx" "ingress-nginx"
          model_kubectl_delete_namespace "ingress-nginx" "false" # wait=false logic
-         wait_and_force_delete_ns "ingress-nginx" 3
+         service_exec_wait_and_force_delete_ns "ingress-nginx" 3
          view_destroy_step_stop "PASS"
  
          # MetalLB
          view_destroy_step_start "$MSG_DESTROY_DEPS_METALLB"
          model_helm_uninstall "metallb" "metallb-system"
          model_kubectl_delete_namespace "metallb-system" "false"
-         wait_and_force_delete_ns "metallb-system" 3
+         service_exec_wait_and_force_delete_ns "metallb-system" 3
          view_destroy_step_stop "PASS"
          
          # Cert-Manager
          view_destroy_step_start "$MSG_DESTROY_DEPS_CERT"
          model_helm_uninstall "cert-manager" "cert-manager"
          model_kubectl_delete_namespace "cert-manager" "false"
-         wait_and_force_delete_ns "cert-manager" 3
+         service_exec_wait_and_force_delete_ns "cert-manager" 3
          view_destroy_step_stop "PASS"
          
          # Storage & Metrics
