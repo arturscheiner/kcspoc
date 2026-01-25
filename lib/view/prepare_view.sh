@@ -11,7 +11,7 @@ view_prepare_banner() {
 }
 
 view_prepare_section() {
-    view_ui_section "$1"
+    view_ui_section_header "$1"
 }
 
 view_prepare_step_start() {
@@ -24,23 +24,23 @@ view_prepare_step_stop() {
 
 view_prepare_step_error() {
     local msg="$1"
-    [ -n "$msg" ] && echo -e "      ${RED}${msg}${NC}"
+    [ -n "$msg" ] && echo -e "      ${BRIGHT_RED}${msg}${NC}"
 }
 
 view_prepare_summary_header() {
-    view_ui_section "$MSG_PREPARE_STEP_6"
+    view_ui_section_header "$MSG_PREPARE_STEP_6"
 }
 
 view_prepare_summary_success() {
     local ingress_ip="$1"
     local domain="$2"
-    echo -e "${GREEN}${ICON_OK} ${MSG_PREPARE_COMPLETED}${NC}"
-    echo -e "   ${MSG_PREPARE_INGRESS_IP}: ${BOLD}${BLUE}$ingress_ip${NC}"
-    echo -e "   ${MSG_PREPARE_HOSTS_HINT}: ${BOLD}${YELLOW}$ingress_ip $domain${NC}"
+    echo -e "${BRIGHT_GREEN}${ICON_OK} ${MSG_PREPARE_COMPLETED}${NC}"
+    echo -e "   ${MSG_PREPARE_INGRESS_IP}: ${BOLD}${BRIGHT_CYAN}$ingress_ip${NC}"
+    echo -e "   ${MSG_PREPARE_HOSTS_HINT}: ${BOLD}${BRIGHT_YELLOW}$ingress_ip $domain${NC}"
 }
 
 view_prepare_summary_fail() {
-    echo -e "${RED}${BOLD}${ICON_FAIL} ${MSG_PREPARE_COMPLETED}${NC} (With errors)"
+    echo -e "${BRIGHT_RED}${BOLD}${ICON_FAIL} ${MSG_PREPARE_COMPLETED}${NC} (With errors)"
     echo -e "   ${MSG_ERROR_CONFIG_NOT_FOUND}" # Fallback generic error msg
 }
 

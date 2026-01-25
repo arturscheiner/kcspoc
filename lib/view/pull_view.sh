@@ -11,12 +11,12 @@ view_pull_banner() {
 }
 
 view_pull_section_title() {
-    view_ui_section "$MSG_PULL_TITLE"
+    view_ui_section_header "$MSG_PULL_TITLE"
 }
 
 view_pull_local_list_header() {
     echo -e "   ${BOLD}${MSG_PULL_LOCAL_TITLE}${NC}"
-    echo -e "   ${DIM}------------------------------------------------------${NC}"
+    view_ui_line
 }
 
 view_pull_local_list_empty() {
@@ -24,8 +24,11 @@ view_pull_local_list_empty() {
 }
 
 view_pull_local_list_table_header() {
-    printf "   ${BOLD}%-12s %-15s %-20s %-40s${NC}\n" "$MSG_PULL_TABLE_ACTIVE" "$MSG_PULL_TABLE_VER" "$MSG_PULL_TABLE_DATE" "$MSG_PULL_TABLE_PATH"
-    printf "   ${DIM}%s${NC}\n" "------------------------------------------------------------------------------------------"
+    view_ui_table_header \
+        "$MSG_PULL_TABLE_ACTIVE:8" \
+        "$MSG_PULL_TABLE_VER:15" \
+        "$MSG_PULL_TABLE_DATE:20" \
+        "$MSG_PULL_TABLE_PATH:40"
 }
 
 view_pull_local_list_item() {
@@ -34,14 +37,16 @@ view_pull_local_list_item() {
     local path="$3"
     local is_active="$4"
 
-    local active_str=""
-    local active_color="${NC}"
+    local active_str=" "
     if [ "$is_active" == "true" ]; then
-        active_str="$MSG_PULL_ACTIVE_MARKER"
-        active_color="${GREEN}"
+        active_str="${BRIGHT_GREEN}*${NC}"
     fi
     
-    echo -e "   ${active_color}$(printf "%-12s" "$active_str")${NC} $(printf "%-15s" "$ver") $(printf "%-20s" "$ddate") $(printf "%-40s" "$path")"
+    view_ui_table_row \
+        "$active_str:8" \
+        "$ver:15" \
+        "$ddate:20" \
+        "$path:40"
 }
 
 view_pull_auth_start() {
@@ -77,7 +82,7 @@ view_pull_version_source_default() {
 
 view_pull_cache_hit() {
     local ver="$1"
-    echo -e "   ${GREEN}${ICON_OK} ${MSG_PULL_SUCCESS}${NC} (Local cache: $ver)"
+    echo -e "   ${BRIGHT_GREEN}${ICON_OK} ${MSG_PULL_SUCCESS}${NC} (Local cache: $ver)"
 }
 
 view_pull_download_start() {
@@ -95,11 +100,11 @@ view_pull_success_file() {
 }
 
 view_pull_error_file_missing() {
-    echo -e "      ${RED}${ICON_FAIL} ${MSG_PULL_ERR_FILE}${NC}"
+    echo -e "      ${BRIGHT_RED}${ICON_FAIL} ${MSG_PULL_ERR_FILE}${NC}"
 }
 
 view_pull_error_fail() {
-    echo -e "      ${RED}${ICON_FAIL} ${MSG_PULL_ERR_FAIL}${NC}"
+    echo -e "      ${BRIGHT_RED}${ICON_FAIL} ${MSG_PULL_ERR_FAIL}${NC}"
 }
 
 view_pull_template_fetch_start() {

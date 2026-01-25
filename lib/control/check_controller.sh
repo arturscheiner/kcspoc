@@ -26,7 +26,7 @@ check_controller() {
     local error=0
 
     # 1. Prerequisites
-    view_check_section_title "1" "Prerequisites"
+    view_check_section_title "" "Prerequisites"
     if ! service_check_validate_prereqs; then
         error=1
     fi
@@ -35,7 +35,7 @@ check_controller() {
     local deep_ns="kcspoc"
 
     # 2. Cluster Context
-    view_check_section_title "2" "Cluster Context"
+    view_check_section_title "" "Cluster Context"
     if [ "$error" -eq 1 ]; then
         view_check_error_skip_cluster
     else
@@ -53,29 +53,29 @@ check_controller() {
             fi
 
             # 3. Cluster Topology
-            view_check_section_title "3" "Cluster Topology"
+            view_check_section_title "" "Cluster Topology"
             service_check_topology || error=1
 
             # 4. Infrastructure Status
-            view_check_section_title "4" "$MSG_CHECK_INFRA_TITLE"
+            view_check_section_title "" "$MSG_CHECK_INFRA_TITLE"
             service_check_infrastructure
 
             # 5. Cloud Provider & Topology
-            view_check_section_title "5" "$MSG_CHECK_CLOUD_TITLE"
+            view_check_section_title "" "$MSG_CHECK_CLOUD_TITLE"
             service_check_cloud_and_cri
 
             # 6. Node Resources & Health (includes Audit as section 7 internally)
-            view_check_section_title "6" "$MSG_CHECK_NODE_RES_TITLE"
+            view_check_section_title "" "$MSG_CHECK_NODE_RES_TITLE"
             service_check_resources "$deep_enabled" "$deep_ns"
 
             # 8. Repository Connectivity
-            view_check_section_title "8" "Repository Connectivity"
+            view_check_section_title "" "Repository Connectivity"
             service_check_repo_connectivity "$deep_ns" || error=1
         fi
     fi
 
     # Results
-    view_check_section_title "Results" "Summary Results"
+    view_check_section_title "" "Summary Results"
     service_check_summary || error=1
 
     # Cleanup

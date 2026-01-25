@@ -11,9 +11,8 @@ view_check_banner() {
 }
 
 view_check_section_title() {
-    local num="$1"
     local title="$2"
-    view_ui_section "${num}. ${title}"
+    view_ui_section_header "${title}"
 }
 
 view_check_step_start() {
@@ -25,7 +24,7 @@ view_check_step_stop() {
 }
 
 view_check_error_skip_cluster() {
-    echo -e "   ${RED}${ICON_FAIL} Skipping cluster checks due to prerequisite failures.${NC}"
+    echo -e "   ${BRIGHT_RED}${ICON_FAIL} Skipping cluster checks due to prerequisite failures.${NC}"
 }
 
 view_check_namespace_prep_start() {
@@ -46,17 +45,17 @@ view_check_info_ctx() {
 
 view_check_conn_error() {
     local msg="$1"
-    echo -e "      ${RED}${BOLD}${MSG_CHECK_CONN_ERR}:${NC}"
-    echo -e "      ${RED}${msg}${NC}"
+    echo -e "      ${BRIGHT_RED}${BOLD}${MSG_CHECK_CONN_ERR}:${NC}"
+    echo -e "      ${BRIGHT_RED}${msg}${NC}"
 }
 
 view_check_k8s_ver_info() {
     local ver="$1"
     local status="$2" # PASS or FAIL
     if [ "$status" == "PASS" ]; then
-        echo -e "      ${BLUE}${ver}${NC} ${DIM}(1.25 - 1.34)${NC}"
+        echo -e "      ${BRIGHT_CYAN}${ver}${NC} ${DIM}(1.25 - 1.34)${NC}"
     else
-        echo -e "      ${RED}${ver}${NC} ${DIM}(Supported: 1.25 - 1.34)${NC}"
+        echo -e "      ${BRIGHT_RED}${ver}${NC} ${DIM}(Supported: 1.25 - 1.34)${NC}"
     fi
 }
 
@@ -66,7 +65,7 @@ view_check_arch_mixed_warn() {
 }
 
 view_check_arch_none_err() {
-    echo -e "      ${RED}$MSG_CHECK_ARCH_NONE${NC}"
+    echo -e "      ${BRIGHT_RED}$MSG_CHECK_ARCH_NONE${NC}"
 }
 
 view_check_runtime_info() {
@@ -79,9 +78,9 @@ view_check_runtime_ver_status() {
     local min="$3"
     local status="$4"
     if [ "$status" == "ok" ]; then
-        echo -e "      - ${name} ${ver} ${GREEN}(OK - ${min}+)${NC}"
+        echo -e "      - ${name} ${ver} ${BRIGHT_GREEN}(OK - ${min}+)${NC}"
     else
-        echo -e "      - ${name} ${ver} ${RED}(FALHA - Min ${min})${NC}"
+        echo -e "      - ${name} ${ver} ${BRIGHT_RED}(FALHA - Min ${min})${NC}"
     fi
 }
 
@@ -110,9 +109,9 @@ view_check_infra_item() {
     local status="$2" # INSTALLED or MISSING
     printf "   %-25s " "$label"
     if [ "$status" == "INSTALLED" ]; then
-        echo -e "[ ${GREEN}${MSG_CHECK_INFRA_INSTALLED}${NC} ]"
+        echo -e "[ ${BRIGHT_GREEN}${MSG_CHECK_INFRA_INSTALLED}${NC} ]"
     else
-        echo -e "[ ${YELLOW}${MSG_CHECK_INFRA_MISSING}${NC} ]"
+        echo -e "[ ${BRIGHT_YELLOW}${MSG_CHECK_INFRA_MISSING}${NC} ]"
     fi
 }
 
@@ -122,7 +121,7 @@ view_check_cloud_provider_info() {
     local region="$3"
     local zone="$4"
     local os_img="$5"
-    echo -e "   ${ICON_INFO} ${BLUE}${MSG_CHECK_CLOUD_PROVIDER}:${NC} ${GREEN}${name}${NC}"
+    echo -e "   ${ICON_INFO} ${BRIGHT_CYAN}${MSG_CHECK_CLOUD_PROVIDER}:${NC} ${BRIGHT_GREEN}${name}${NC}"
     echo -e "      ${DIM}- ProviderID : ${prov_id:-N/A}${NC}"
     echo -e "      ${DIM}- ${MSG_CHECK_CLOUD_REGION}   : ${NC}${region:-N/A}"
     echo -e "      ${DIM}- ${MSG_CHECK_CLOUD_ZONE}     : ${NC}${zone:-N/A}"
@@ -137,21 +136,22 @@ view_check_cri_info() {
     local type="$1"
     local ver="$2"
     local socket="$3"
-    echo -e "      ${ICON_INFO} ${BLUE}$MSG_CHECK_CRI_FOUND${NC} ${GREEN}${type} (${ver})${NC}"
+    echo -e "      ${ICON_INFO} ${BRIGHT_CYAN}$MSG_CHECK_CRI_FOUND${NC} ${BRIGHT_GREEN}${type} (${ver})${NC}"
     if [ -n "$socket" ]; then
-        echo -e "      ${ICON_INFO} ${BLUE}$MSG_CHECK_CRI_SOCKET${NC} ${GREEN}${socket}${NC}"
+        echo -e "      ${ICON_INFO} ${BRIGHT_CYAN}$MSG_CHECK_CRI_SOCKET${NC} ${BRIGHT_GREEN}${socket}${NC}"
         echo -e "      ${DIM}$MSG_CHECK_CRI_HINT${NC}"
     fi
 }
 
 view_check_cri_confirmed() {
     local socket="$1"
-    echo -e "      ${ICON_OK} ${BLUE}$MSG_CHECK_CRI_CONFIRMED${NC} ${GREEN}${socket}${NC}"
+    echo -e "      ${ICON_OK} ${BRIGHT_CYAN}$MSG_CHECK_CRI_CONFIRMED${NC} ${BRIGHT_GREEN}${socket}${NC}"
 }
 
 view_check_deep_run_info() {
     local ns="$1"
-    echo -e "      ${DIM}(Using isolated namespace: ${ns})${NC}"
+    # Output on the same line as the spinner message
+    echo -ne " ${DIM}(Using isolated namespace: ${ns})${NC}"
 }
 
 view_check_deep_skip_info() {
@@ -159,8 +159,14 @@ view_check_deep_skip_info() {
 }
 
 view_check_node_table_header() {
-    printf "   ${BOLD}%-25s %-12s %-10s %-10s %-15s %-15s %-15s${NC}\n" "NODE" "ROLE" "CPU(A/T)" "RAM(A/T)" "DISK(A/T)" "eBPF" "HEADERS"
-    printf "   ${DIM}%s${NC}\n" "----------------------------------------------------------------------------------------------------"
+    view_ui_table_header \
+        "NODE:25" \
+        "ROLE:12" \
+        "CPU(A/T):10" \
+        "RAM(A/T):10" \
+        "DISK(A/T):15" \
+        "eBPF:10" \
+        "HEADERS:10"
 }
 
 view_check_node_table_row() {
@@ -171,16 +177,35 @@ view_check_node_table_row() {
     local disk="$5"
     local ebpf="$6"
     local headers="$7"
-    printf "   %-25s %-12s %-10s %-10s %-15b %-15b %-15b\n" "$name" "$role" "$cpu" "$ram" "$disk" "$ebpf" "$headers"
+    
+    view_ui_table_row \
+        "$name:25" \
+        "$role:12" \
+        "$cpu:10" \
+        "$ram:10" \
+        "$disk:15" \
+        "$ebpf:10" \
+        "$headers:10"
 }
 
 view_check_audit_header() {
     echo -e "   ${BOLD}$MSG_AUDIT_REF_TABLE:${NC}"
-    printf "   %-20s | %-15s | %-15s\n" "$MSG_AUDIT_RES" "$MSG_AUDIT_MIN" "$MSG_AUDIT_IDEAL"
-    printf "   %-20s | %-15s | %-15s\n" "--------------------" "---------------" "---------------"
-    printf "   %-20s | %-15s | %-15s\n" "$MSG_AUDIT_CPU" "4 Cores" "12 Cores"
-    printf "   %-20s | %-15s | %-15s\n" "$MSG_AUDIT_RAM" "8 GB" "20 GB"
-    printf "   %-20s | %-15s | %-15s\n" "$MSG_AUDIT_DISK" "80 GB" "150 GB"
+    view_ui_table_header \
+        "$MSG_AUDIT_RES:20" \
+        "$MSG_AUDIT_MIN:15" \
+        "$MSG_AUDIT_IDEAL:15"
+    view_ui_table_row \
+        "$MSG_AUDIT_CPU:20" \
+        "4 Cores:15" \
+        "12 Cores:15"
+    view_ui_table_row \
+        "$MSG_AUDIT_RAM:20" \
+        "8 GB:15" \
+        "20 GB:15"
+    view_ui_table_row \
+        "$MSG_AUDIT_DISK:20" \
+        "80 GB:15" \
+        "150 GB:15"
     echo ""
 }
 
@@ -189,20 +214,20 @@ view_check_audit_node_rejected() {
     local fail_reasons="$2"
     local avail_str="$3"
     local total_str="$4"
-    echo -e "   ${BOLD}$MSG_AUDIT_NODE_EVAL: ${name}${NC} ${RED}$MSG_AUDIT_REJECTED${NC}"
+    echo -e "   ${BOLD}$MSG_AUDIT_NODE_EVAL: ${name}${NC} ${BRIGHT_RED}$MSG_AUDIT_REJECTED${NC}"
     echo -e "$fail_reasons"
     echo -e "      ${DIM}Available: ${avail_str}${NC}"
     echo -e "      ${DIM}Total    : ${total_str}${NC}"
-    echo "   ----------------------------------------------------"
+    view_ui_line
 }
 
 view_check_audit_success() {
-    echo -e "   ${GREEN}$MSG_AUDIT_SUCCESS${NC}"
+    echo -e "   ${BRIGHT_GREEN}$MSG_AUDIT_SUCCESS${NC}"
 }
 
 view_check_audit_fail() {
-    echo -e "   ${RED}$MSG_AUDIT_FAIL${NC}"
-    echo -e "   ${YELLOW}$MSG_AUDIT_REC${NC}"
+    echo -e "   ${BRIGHT_RED}$MSG_AUDIT_FAIL${NC}"
+    echo -e "   ${BRIGHT_YELLOW}$MSG_AUDIT_REC${NC}"
 }
 
 view_check_global_totals() {
@@ -211,11 +236,11 @@ view_check_global_totals() {
     local status="$3" # PASS or FAIL
     local msg="$4"
     echo -ne "   ${ICON_INFO} $MSG_CHECK_GLOBAL_TOTALS: "
-    echo -e "${BLUE}${cpu} vCPUs / ${mem} GB RAM${NC}"
+    echo -e "${BRIGHT_CYAN}${cpu} vCPUs / ${mem} GB RAM${NC}"
     if [ "$status" == "FAIL" ]; then
-         echo -e "      ${RED}$MSG_CHECK_LABEL_FAIL${NC} ${RED}${msg}${NC}"
+         echo -e "      ${BRIGHT_RED}$MSG_CHECK_LABEL_FAIL${NC} ${BRIGHT_RED}${msg}${NC}"
     else
-         echo -e "      ${GREEN}$MSG_CHECK_LABEL_PASS${NC} ${DIM}${msg}${NC}"
+         echo -e "      ${BRIGHT_GREEN}$MSG_CHECK_LABEL_PASS${NC} ${DIM}${msg}${NC}"
     fi
 }
 
@@ -228,12 +253,12 @@ view_check_cleaning_done() {
 }
 
 view_check_all_pass() {
-    echo -e "${GREEN}${BOLD}${ICON_OK} $MSG_CHECK_ALL_PASS${NC}"
+    echo -e "${BRIGHT_GREEN}${BOLD}${ICON_OK} $MSG_CHECK_ALL_PASS${NC}"
     echo -e "${DIM}Your cluster is ready for Kaspersky Container Security installation.${NC}"
 }
 
 view_check_final_fail() {
-    echo -e "${RED}${BOLD}${ICON_FAIL} $MSG_CHECK_FINAL_FAIL${NC}"
+    echo -e "${BRIGHT_RED}${BOLD}${ICON_FAIL} $MSG_CHECK_FINAL_FAIL${NC}"
 }
 
 view_check_prereq_config_fix() {

@@ -7,7 +7,7 @@
 # ==============================================================================
 
 view_bootstrap_intro() {
-    view_ui_section "KCS API Integration Bootstrap"
+    view_ui_section_header "KCS API Integration Bootstrap"
 
     echo -e "   This command will guide you through the initial KCS API configuration."
     echo -e "   The API token is required for automated agent deployment and management.\n"
@@ -28,11 +28,11 @@ view_bootstrap_prompt_token() {
 }
 
 view_bootstrap_error_empty() {
-    echo -e "      ${RED}${ICON_FAIL} Token cannot be empty. Please try again.${NC}"
+    echo -e "      ${BRIGHT_RED}${ICON_FAIL} Token cannot be empty. Please try again.${NC}"
 }
 
 view_bootstrap_warn_short() {
-    echo -e "   ${RED}${ICON_FAIL} The token seems too short. Are you sure it's correct?${NC}"
+    echo -e "   ${BRIGHT_RED}${ICON_FAIL} The token seems too short. Are you sure it's correct?${NC}"
 }
 
 view_bootstrap_saving_start() {
@@ -44,10 +44,10 @@ view_bootstrap_saving_stop() {
 }
 
 view_bootstrap_success() {
-    echo -e "\n   ${GREEN}${BOLD}${ICON_OK} BOOTSTRAP COMPLETED!${NC}"
+    echo -e "\n   ${BRIGHT_GREEN}${BOLD}${ICON_OK} BOOTSTRAP COMPLETED!${NC}"
     echo -e "   The API token has been securely stored in ~/.kcspoc/config."
     
     echo -e "\n   ${BOLD}Next Journey Steps:${NC}"
-    echo -e "   - Run ${GREEN}${BOLD}./kcspoc deploy --agents${NC} to install KCS Agents on your nodes."
+    echo -e "   - Run ${BRIGHT_GREEN}${BOLD}./kcspoc deploy --agents${NC} to install KCS Agents on your nodes."
     echo -e "   - Check the walkthrough for advanced configuration tips.\n"
 }

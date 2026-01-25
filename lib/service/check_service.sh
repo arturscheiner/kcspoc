@@ -318,7 +318,7 @@ service_check_resources() {
 
 service_check_perform_audit() {
     local data_file="$1"
-    view_check_section_title "7" "$MSG_AUDIT_TITLE"
+    view_check_section_title "" "$MSG_AUDIT_TITLE"
     view_check_audit_header
     
     local cluster_pass=true

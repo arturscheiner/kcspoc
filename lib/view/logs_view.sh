@@ -7,21 +7,28 @@
 # ==============================================================================
 
 view_logs_banner() {
-    view_ui_banner "$VERSION" "$EXEC_HASH" "$VERSION" "$EXEC_HASH"
+    view_ui_banner "$VERSION" "$EXEC_HASH"
 }
 
 view_logs_section() {
-    view_ui_section "$1"
+    view_ui_section_header "$1"
 }
 
 view_logs_list_header() {
     local target="$1"
     if [ -n "$target" ]; then
-        printf "   ${BOLD}%-20s %-10s %-15s %-10s${NC}\n" "DATE/TIME" "HASH" "STATUS" "VERSION"
-        printf "   ${DIM}%s${NC}\n" "---------------------------------------------------------"
+        view_ui_table_header \
+            "DATE/TIME:20" \
+            "HASH:10" \
+            "STATUS:15" \
+            "VERSION:10"
     else
-        printf "   ${BOLD}%-20s %-12s %-10s %-15s %-10s${NC}\n" "DATE/TIME" "COMMAND" "HASH" "STATUS" "VERSION"
-        printf "   ${DIM}%s${NC}\n" "----------------------------------------------------------------------"
+        view_ui_table_header \
+            "DATE/TIME:20" \
+            "COMMAND:12" \
+            "HASH:10" \
+            "STATUS:15" \
+            "VERSION:10"
     fi
 }
 
@@ -33,14 +40,26 @@ view_logs_list_row() {
     local version="$5"
     local target="$6"
 
-    local color=$RED
-    if [ "$status" == "SUCCESS" ]; then color=$GREEN; 
+    local color=$NC
+    if [ "$status" == "SUCCESS" ]; then color=$BRIGHT_GREEN; 
+    elif [ "$status" == "FAIL" ]; then color=$BRIGHT_RED;
     elif [ "$status" == "UNKNOWN" ] || [ "$status" == "-" ]; then color=$DIM; fi
 
+    local colored_status="${color}${status}${NC}"
+
     if [ -n "$target" ]; then
-        printf "   %-20s %-10s ${color}%-15s${NC} %-10s\n" "$date" "$hash" "$status" "$version"
+        view_ui_table_row \
+            "$date:20" \
+            "$hash:10" \
+            "$colored_status:15" \
+            "$version:10"
     else
-        printf "   %-20s %-12s %-10s ${color}%-15s${NC} %-10s\n" "$date" "$cmd" "$hash" "$status" "$version"
+        view_ui_table_row \
+            "$date:20" \
+            "$cmd:12" \
+            "$hash:10" \
+            "$colored_status:15" \
+            "$version:10"
     fi
 }
 
@@ -76,7 +95,7 @@ view_logs_cleanup_stop() {
         if [ "$empty" == "true" ]; then
             echo -e "      ${DIM}No logs found to clean.${NC}"
         else
-            echo -e "      ${GREEN}${ICON_OK} All logs have been cleared.${NC}"
+            echo -e "      ${BRIGHT_GREEN}${ICON_OK} All logs have been cleared.${NC}"
         fi
     fi
 }

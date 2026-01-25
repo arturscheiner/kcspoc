@@ -11,13 +11,13 @@ config_view_banner() {
 }
 
 config_view_wizard_intro() {
-    view_ui_section "$MSG_CONFIG_WIZARD_TITLE"
+    view_ui_section_header "$MSG_CONFIG_WIZARD_TITLE"
     echo -e "$MSG_CONFIG_WIZARD_DESC"
     echo ""
 }
 
 config_view_config_loaded() {
-    echo -e "${GREEN}${ICON_OK} $MSG_CONFIG_LOADED${NC}"
+    echo -e "${BRIGHT_GREEN}${ICON_OK} $MSG_CONFIG_LOADED${NC}"
 }
 
 config_view_step_lang() {
@@ -51,17 +51,17 @@ config_view_secrets_generated() {
 
 config_view_config_saved() {
     local config_file="$1"
-    echo -e "\n${GREEN}${ICON_OK} $MSG_CONFIG_SAVED $config_file${NC}"
+    echo -e "\n${BRIGHT_GREEN}${ICON_OK} $MSG_CONFIG_SAVED $config_file${NC}"
     echo -e "${DIM}${MSG_CONFIG_NEXT_STEPS}${NC}"
 }
 
 config_view_version_update_header() {
-    view_ui_section "$MSG_CONFIG_VER_UPDATED"
+    view_ui_section_header "$MSG_CONFIG_VER_UPDATED"
 }
 
 config_view_version_update_success() {
     local version="$1"
-    echo -e "   ${GREEN}${ICON_OK} ${MSG_CONFIG_VER_UPDATED}: ${BOLD}${version}${NC}\n"
+    echo -e "   ${BRIGHT_GREEN}${ICON_OK} ${MSG_CONFIG_VER_UPDATED}: ${BOLD}${version}${NC}\n"
 }
 
 config_view_error_config_not_found() {
