@@ -56,6 +56,19 @@ view_ui_banner() {
     echo ""
 }
 
+view_ui_slim_header() {
+    local version="$1"
+    local exec_hash="$2"
+    
+    echo ""
+    echo -e "   Kaspersky Container Security PoC Tool - v${version}"
+    if [ -n "$exec_hash" ]; then
+        echo -e "   ${DIM}Execution ID: ${BOLD}${exec_hash}${NC}"
+    fi
+    echo -e "${BLUE}  ====================================================${NC}"
+    echo ""
+}
+
 view_ui_section() {
     local title="$1"
     echo -e "${MAGENTA}${BOLD}:: ${title} ::${NC}"

@@ -13,42 +13,66 @@ base_controller_dispatch() {
     case "$cmd" in
         config)
             shift
-            _base_control_needs_logging "$@" && service_exec_init_logging "config" "$VERSION"
+            if _base_control_needs_logging "$@"; then
+                service_exec_init_logging "config" "$VERSION"
+                view_ui_slim_header "$VERSION" "$EXEC_HASH"
+            fi
             config_controller "$@"
             ;;
         pull)
             shift
-            _base_control_needs_logging "$@" && service_exec_init_logging "pull" "$VERSION"
+            if _base_control_needs_logging "$@"; then
+                service_exec_init_logging "pull" "$VERSION"
+                view_ui_slim_header "$VERSION" "$EXEC_HASH"
+            fi
             pull_controller "$@"
             ;;
         check)
             shift
-            _base_control_needs_logging "$@" && service_exec_init_logging "check" "$VERSION"
+            if _base_control_needs_logging "$@"; then
+                service_exec_init_logging "check" "$VERSION"
+                view_ui_slim_header "$VERSION" "$EXEC_HASH"
+            fi
             check_controller "$@"
             ;;
         prepare)
             shift
-            _base_control_needs_logging "$@" && service_exec_init_logging "prepare" "$VERSION"
+            if _base_control_needs_logging "$@"; then
+                service_exec_init_logging "prepare" "$VERSION"
+                view_ui_slim_header "$VERSION" "$EXEC_HASH"
+            fi
             prepare_controller "$@"
             ;;
         deploy)
             shift
-            _base_control_needs_logging "$@" && service_exec_init_logging "deploy" "$VERSION"
+            if _base_control_needs_logging "$@"; then
+                service_exec_init_logging "deploy" "$VERSION"
+                view_ui_slim_header "$VERSION" "$EXEC_HASH"
+            fi
             deploy_controller "$@"
             ;;
         destroy)
             shift
-            _base_control_needs_logging "$@" && service_exec_init_logging "destroy" "$VERSION"
+            if _base_control_needs_logging "$@"; then
+                service_exec_init_logging "destroy" "$VERSION"
+                view_ui_slim_header "$VERSION" "$EXEC_HASH"
+            fi
             destroy_controller "$@"
             ;;
         logs)
             shift
+            if _base_control_needs_logging "$@"; then
+                view_ui_slim_header "$VERSION" ""
+            fi
             # No logging for the logs command itself
             logs_controller "$@"
             ;;
         bootstrap)
             shift
-            _base_control_needs_logging "$@" && service_exec_init_logging "bootstrap" "$VERSION"
+            if _base_control_needs_logging "$@"; then
+                service_exec_init_logging "bootstrap" "$VERSION"
+                view_ui_slim_header "$VERSION" "$EXEC_HASH"
+            fi
             bootstrap_controller "$@"
             ;;
         help|*)
