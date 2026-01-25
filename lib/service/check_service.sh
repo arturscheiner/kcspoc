@@ -38,7 +38,7 @@ service_check_validate_prereqs() {
 
     # 3. Config
     view_check_step_start "$MSG_CHECK_CONFIG"
-    if load_config; then
+    if model_fs_load_config; then
         if [ -z "$NAMESPACE" ] || [ -z "$IP_RANGE" ] || [ -z "$REGISTRY_USER" ]; then
              view_check_step_stop "FAIL"
              view_check_prereq_config_fix
@@ -283,7 +283,6 @@ service_check_resources() {
                     # Headers
                     local headers_out
                     headers_out=$(model_node_exec_probe "$pod_name" "$deep_ns" /bin/bash -c "chroot /host sh -c 'dpkg -l 2>/dev/null | grep -i headers || rpm -qa 2>/dev/null | grep -i headers'" 2>/dev/null)
-                    if [ -n "$headers_out" ]; then ebpf="${GREEN}YES${NC}"; else ebpf="${RED}NO${NC}"; fi # TYPO FIX: should be headers
                     [ -n "$headers_out" ] && headers="${GREEN}YES${NC}" || headers="${RED}NO${NC}"
                     # CRI Socket
                     if [ -z "$deep_confirmed_socket" ]; then
