@@ -23,7 +23,6 @@ check_controller() {
         esac
     done
 
-    view_check_banner
     local error=0
 
     # 1. Prerequisites

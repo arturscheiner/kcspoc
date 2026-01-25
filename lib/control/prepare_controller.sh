@@ -23,8 +23,6 @@ prepare_controller() {
         esac
     done
 
-    view_prepare_banner
-    
     # Load config (Service will check requirements)
     if ! model_fs_load_config &>> "$DEBUG_OUT"; then
         echo -e "${RED}${ICON_FAIL} ${MSG_ERROR_CONFIG_NOT_FOUND}${NC}"

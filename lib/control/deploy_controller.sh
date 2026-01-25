@@ -58,8 +58,6 @@ deploy_controller() {
         return 1
     fi
 
-    view_deploy_banner
-
     # Check for artifacts
     local count=$(model_deploy_count_local_artifacts)
     if [ "$count" -eq 0 ]; then

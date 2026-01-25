@@ -13,7 +13,6 @@ _generate_random_secret() {
 
 config_service_set_version() {
     local set_ver="$1"
-    config_view_banner
     config_view_version_update_header
     
     if ! kubeconfig_update_version "$set_ver"; then
@@ -26,7 +25,6 @@ config_service_set_version() {
 }
 
 config_service_wizard() {
-    config_view_banner
     config_view_wizard_intro
     
     mkdir -p "$CONFIG_DIR"

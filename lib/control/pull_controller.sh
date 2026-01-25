@@ -32,7 +32,6 @@ pull_controller() {
         exit 1
     fi
     
-    view_pull_banner
     view_pull_section_title
 
     if [ "$list_local" == "true" ]; then

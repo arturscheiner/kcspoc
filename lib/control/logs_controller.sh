@@ -47,8 +47,6 @@ logs_controller() {
         return 1
     fi
 
-    view_logs_banner
-
     case "$action" in
         list)
             service_logs_get_history "$target"

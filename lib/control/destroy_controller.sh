@@ -26,8 +26,6 @@ destroy_controller() {
         esac
     done
 
-    view_destroy_banner
-    
     local target_ns="kcs"
     local cleanup_deps=false
     
