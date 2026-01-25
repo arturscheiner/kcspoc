@@ -16,7 +16,6 @@ ICON_INFO="ℹ"
 ICON_GEAR="⚙"
 
 ui_banner() {
-    clear
     echo -e "${GREEN}${BOLD}"
     echo "  _  __ _____ ____  ____   ___   ____ "
     echo " | |/ // ____/ ___||  _ \ / _ \ / ___|"

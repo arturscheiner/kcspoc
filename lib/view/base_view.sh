@@ -38,7 +38,6 @@ view_ui_banner() {
     local version="$1"
     local exec_hash="$2"
     
-    clear
     echo -e "${GREEN}${BOLD}"
     echo "  _  __ _____ ____  ____   ___   ____ "
     echo " | |/ // ____/ ___||  _ \ / _ \ / ___|"
