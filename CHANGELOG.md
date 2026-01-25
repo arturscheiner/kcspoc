@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Version v0.5.0 predates the formal changelog and GitHub Releases process. This document has been created retroactively to capture the early development history.
 
+## [0.6.0-dev] - TBD
+### Added
+- **AI Integration**: Initial foundation for AI-based log analysis (Ollama).
+- **Architecture**: Enforced MVC pattern for command structure.
+
 ## [0.5.5] - 2026-01-19
 ### Changed
 - Introduced stable bootstrap installer with explicit stable, dev, and version modes.
@@ -109,6 +114,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Destroy Optimization**: Refactored removal logic for faster, non-blocking uninstallation.
 
 ---
+[0.6.0-dev]: https://github.com/arturscheiner/kcspoc/compare/v0.5.5...main
+[0.5.5]: https://github.com/arturscheiner/kcspoc/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/arturscheiner/kcspoc/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/arturscheiner/kcspoc/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/arturscheiner/kcspoc/compare/v0.5.1...v0.5.2
