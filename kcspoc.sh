@@ -7,8 +7,6 @@
 # Environment: Linux (Ubuntu/Debian preferred), K8s
 # ==============================================================================
 
-set -e
-
 # Resolve Script Directory to find libs (Handles Symlinks)
 SOURCE="${BASH_SOURCE[0]}"
 while [ -L "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink

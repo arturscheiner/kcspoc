@@ -28,6 +28,16 @@ view_check_error_skip_cluster() {
     echo -e "   ${RED}${ICON_FAIL} Skipping cluster checks due to prerequisite failures.${NC}"
 }
 
+view_check_namespace_prep_start() {
+    local ns="$1"
+    service_spinner_start "Creating management namespace: $ns"
+}
+
+view_check_namespace_prep_stop() {
+    local status="$1"
+    service_spinner_stop "$status"
+}
+
 view_check_info_ctx() {
     local ctx="$1"
     echo -e "      ${BLUE}${ctx}${NC}"
