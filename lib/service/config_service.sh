@@ -1,187 +1,40 @@
-#!/bin/bash
-
 # ==============================================================================
 # Layer: Service
 # File: config_service.sh
-# Responsibility: Business Logic and Wizard Orchestration
+# Responsibility: Business Logic and Configuration Management
+# Rules: 
+# 1. MUST NOT print output.
+# 2. MUST NOT parse CLI arguments.
 # ==============================================================================
 
-_generate_random_secret() {
-    local length=${1:-24}
+config_service_generate_secret() {
+    local length=${1:-32}
     LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$length"
 }
 
 config_service_set_version() {
     local set_ver="$1"
-    config_view_version_update_header
     
     if ! kubeconfig_update_version "$set_ver"; then
-         config_view_error_config_not_found
-         exit 1
+         return 1
     fi
     
-    config_view_version_update_success "$set_ver"
     return 0
 }
 
-config_service_wizard() {
-    config_view_wizard_intro
-    
-    mkdir -p "$CONFIG_DIR"
-    
-    # Load existing config
-    local CUR_NS="" CUR_DOMAIN="" CUR_REG_SRV="" CUR_REG_USER="" CUR_REG_EMAIL="" CUR_IP_RANGE="" CUR_DEEP="" CUR_VER="" CUR_LANG="" CUR_PLAT="" CUR_CRI=""
-    local CUR_PG_USER="" CUR_PG_PASS="" CUR_MINIO_USER="" CUR_MINIO_PASS="" CUR_CH_ADMIN_PASS="" CUR_CH_WRITE_PASS="" CUR_CH_READ_PASS="" CUR_MCHD_USER="" CUR_MCHD_PASS="" CUR_APP_SECRET=""
-    
+config_service_load() {
     if kubeconfig_load; then
-        CUR_NS="$NAMESPACE"
-        CUR_DOMAIN="$DOMAIN"
-        CUR_REG_SRV="$REGISTRY_SERVER"
-        CUR_REG_USER="$REGISTRY_USER"
-        CUR_REG_EMAIL="$REGISTRY_EMAIL"
-        CUR_IP_RANGE="$IP_RANGE"
-        CUR_DEEP="$ENABLE_DEEP_CHECK"
-        CUR_VER="$KCS_VERSION"
-        CUR_LANG="$PREFERRED_LANG"
-        CUR_PLAT="$PLATFORM"
-        CUR_CRI="$CRI_SOCKET"
-        CUR_PG_USER="$POSTGRES_USER"
-        CUR_PG_PASS="$POSTGRES_PASSWORD"
-        CUR_MINIO_USER="$MINIO_ROOT_USER"
-        CUR_MINIO_PASS="$MINIO_ROOT_PASSWORD"
-        CUR_CH_ADMIN_PASS="$CLICKHOUSE_ADMIN_PASSWORD"
-        CUR_CH_WRITE_PASS="$CLICKHOUSE_WRITE_PASSWORD"
-        CUR_CH_READ_PASS="$CLICKHOUSE_READ_PASSWORD"
-        CUR_MCHD_USER="$MCHD_USER"
-        CUR_MCHD_PASS="$MCHD_PASS"
-        CUR_APP_SECRET="$APP_SECRET"
-        config_view_config_loaded
+        return 0
     fi
+    return 1
+}
 
-    local TOTAL_STEPS=10
+config_service_get_locales() {
+    ls "$SCRIPT_DIR/locales/"*.sh 2>/dev/null | xargs -n 1 basename | sed 's/\.sh//' | tr '\n' ' '
+}
 
-    # 1. Language
-    local AVAIL_LOCALES=$(ls "$SCRIPT_DIR/locales/"*.sh 2>/dev/null | xargs -n 1 basename | sed 's/\.sh//')
-    local AVAIL_STR=$(echo "$AVAIL_LOCALES" | tr '\n' ' ')
-    local DEF_LANG="en_US"
-    [ -n "$CUR_LANG" ] && DEF_LANG="$CUR_LANG"
-    
-    config_view_step_lang "$TOTAL_STEPS" "$AVAIL_STR" "$DEF_LANG" "$CUR_LANG"
-    PREFERRED_LANG="$RET_VAL"
-
-    # Hot-swap locale
-    NEW_LOCALE_FILE="$SCRIPT_DIR/locales/${PREFERRED_LANG}.sh"
-    [ -f "$NEW_LOCALE_FILE" ] && source "$NEW_LOCALE_FILE"
-
-    # 2. Namespace
-    config_view_step_generic 2 "$TOTAL_STEPS" "$MSG_STEP_NS" "$MSG_STEP_NS_DESC" "$MSG_INPUT_NS" "kcs" "$CUR_NS"
-    NAMESPACE="$RET_VAL"
-
-    # 3. Domain
-    config_view_step_generic 3 "$TOTAL_STEPS" "$MSG_STEP_DOMAIN" "$MSG_STEP_DOMAIN_DESC" "$MSG_INPUT_DOMAIN" "kcs.cluster.lab" "$CUR_DOMAIN"
-    DOMAIN="$RET_VAL"
-
-    # 4. Registry
-    view_ui_step 4 "$TOTAL_STEPS" "$MSG_STEP_REG" "$MSG_STEP_REG_DESC"
-    view_ui_input "$MSG_INPUT_REG_URL" "repo.kcs.kaspersky.com" "$CUR_REG_SRV"
-    REGISTRY_SERVER="$RET_VAL"
-    view_ui_input "$MSG_INPUT_REG_USER" "" "$CUR_REG_USER"
-    REGISTRY_USER="$RET_VAL"
-    view_ui_input "$MSG_INPUT_REG_PASS" "" "****" "yes"
-    if [ "$RET_VAL" != "****" ]; then
-         REGISTRY_PASS="$RET_VAL"
-    fi
-    view_ui_input "$MSG_INPUT_REG_EMAIL" "" "$CUR_REG_EMAIL"
-    REGISTRY_EMAIL="$RET_VAL"
-
-    # 5. MetalLB
-    config_view_step_generic 5 "$TOTAL_STEPS" "$MSG_STEP_METALLB" "$MSG_STEP_METALLB_DESC" "$MSG_INPUT_IP_RANGE" "" "$CUR_IP_RANGE"
-    IP_RANGE="$RET_VAL"
-
-    # 6. Deep Check
-    config_view_step_generic 6 "$TOTAL_STEPS" "$MSG_STEP_DEEP" "$MSG_STEP_DEEP_DESC" "$MSG_INPUT_DEEP" "false" "$CUR_DEEP"
-    ENABLE_DEEP_CHECK="$RET_VAL"
-
-    # 7. Version
-    config_view_step_generic 7 "$TOTAL_STEPS" "$MSG_STEP_VERSION" "$MSG_STEP_VERSION_DESC" "$MSG_INPUT_VERSION" "latest" "$CUR_VER"
-    KCS_VERSION="$RET_VAL"
-
-    # 8. Platform
-    config_view_step_generic 8 "$TOTAL_STEPS" "$MSG_STEP_PLATFORM" "$MSG_STEP_PLATFORM_DESC" "$MSG_INPUT_PLATFORM" "kubernetes" "$CUR_PLAT"
-    PLATFORM="$RET_VAL"
-
-    # 9. CRI Socket
-    local SUGGESTED_CRI=$(kubeconfig_get_suggested_cri "$CUR_CRI")
-    config_view_step_generic 9 "$TOTAL_STEPS" "$MSG_STEP_CRI" "$MSG_STEP_CRI_DESC" "$MSG_INPUT_CRI_SOCKET" "$SUGGESTED_CRI" "$CUR_CRI"
-    CRI_SOCKET="$RET_VAL"
-
-    # 10. Secrets
-    config_view_step_generic 10 "$TOTAL_STEPS" "$MSG_STEP_SECRETS" "$MSG_STEP_SECRETS_DESC" "$MSG_INPUT_SECRETS_AUTO" "y" "y"
-    local AUTO_GEN="$RET_VAL"
-
-    if [[ "$AUTO_GEN" =~ ^[yY]$ ]]; then
-        POSTGRES_USER="${CUR_PG_USER:-pguser}"
-        POSTGRES_PASSWORD="$(_generate_random_secret)"
-        MINIO_ROOT_USER="${CUR_MINIO_USER:-miniouser}"
-        MINIO_ROOT_PASSWORD="$(_generate_random_secret)"
-        CLICKHOUSE_ADMIN_PASSWORD="$(_generate_random_secret)"
-        CLICKHOUSE_WRITE_PASSWORD="$(_generate_random_secret)"
-        CLICKHOUSE_READ_PASSWORD="$(_generate_random_secret)"
-        MCHD_USER="${CUR_MCHD_USER:-mchduser}"
-        MCHD_PASS="$(_generate_random_secret)"
-        APP_SECRET="$(_generate_random_secret)"
-        config_view_secrets_generated
-    else
-        view_ui_input "$MSG_INPUT_PG_USER" "pguser" "$CUR_PG_USER"; POSTGRES_USER="$RET_VAL"
-        view_ui_input "$MSG_INPUT_PG_PASS" "Ka5per5Ky!" "$CUR_PG_PASS"; POSTGRES_PASSWORD="$RET_VAL"
-        view_ui_input "$MSG_INPUT_MINIO_USER" "miniouser" "$CUR_MINIO_USER"; MINIO_ROOT_USER="$RET_VAL"
-        view_ui_input "$MSG_INPUT_MINIO_PASS" "Ka5per5Ky!" "$CUR_MINIO_PASS"; MINIO_ROOT_PASSWORD="$RET_VAL"
-        view_ui_input "$MSG_INPUT_CH_ADMIN_PASS" "Ka5per5Ky!" "$CUR_CH_ADMIN_PASS"; CLICKHOUSE_ADMIN_PASSWORD="$RET_VAL"
-        view_ui_input "$MSG_INPUT_CH_WRITE_PASS" "Ka5per5Ky!" "$CUR_CH_WRITE_PASS"; CLICKHOUSE_WRITE_PASSWORD="$RET_VAL"
-        view_ui_input "$MSG_INPUT_CH_READ_PASS" "Ka5per5Ky!" "$CUR_CH_READ_PASS"; CLICKHOUSE_READ_PASSWORD="$RET_VAL"
-        view_ui_input "$MSG_INPUT_MCHD_USER" "mchduser" "$CUR_MCHD_USER"; MCHD_USER="$RET_VAL"
-        view_ui_input "$MSG_INPUT_MCHD_PASS" "Ka5per5Ky!" "$CUR_MCHD_PASS"; MCHD_PASS="$RET_VAL"
-        view_ui_input "$MSG_INPUT_APP_SECRET" "Ka5per5Ky!" "$CUR_APP_SECRET"; APP_SECRET="$RET_VAL"
-    fi
-
-    local NEW_CONFIG=" # KCS PoC Configuration
-# Generated on $(date)
-
-# Localization
-PREFERRED_LANG=\"$PREFERRED_LANG\"
-
-NAMESPACE=\"$NAMESPACE\"
-DOMAIN=\"$DOMAIN\"
-
-# Registry
-REGISTRY_SERVER=\"$REGISTRY_SERVER\"
-REGISTRY_USER=\"$REGISTRY_USER\"
-REGISTRY_PASS=\"$REGISTRY_PASS\"
-REGISTRY_EMAIL=\"$REGISTRY_EMAIL\"
-
-# Networking
-IP_RANGE=\"$IP_RANGE\"
-
-# Installation
-KCS_VERSION=\"$KCS_VERSION\"
-PLATFORM=\"$PLATFORM\"
-CRI_SOCKET=\"$CRI_SOCKET\"
-
-# Checks
-ENABLE_DEEP_CHECK=\"$ENABLE_DEEP_CHECK\"
-
-# Secrets
-POSTGRES_USER=\"$POSTGRES_USER\"
-POSTGRES_PASSWORD=\"$POSTGRES_PASSWORD\"
-MINIO_ROOT_USER=\"$MINIO_ROOT_USER\"
-MINIO_ROOT_PASSWORD=\"$MINIO_ROOT_PASSWORD\"
-CLICKHOUSE_ADMIN_PASSWORD=\"$CLICKHOUSE_ADMIN_PASSWORD\"
-CLICKHOUSE_WRITE_PASSWORD=\"$CLICKHOUSE_WRITE_PASSWORD\"
-CLICKHOUSE_READ_PASSWORD=\"$CLICKHOUSE_READ_PASSWORD\"
-MCHD_USER=\"$MCHD_USER\"
-MCHD_PASS=\"$MCHD_PASS\"
-APP_SECRET=\"$APP_SECRET\""
-
-    kubeconfig_save "$NEW_CONFIG"
-    config_view_config_saved "$CONFIG_FILE"
+config_service_save() {
+    local config_data="$1"
+    mkdir -p "$CONFIG_DIR"
+    kubeconfig_save "$config_data"
 }

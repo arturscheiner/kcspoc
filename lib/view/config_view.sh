@@ -12,12 +12,12 @@ config_view_banner() {
 
 config_view_wizard_intro() {
     view_ui_section_header "$MSG_CONFIG_WIZARD_TITLE"
-    echo -e "$MSG_CONFIG_WIZARD_DESC"
+    echo -e "${BRIGHT_WHITE}$MSG_CONFIG_WIZARD_DESC${NC}"
     echo ""
 }
 
 config_view_config_loaded() {
-    echo -e "${BRIGHT_GREEN}${ICON_OK} $MSG_CONFIG_LOADED${NC}"
+    config_view_action_line "$MSG_CONFIG_LOADED" "PASS"
 }
 
 config_view_step_lang() {
@@ -46,13 +46,24 @@ config_view_step_generic() {
 }
 
 config_view_secrets_generated() {
-    echo -e "      ${DIM}${ICON_OK} Secrets generated randomly.${NC}"
+    echo -e "      ${DIM}${ICON_OK} $MSG_CONFIG_SECRETS_GEN${NC}"
 }
 
 config_view_config_saved() {
     local config_file="$1"
-    echo -e "\n${BRIGHT_GREEN}${ICON_OK} $MSG_CONFIG_SAVED $config_file${NC}"
+    config_view_action_line "$MSG_CONFIG_SAVED $config_file" "PASS"
     echo -e "${DIM}${MSG_CONFIG_NEXT_STEPS}${NC}"
+}
+
+config_view_action_line() {
+    local msg="$1"
+    local status="$2"
+    echo -ne "   ${ICON_GEAR} $msg... "
+    if [ "$status" = "PASS" ]; then
+        echo -e "[ ${BRIGHT_GREEN}${ICON_OK}${NC} ]"
+    else
+        echo -e "[ ${BRIGHT_RED}${ICON_FAIL}${NC} ]"
+    fi
 }
 
 config_view_version_update_header() {

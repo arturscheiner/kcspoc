@@ -25,6 +25,7 @@ MSG_CONFIG_LOADED="Loaded existing configuration."
 MSG_CONFIG_SAVED="Configuration saved to"
 MSG_CONFIG_VER_UPDATED="KCS version pinned to"
 MSG_CONFIG_NEXT_STEPS="Next steps: run 'kcspoc check' to verify your environment."
+MSG_CONFIG_SECRETS_GEN="Secrets generated randomly."
 
 MSG_STEP_LANG="Preferred Language"
 MSG_STEP_LANG_DESC="Select the interface language."
