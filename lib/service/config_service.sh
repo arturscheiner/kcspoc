@@ -84,16 +84,16 @@ config_service_wizard() {
     DOMAIN="$RET_VAL"
 
     # 4. Registry
-    ui_step 4 "$TOTAL_STEPS" "$MSG_STEP_REG" "$MSG_STEP_REG_DESC"
-    ui_input "$MSG_INPUT_REG_URL" "repo.kcs.kaspersky.com" "$CUR_REG_SRV"
+    view_ui_step 4 "$TOTAL_STEPS" "$MSG_STEP_REG" "$MSG_STEP_REG_DESC"
+    view_ui_input "$MSG_INPUT_REG_URL" "repo.kcs.kaspersky.com" "$CUR_REG_SRV"
     REGISTRY_SERVER="$RET_VAL"
-    ui_input "$MSG_INPUT_REG_USER" "" "$CUR_REG_USER"
+    view_ui_input "$MSG_INPUT_REG_USER" "" "$CUR_REG_USER"
     REGISTRY_USER="$RET_VAL"
-    ui_input "$MSG_INPUT_REG_PASS" "" "****" "yes"
+    view_ui_input "$MSG_INPUT_REG_PASS" "" "****" "yes"
     if [ "$RET_VAL" != "****" ]; then
          REGISTRY_PASS="$RET_VAL"
     fi
-    ui_input "$MSG_INPUT_REG_EMAIL" "" "$CUR_REG_EMAIL"
+    view_ui_input "$MSG_INPUT_REG_EMAIL" "" "$CUR_REG_EMAIL"
     REGISTRY_EMAIL="$RET_VAL"
 
     # 5. MetalLB
@@ -134,16 +134,16 @@ config_service_wizard() {
         APP_SECRET="$(_generate_random_secret)"
         config_view_secrets_generated
     else
-        ui_input "$MSG_INPUT_PG_USER" "pguser" "$CUR_PG_USER"; POSTGRES_USER="$RET_VAL"
-        ui_input "$MSG_INPUT_PG_PASS" "Ka5per5Ky!" "$CUR_PG_PASS"; POSTGRES_PASSWORD="$RET_VAL"
-        ui_input "$MSG_INPUT_MINIO_USER" "miniouser" "$CUR_MINIO_USER"; MINIO_ROOT_USER="$RET_VAL"
-        ui_input "$MSG_INPUT_MINIO_PASS" "Ka5per5Ky!" "$CUR_MINIO_PASS"; MINIO_ROOT_PASSWORD="$RET_VAL"
-        ui_input "$MSG_INPUT_CH_ADMIN_PASS" "Ka5per5Ky!" "$CUR_CH_ADMIN_PASS"; CLICKHOUSE_ADMIN_PASSWORD="$RET_VAL"
-        ui_input "$MSG_INPUT_CH_WRITE_PASS" "Ka5per5Ky!" "$CUR_CH_WRITE_PASS"; CLICKHOUSE_WRITE_PASSWORD="$RET_VAL"
-        ui_input "$MSG_INPUT_CH_READ_PASS" "Ka5per5Ky!" "$CUR_CH_READ_PASS"; CLICKHOUSE_READ_PASSWORD="$RET_VAL"
-        ui_input "$MSG_INPUT_MCHD_USER" "mchduser" "$CUR_MCHD_USER"; MCHD_USER="$RET_VAL"
-        ui_input "$MSG_INPUT_MCHD_PASS" "Ka5per5Ky!" "$CUR_MCHD_PASS"; MCHD_PASS="$RET_VAL"
-        ui_input "$MSG_INPUT_APP_SECRET" "Ka5per5Ky!" "$CUR_APP_SECRET"; APP_SECRET="$RET_VAL"
+        view_ui_input "$MSG_INPUT_PG_USER" "pguser" "$CUR_PG_USER"; POSTGRES_USER="$RET_VAL"
+        view_ui_input "$MSG_INPUT_PG_PASS" "Ka5per5Ky!" "$CUR_PG_PASS"; POSTGRES_PASSWORD="$RET_VAL"
+        view_ui_input "$MSG_INPUT_MINIO_USER" "miniouser" "$CUR_MINIO_USER"; MINIO_ROOT_USER="$RET_VAL"
+        view_ui_input "$MSG_INPUT_MINIO_PASS" "Ka5per5Ky!" "$CUR_MINIO_PASS"; MINIO_ROOT_PASSWORD="$RET_VAL"
+        view_ui_input "$MSG_INPUT_CH_ADMIN_PASS" "Ka5per5Ky!" "$CUR_CH_ADMIN_PASS"; CLICKHOUSE_ADMIN_PASSWORD="$RET_VAL"
+        view_ui_input "$MSG_INPUT_CH_WRITE_PASS" "Ka5per5Ky!" "$CUR_CH_WRITE_PASS"; CLICKHOUSE_WRITE_PASSWORD="$RET_VAL"
+        view_ui_input "$MSG_INPUT_CH_READ_PASS" "Ka5per5Ky!" "$CUR_CH_READ_PASS"; CLICKHOUSE_READ_PASSWORD="$RET_VAL"
+        view_ui_input "$MSG_INPUT_MCHD_USER" "mchduser" "$CUR_MCHD_USER"; MCHD_USER="$RET_VAL"
+        view_ui_input "$MSG_INPUT_MCHD_PASS" "Ka5per5Ky!" "$CUR_MCHD_PASS"; MCHD_PASS="$RET_VAL"
+        view_ui_input "$MSG_INPUT_APP_SECRET" "Ka5per5Ky!" "$CUR_APP_SECRET"; APP_SECRET="$RET_VAL"
     fi
 
     local NEW_CONFIG=" # KCS PoC Configuration

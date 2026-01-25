@@ -30,7 +30,7 @@ service_bootstrap_run() {
         view_bootstrap_saving_stop
     else
         # Should not happen if config exists, but good for safety
-        ui_spinner_stop "FAIL"
+        service_spinner_stop "FAIL"
         return 1
     fi
 
