@@ -47,28 +47,28 @@ Do not execute `git checkout` automatically.
 
 ---
 
-## Step 4 — Determine Planning Artifact
+## Step 4 — Determine Planning Artifacts
 
 Based on the target branch:
 
-* If target is `main`:
-
-  * The proposal belongs in `.roadmap/`
-  * Identify the most appropriate roadmap file (e.g. `0.6.0-dev.md`, `future-capabilities.md`)
-
-* If target is `release/*`:
-
-  * The proposal belongs in `TODO.md`
+* **If target is `main` (Standard for v0.6.0+ Development):**
+  * The proposal requires updating two distinct artifacts in `.roadmap/`:
+    1. **High-Level Roadmap** (e.g., `0.6.0-dev.md`): Captures the **desired feature** or capability.
+       - **Rule**: This file must NOT contain checkboxes `[ ]` or task markers. It is a list of goals, not an execution checklist.
+    2. **Execution-Level TODOs** (e.g., `0.6.0-execution-todos.md`): Captures the **granular tasks** required to implement the feature.
+       - **Rule**: This file uses checkboxes `[ ]` to track implementation progress.
+  
+* **If target is `release/*`:**
+  * The proposal belongs directly in the root `TODO.md` (or the specific release TODO).
 
 ---
 
 ## Step 5 — Propose the Update
 
-Describe:
+Describe the specific changes for both levels:
 
-* what file should be updated
-* what section the item belongs to
-* suggested wording for the new entry
+1. **For the Roadmap**: Suggested wording for the new capability (feature-oriented).
+2. **For the Execution TODOs**: Break down the feature into 3-5 actionable sub-tasks (implementation-oriented).
 
 Do not modify files automatically.
 
