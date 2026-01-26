@@ -1,5 +1,5 @@
 ---
-activation: always
+trigger: always_on
 ---
 
 # Roadmap Governance Rule
@@ -13,9 +13,9 @@ Restrictions:
 
 Allowed behavior:
 - Reference roadmap items when justifying proposals.
+- The roadmap items should be numbered to facilitate the selection of the update that should be done.
 - Suggest roadmap updates, but never apply them automatically.
 
 If a proposal conflicts with the roadmap:
 - Clearly explain the conflict.
 - Ask the user how to proceed.
-
