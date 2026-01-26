@@ -27,6 +27,7 @@ From `TODO.md`:
 
 * Identify unchecked (open) items
 * Ignore completed, deprecated, or commented entries
+* All TODO needs to be numbered
 
 Treat TODO items as **short-term, tactical work**.
 
