@@ -6,6 +6,8 @@
 # Responsibility: Global execution lifecycle, logging, and state
 # ==============================================================================
 
+_KCS_CLEANUP_DONE=0
+
 service_exec_init_logging() {
     local cmd_name="$1"
     local version="$2"
@@ -80,22 +82,36 @@ service_exec_wait_and_force_delete_ns() {
 service_exec_cleanup() {
     local exit_code="$1"
     
-    # Ensure cursor is visible
+    # 1. Guard against re-entrancy
+    [ "$_KCS_CLEANUP_DONE" -eq 1 ] && return
+    _KCS_CLEANUP_DONE=1
+
+    # 2. Ensure cursor is visible (UX safety)
     tput cnorm 2>/dev/null || true
     
-    # Cleanup spinner if running
-    service_spinner_cleanup "$exit_code" "$EXEC_LOG_FILE" "$EXEC_HASH"
+    # 3. Cleanup background processes (spinners, etc)
+    service_spinner_cleanup "$exit_code"
     
-    # Final state sync
-    if [ "$exit_code" -ne 0 ]; then
-        service_exec_save_status "FAIL"
-    else
-        service_exec_save_status "SUCCESS"
+    # 4. Final state sync for logging and UI summary
+    if [ -n "$EXEC_LOG_FILE" ]; then
+        local status="SUCCESS"
+        [ "$exit_code" -ne 0 ] && status="FAIL"
+        
+        service_exec_save_status "$status"
+        
+        # Only show log info if there was a hash generated (avoids noise for simple logs)
+        if [ -n "$EXEC_HASH" ]; then
+            view_ui_log_info "$EXEC_HASH"
+        fi
     fi
 }
 
 service_exec_register_traps() {
     # Centralized trap for script exit
+    # This catches end of script, explicit 'exit', or signals after they call exit.
     trap 'service_exec_cleanup $?' EXIT
-    trap 'service_exec_cleanup 1' SIGINT SIGTERM
+
+    # Signal traps: explicitly call 'exit' to trigger the EXIT trap above.
+    # This prevents the script from ignoring CTRL+C.
+    trap 'exit 1' SIGINT SIGTERM
 }
