@@ -25,7 +25,7 @@ service_prepare_run_all() {
     if _should_run "registry-auth"; then
         if view_prepare_confirm_step "Registry Secret" "$MSG_PREPARE_WHY_REGISTRY_TITLE" "$MSG_PREPARE_WHY_REGISTRY_DESC" "$UNATTENDED"; then
             view_prepare_step_start "$MSG_PREPARE_STEP_1"
-            if model_kubectl_create_docker_secret "kcs-registry-secret" "$NAMESPACE" "$REGISTRY_SERVER" "$REGISTRY_USER" "$REGISTRY_PASSWORD" && \
+            if model_kubectl_create_docker_secret "kcs-registry-secret" "$NAMESPACE" "$REGISTRY_SERVER" "$REGISTRY_USER" "$REGISTRY_PASS" && \
                model_kubectl_label "secret" "kcs-registry-secret" "$NAMESPACE" "$POC_LABEL"; then
                 view_prepare_step_stop "PASS"
                 if model_ns_check_label "secret" "kcs-registry-secret" "$NAMESPACE" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then

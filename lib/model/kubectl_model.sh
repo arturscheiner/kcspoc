@@ -8,7 +8,7 @@
 
 model_kubectl_create_namespace() {
     local ns="$1"
-    kubectl create namespace "$ns" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
+    kubectl create namespace "$ns" --dry-run=client -o yaml 2>> "$DEBUG_OUT" | kubectl apply -f - &>> "$DEBUG_OUT"
 }
 
 model_kubectl_create_docker_secret() {
@@ -22,7 +22,7 @@ model_kubectl_create_docker_secret() {
         --docker-server="$server" \
         --docker-username="$user" \
         --docker-password="$pass" \
-        -n "$ns" --dry-run=client -o yaml | kubectl apply -f - &>> "$DEBUG_OUT"
+        -n "$ns" --dry-run=client -o yaml 2>> "$DEBUG_OUT" | kubectl apply -f - &>> "$DEBUG_OUT"
 }
 
 model_kubectl_label() {
