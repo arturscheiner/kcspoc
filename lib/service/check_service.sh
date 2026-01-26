@@ -327,9 +327,9 @@ service_check_perform_audit() {
     while IFS='|' read -r name role cpu_a_m cpu_c_m mem_a_m mem_c_m disk_val disk_disp ebpf headers; do
         [ -z "$name" ] && continue
         local fail_reasons=""
-        [ "$cpu_a_m" -lt "$min_cpu" ] && { fail_reasons+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_CPU" "$((cpu_a_m/1000))" "4")${NC}\n"; fail_reasons+="        -> $MSG_AUDIT_CAUSE_CPU\n"; }
-        [ "$mem_a_m" -lt "$min_ram" ] && { fail_reasons+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_RAM" "$mem_a_m" "7680")${NC}\n"; fail_reasons+="        -> $MSG_AUDIT_CAUSE_RAM\n"; }
-        [ "$disk_val" -lt "$min_disk" ] && { local d_v_s="$disk_val"; [ "$disk_val" -eq 0 ] && d_v_s="0 (Unknown)"; fail_reasons+="${RED}      ✖ $(printf "$MSG_AUDIT_FAIL_DISK" "$d_v_s" "80")${NC}\n"; fail_reasons+="        -> $MSG_AUDIT_CAUSE_DISK\n"; }
+        [ "$cpu_a_m" -lt "$min_cpu" ] && { fail_reasons+="$(printf "$MSG_AUDIT_FAIL_CPU" "$((cpu_a_m/1000))" "4")|CAUSE:$MSG_AUDIT_CAUSE_CPU\n"; }
+        [ "$mem_a_m" -lt "$min_ram" ] && { fail_reasons+="$(printf "$MSG_AUDIT_FAIL_RAM" "$mem_a_m" "7680")|CAUSE:$MSG_AUDIT_CAUSE_RAM\n"; }
+        [ "$disk_val" -lt "$min_disk" ] && { local d_v_s="$disk_val"; [ "$disk_val" -eq 0 ] && d_v_s="0 (Unknown)"; fail_reasons+="$(printf "$MSG_AUDIT_FAIL_DISK" "$d_v_s" "80")|CAUSE:$MSG_AUDIT_CAUSE_DISK\n"; }
 
         if [ -n "$fail_reasons" ]; then
             cluster_pass=false

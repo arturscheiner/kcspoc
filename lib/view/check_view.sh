@@ -24,7 +24,8 @@ view_check_step_stop() {
 }
 
 view_check_error_skip_cluster() {
-    echo -e "   ${BRIGHT_RED}${ICON_FAIL} Skipping cluster checks due to prerequisite failures.${NC}"
+    echo -e "      ${BRIGHT_RED}${MSG_CHECK_LABEL_FAIL:-Error}:${NC}"
+    echo -e "      Skipping cluster checks due to prerequisite failures."
 }
 
 view_check_namespace_prep_start() {
@@ -45,7 +46,7 @@ view_check_info_ctx() {
 
 view_check_conn_error() {
     local msg="$1"
-    echo -e "      ${BRIGHT_RED}${BOLD}${MSG_CHECK_CONN_ERR}:${NC}"
+    echo -e "      [ ${BRIGHT_RED}${ICON_FAIL}${NC} ] ${BRIGHT_RED}${BOLD}${MSG_CHECK_CONN_ERR}:${NC}"
     echo -e "      ${BRIGHT_RED}${msg}${NC}"
 }
 
@@ -53,19 +54,19 @@ view_check_k8s_ver_info() {
     local ver="$1"
     local status="$2" # PASS or FAIL
     if [ "$status" == "PASS" ]; then
-        echo -e "      ${BRIGHT_CYAN}${ver}${NC} ${DIM}(1.25 - 1.34)${NC}"
+        echo -e "      Version: ${BRIGHT_CYAN}${ver}${NC} [ ${BRIGHT_GREEN}${ICON_OK}${NC} ] ${DIM}(1.25 - 1.34)${NC}"
     else
-        echo -e "      ${BRIGHT_RED}${ver}${NC} ${DIM}(Supported: 1.25 - 1.34)${NC}"
+        echo -e "      Version: ${BRIGHT_RED}${ver}${NC} [ ${BRIGHT_RED}${ICON_FAIL}${NC} ] ${DIM}(Supported: 1.25 - 1.34)${NC}"
     fi
 }
 
 view_check_arch_mixed_warn() {
-    echo -e "      ${YELLOW}$MSG_CHECK_LABEL_WARN: $MSG_CHECK_ARCH_MIXED${NC}"
-    echo -e "      ${DIM}$MSG_CHECK_ARCH_WARN${NC}"
+    echo -e "      [ ${BRIGHT_YELLOW}${ICON_WARN}${NC} ] ${BRIGHT_YELLOW}$MSG_CHECK_ARCH_MIXED${NC}"
+    echo -e "      ${DIM}${ICON_ARROW} $MSG_CHECK_ARCH_WARN${NC}"
 }
 
 view_check_arch_none_err() {
-    echo -e "      ${BRIGHT_RED}$MSG_CHECK_ARCH_NONE${NC}"
+    echo -e "      [ ${BRIGHT_RED}${ICON_FAIL}${NC} ] ${BRIGHT_RED}$MSG_CHECK_ARCH_NONE${NC}"
 }
 
 view_check_runtime_info() {
@@ -78,9 +79,9 @@ view_check_runtime_ver_status() {
     local min="$3"
     local status="$4"
     if [ "$status" == "ok" ]; then
-        echo -e "      - ${name} ${ver} ${BRIGHT_GREEN}(OK - ${min}+)${NC}"
+        echo -e "      - ${name} ${ver} [ ${BRIGHT_GREEN}${ICON_OK}${NC} ] ${DIM}(Min: ${min}+)${NC}"
     else
-        echo -e "      - ${name} ${ver} ${BRIGHT_RED}(FALHA - Min ${min})${NC}"
+        echo -e "      - ${name} ${ver} [ ${BRIGHT_RED}${ICON_FAIL}${NC} ] ${DIM}(Min: ${min}+)${NC}"
     fi
 }
 
@@ -97,7 +98,7 @@ view_check_cni_info() {
 }
 
 view_check_cni_warn() {
-    echo -e "      ${YELLOW}$MSG_CHECK_LABEL_WARN: $MSG_CHECK_CNI_WARN${NC}"
+    echo -e "      [ ${BRIGHT_YELLOW}${ICON_WARN}${NC} ] ${BRIGHT_YELLOW}$MSG_CHECK_CNI_WARN${NC}"
 }
 
 view_check_infra_header() {
@@ -109,9 +110,9 @@ view_check_infra_item() {
     local status="$2" # INSTALLED or MISSING
     printf "   %-25s " "$label"
     if [ "$status" == "INSTALLED" ]; then
-        echo -e "[ ${BRIGHT_GREEN}${MSG_CHECK_INFRA_INSTALLED}${NC} ]"
+        echo -e "[ ${BRIGHT_GREEN}${ICON_OK}${NC} ] ${DIM}(${MSG_CHECK_INFRA_INSTALLED})${NC}"
     else
-        echo -e "[ ${BRIGHT_YELLOW}${MSG_CHECK_INFRA_MISSING}${NC} ]"
+        echo -e "[ ${BRIGHT_YELLOW}${ICON_WARN}${NC} ] ${DIM}(${MSG_CHECK_INFRA_MISSING})${NC}"
     fi
 }
 
@@ -214,20 +215,24 @@ view_check_audit_node_rejected() {
     local fail_reasons="$2"
     local avail_str="$3"
     local total_str="$4"
-    echo -e "   ${BOLD}$MSG_AUDIT_NODE_EVAL: ${name}${NC} ${BRIGHT_RED}$MSG_AUDIT_REJECTED${NC}"
-    echo -e "$fail_reasons"
+    echo -e "   ${BOLD}$MSG_AUDIT_NODE_EVAL: ${name}${NC} [ ${BRIGHT_RED}${ICON_FAIL}${NC} ] ${BRIGHT_RED}${MSG_AUDIT_REJECTED:-REJECTED}${NC}"
+    echo -e "$fail_reasons" | while IFS='|' read -r reason cause; do
+         [ -z "$reason" ] && continue
+         echo -e "      ${BRIGHT_RED}${ICON_FAIL}${NC} ${reason}"
+         [ -n "$cause" ] && echo -e "        ${DIM}${ICON_ARROW} ${cause#CAUSE:}${NC}"
+    done
     echo -e "      ${DIM}Available: ${avail_str}${NC}"
     echo -e "      ${DIM}Total    : ${total_str}${NC}"
     view_ui_line
 }
 
 view_check_audit_success() {
-    echo -e "   ${BRIGHT_GREEN}$MSG_AUDIT_SUCCESS${NC}"
+    echo -e "   [ ${BRIGHT_GREEN}${ICON_OK}${NC} ] ${BRIGHT_GREEN}$MSG_AUDIT_SUCCESS${NC}"
 }
 
 view_check_audit_fail() {
-    echo -e "   ${BRIGHT_RED}$MSG_AUDIT_FAIL${NC}"
-    echo -e "   ${BRIGHT_YELLOW}$MSG_AUDIT_REC${NC}"
+    echo -e "   [ ${BRIGHT_RED}${ICON_FAIL}${NC} ] ${BRIGHT_RED}$MSG_AUDIT_FAIL${NC}"
+    echo -e "   ${BRIGHT_YELLOW}${ICON_ARROW} $MSG_AUDIT_REC${NC}"
 }
 
 view_check_global_totals() {
@@ -238,42 +243,42 @@ view_check_global_totals() {
     echo -ne "   ${ICON_INFO} $MSG_CHECK_GLOBAL_TOTALS: "
     echo -e "${BRIGHT_CYAN}${cpu} vCPUs / ${mem} GB RAM${NC}"
     if [ "$status" == "FAIL" ]; then
-         echo -e "      ${BRIGHT_RED}$MSG_CHECK_LABEL_FAIL${NC} ${BRIGHT_RED}${msg}${NC}"
+         echo -e "      [ ${BRIGHT_RED}${ICON_FAIL}${NC} ] ${BRIGHT_RED}${msg}${NC}"
     else
-         echo -e "      ${BRIGHT_GREEN}$MSG_CHECK_LABEL_PASS${NC} ${DIM}${msg}${NC}"
+         echo -e "      [ ${BRIGHT_GREEN}${ICON_OK}${NC} ] ${DIM}${msg}${NC}"
     fi
 }
 
-view_check_cleaning_residue() {
-    echo -ne "   ${ICON_GEAR} Cleaning residue... "
+view_check_cleanup_start() {
+    service_spinner_start "Cleaning residue"
 }
 
-view_check_cleaning_done() {
-    echo -e "${DIM}Done${NC}"
+view_check_cleanup_stop() {
+    service_spinner_stop "$1"
 }
 
 view_check_all_pass() {
-    echo -e "${BRIGHT_GREEN}${BOLD}${ICON_OK} $MSG_CHECK_ALL_PASS${NC}"
-    echo -e "${DIM}Your cluster is ready for Kaspersky Container Security installation.${NC}"
+    echo -e "\n${BRIGHT_GREEN}${BOLD}[ ${ICON_OK} ] $MSG_CHECK_ALL_PASS${NC}"
+    echo -e "${DIM}   Your cluster is ready for Kaspersky Container Security installation.${NC}\n"
 }
 
 view_check_final_fail() {
-    echo -e "${BRIGHT_RED}${BOLD}${ICON_FAIL} $MSG_CHECK_FINAL_FAIL${NC}"
+    echo -e "\n${BRIGHT_RED}${BOLD}[ ${ICON_FAIL} ] $MSG_CHECK_FINAL_FAIL${NC}\n"
 }
 
 view_check_prereq_config_fix() {
-    echo -e "      ${YELLOW}$MSG_CHECK_CONFIG_FIX${NC}"
+    echo -e "      ${DIM}${ICON_ARROW} ${BRIGHT_YELLOW}$MSG_CHECK_CONFIG_FIX${NC}"
 }
 
 view_check_prereq_config_create() {
-    echo -e "      ${YELLOW}$MSG_CHECK_CONFIG_CREATE${NC}"
+    echo -e "      ${DIM}${ICON_ARROW} ${BRIGHT_YELLOW}$MSG_CHECK_CONFIG_CREATE${NC}"
 }
 
 view_check_prereq_kubeconfig_fail() {
-    echo -e "      ${RED}${MSG_CHECK_KUBECONFIG_FAIL}${NC}"
+    echo -e "      [ ${BRIGHT_RED}${ICON_FAIL}${NC} ] ${BRIGHT_RED}${MSG_CHECK_KUBECONFIG_FAIL}${NC}"
 }
 
 view_check_prereq_tools_fail() {
     local tools="$1"
-    echo -e "      ${RED}${MSG_CHECK_TOOLS_FAIL}:${tools}${NC}"
+    echo -e "      [ ${BRIGHT_RED}${ICON_FAIL}${NC} ] ${BRIGHT_RED}${MSG_CHECK_TOOLS_FAIL}:${NC} ${tools}"
 }

@@ -80,12 +80,11 @@ check_controller() {
 
     # Cleanup
     if [ "$error" -eq 0 ] || [ -d "$CONFIG_DIR" ]; then
-        view_check_cleaning_residue
+        view_check_cleanup_start
         model_cluster_delete_namespace "$deep_ns" "false" &>/dev/null || true
-        view_check_cleaning_done
+        view_check_cleanup_stop "PASS"
     fi
 
-    echo ""
     if [ $error -eq 0 ]; then
         view_check_all_pass
     else
