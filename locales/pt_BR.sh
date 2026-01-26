@@ -300,8 +300,8 @@ MSG_HELP_CHECK_EX="kcspoc check\nkcspoc check --deep"
 
 # Prepare Help
 MSG_HELP_PREPARE_DESC="Orquestra a instalação das dependências de infraestrutura (MetalLB, Nginx, Cert-Manager) e armazenamento local para preparar o KCS."
-MSG_HELP_PREPARE_OPTS="--unattended|Instala todos os componentes sem solicitar confirmação do usuário."
-MSG_HELP_PREPARE_EX="kcspoc prepare\nkcspoc prepare --unattended"
+MSG_HELP_PREPARE_OPTS="--unattended|Instala todos os componentes sem solicitar confirmação.\n--install <lista>|Lista separada por vírgula (ex: metallb,cert-manager)."
+MSG_HELP_PREPARE_EX="kcspoc prepare\nkcspoc prepare --unattended\nkcspoc prepare --install metallb,ingress-nginx"
 
 # Destroy Help
 MSG_HELP_DESTROY_DESC="Desinstala com segurança o KCS e seus recursos associados do seu cluster. Inclui limpeza opcional das dependências de infraestrutura."

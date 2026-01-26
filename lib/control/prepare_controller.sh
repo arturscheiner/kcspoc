@@ -7,18 +7,23 @@
 # ==============================================================================
 
 prepare_controller() {
-    # Parse Arguments (Standard layout for v0.6.0)
+    local install_list=""
+    
     while [[ "$#" -gt 0 ]]; do
         case $1 in
             --help|help)
                 view_ui_help "prepare" "$MSG_HELP_PREPARE_DESC" "$MSG_HELP_PREPARE_OPTS" "$MSG_HELP_PREPARE_EX" "$VERSION"
                 return 0
                 ;;
+            --install)
+                install_list="$2"
+                shift 2
+                ;;
             *)
                 # Prepare often takes positional args or flags like --unattended in global context
                 # but cmd_prepare historically didn't have specific flags. 
                 # Just catch-all to avoid help on unknown flags if intended.
-                break
+                shift
                 ;;
         esac
     done
@@ -29,5 +34,5 @@ prepare_controller() {
         return 1
     fi
 
-    service_prepare_run_all
+    service_prepare_run_all "$install_list"
 }
