@@ -19,3 +19,8 @@ export EXEC_CMD=""
 export EXEC_STATUS="UNKNOWN"
 export DEBUG_OUT="/dev/null"
 export KCS_DEBUG=false
+
+# --- PoC Labels ---
+export POC_LABEL_KEY="kcspoc.io/managed-by"
+export POC_LABEL_VAL="kcspoc"
+export POC_LABEL="${POC_LABEL_KEY}=${POC_LABEL_VAL}"

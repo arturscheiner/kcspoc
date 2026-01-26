@@ -44,11 +44,16 @@ view_prepare_summary_fail() {
     echo -e "   ${MSG_ERROR_CONFIG_NOT_FOUND}" # Fallback generic error msg
 }
 
-view_prepare_infra_check() {
-    local type="$1"
-    local name="$2"
-    local ns="$3"
-    check_k8s_label "$type" "$name" "$ns"
+view_prepare_infra_status() {
+    local status="$1"
+    local type="$2"
+    local name="$3"
+    
+    if [ "$status" == "PASS" ]; then
+        echo -e "      ${ICON_OK} Verification Successful: ${type}/${name}${NC}"
+    else
+        echo -e "      ${ICON_FAIL} Verification Failed: ${type}/${name}${NC}"
+    fi
 }
 
 view_prepare_confirm_step() {

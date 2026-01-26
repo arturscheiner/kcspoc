@@ -24,7 +24,11 @@ service_prepare_run_all() {
             if model_kubectl_create_docker_secret "kcs-registry-secret" "$NAMESPACE" "$REGISTRY_SERVER" "$REGISTRY_USER" "$REGISTRY_PASSWORD" && \
                model_kubectl_label "secret" "kcs-registry-secret" "$NAMESPACE" "$POC_LABEL"; then
                 view_prepare_step_stop "PASS"
-                view_prepare_infra_check "secret" "kcs-registry-secret" "$NAMESPACE"
+                if model_ns_check_label "secret" "kcs-registry-secret" "$NAMESPACE" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
+                    view_prepare_infra_status "PASS" "secret" "kcs-registry-secret"
+                else
+                    view_prepare_infra_status "FAIL" "secret" "kcs-registry-secret"
+                fi
             else
                 view_prepare_step_stop "FAIL"
                 PREPARE_ERROR=1
@@ -49,7 +53,11 @@ service_prepare_run_all() {
                 model_kubectl_label_all "deployment" "cert-manager" "$POC_LABEL"
                 
                 view_prepare_step_stop "PASS"
-                view_prepare_infra_check "namespace" "cert-manager"
+                if model_ns_check_label "namespace" "cert-manager" "" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
+                    view_prepare_infra_status "PASS" "namespace" "cert-manager"
+                else
+                    view_prepare_infra_status "FAIL" "namespace" "cert-manager"
+                fi
             else
                 view_prepare_step_stop "FAIL"
                 local err_msg=$(cat "$HELM_ERR" | tr '\n' ' ' | cut -c 1-120)
@@ -73,7 +81,11 @@ service_prepare_run_all() {
                 model_kubectl_patch_storageclass "local-path" '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
                 model_kubectl_label "sc" "local-path" "" "$POC_LABEL"
                 view_prepare_step_stop "PASS"
-                view_prepare_infra_check "sc" "local-path"
+                if model_ns_check_label "sc" "local-path" "" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
+                    view_prepare_infra_status "PASS" "sc" "local-path"
+                else
+                    view_prepare_infra_status "FAIL" "sc" "local-path"
+                fi
             else
                 view_prepare_step_stop "FAIL"
                 view_prepare_step_error "Helm install failed. Check logs."
@@ -95,7 +107,11 @@ service_prepare_run_all() {
                ]' && \
                model_kubectl_label "deployment" "metrics-server" "kube-system" "$POC_LABEL"; then
                 view_prepare_step_stop "PASS"
-                view_prepare_infra_check "deployment" "metrics-server" "kube-system"
+                if model_ns_check_label "deployment" "metrics-server" "kube-system" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
+                    view_prepare_infra_status "PASS" "deployment" "metrics-server"
+                else
+                    view_prepare_infra_status "FAIL" "deployment" "metrics-server"
+                fi
             else
                 view_prepare_step_stop "FAIL"
                 PREPARE_ERROR=1
@@ -141,7 +157,11 @@ spec:
   - first-pool
 EOF
                 view_prepare_step_stop "PASS"
-                view_prepare_infra_check "namespace" "metallb-system"
+                if model_ns_check_label "namespace" "metallb-system" "" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
+                    view_prepare_infra_status "PASS" "namespace" "metallb-system"
+                else
+                    view_prepare_infra_status "FAIL" "namespace" "metallb-system"
+                fi
             else
                 view_prepare_step_stop "FAIL"
                 local err_msg=$(cat "$HELM_ERR" | tr '\n' ' ' | cut -c 1-120)
@@ -165,7 +185,11 @@ EOF
                 model_kubectl_label "namespace" "ingress-nginx" "" "$POC_LABEL"
                 model_kubectl_label_all "deployment" "ingress-nginx" "$POC_LABEL"
                 view_prepare_step_stop "PASS"
-                view_prepare_infra_check "namespace" "ingress-nginx"
+                if model_ns_check_label "namespace" "ingress-nginx" "" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
+                    view_prepare_infra_status "PASS" "namespace" "ingress-nginx"
+                else
+                    view_prepare_infra_status "FAIL" "namespace" "ingress-nginx"
+                fi
             else
                 view_prepare_step_stop "FAIL"
                 local err_msg=$(cat "$HELM_ERR" | tr '\n' ' ' | cut -c 1-120)
