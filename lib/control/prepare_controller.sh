@@ -8,6 +8,7 @@
 
 prepare_controller() {
     local install_list=""
+    local uninstall_list=""
     
     while [[ "$#" -gt 0 ]]; do
         case $1 in
@@ -17,6 +18,10 @@ prepare_controller() {
                 ;;
             --install)
                 install_list="$2"
+                shift 2
+                ;;
+            --uninstall)
+                uninstall_list="$2"
                 shift 2
                 ;;
             *)
@@ -34,5 +39,10 @@ prepare_controller() {
         return 1
     fi
 
-    service_prepare_run_all "$install_list"
+    # Dispatch based on operation
+    if [ -n "$uninstall_list" ]; then
+        service_prepare_uninstall "$uninstall_list"
+    else
+        service_prepare_run_all "$install_list"
+    fi
 }

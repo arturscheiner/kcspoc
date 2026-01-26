@@ -7,13 +7,17 @@
 # ==============================================================================
 
 service_prepare_run_all() {
-    local install_list="$1"
+    local list="$1"
     local PREPARE_ERROR=0
+
+    # Expand 'all' or empty to full list
+    if [ "$list" == "all" ] || [ -z "$list" ]; then
+        list="registry-auth,cert-manager,local-path-storage,metrics-server,metallb,ingress-nginx,kernel-headers"
+    fi
 
     _should_run() {
         local comp="$1"
-        if [ -z "$install_list" ]; then return 0; fi # Default to all if empty
-        [[ ",$install_list," == *",$comp,"* ]] && return 0
+        [[ ",$list," == *",$comp,"* ]] && return 0
         return 1
     }
 
@@ -225,4 +229,74 @@ EOF
         view_prepare_summary_success "$ingress_ip" "$DOMAIN"
         return 0
     fi
+}
+
+service_prepare_uninstall() {
+    local list="$1"
+    
+    # Expand 'all' to full list
+    if [ "$list" == "all" ]; then
+        list="ingress-nginx,metallb,metrics-server,local-path-storage,cert-manager,registry-auth"
+    fi
+
+    _should_uninstall() {
+        local comp="$1"
+        [[ ",$list," == *",$comp,"* ]] && return 0
+        return 1
+    }
+
+    view_prepare_section "Infrastructure Removal"
+
+    # 1. Ingress-Nginx
+    if _should_uninstall "ingress-nginx"; then
+        view_prepare_step_start "Removing Ingress-Nginx"
+        model_helm_uninstall "ingress-nginx" "ingress-nginx"
+        model_kubectl_delete_namespace "ingress-nginx" "false"
+        service_exec_wait_and_force_delete_ns "ingress-nginx" 3
+        view_prepare_step_stop "PASS"
+    fi
+
+    # 2. MetalLB
+    if _should_uninstall "metallb"; then
+        view_prepare_step_start "Removing MetalLB"
+        model_helm_uninstall "metallb" "metallb-system"
+        model_kubectl_delete_namespace "metallb-system" "false"
+        service_exec_wait_and_force_delete_ns "metallb-system" 3
+        view_prepare_step_stop "PASS"
+    fi
+
+    # 3. Metrics Server
+    if _should_uninstall "metrics-server"; then
+        view_prepare_step_start "Removing Metrics Server"
+        kubectl delete deployment metrics-server -n kube-system &>> "$DEBUG_OUT" || true
+        view_prepare_step_stop "PASS"
+    fi
+
+    # 4. Local Path Storage
+    if _should_uninstall "local-path-storage"; then
+        view_prepare_step_start "Removing Local Path Storage"
+        model_helm_uninstall "local-path-storage" "local-path-storage"
+        model_kubectl_delete_namespace "local-path-storage" "false"
+        service_exec_wait_and_force_delete_ns "local-path-storage" 3
+        view_prepare_step_stop "PASS"
+    fi
+
+    # 5. Cert-Manager
+    if _should_uninstall "cert-manager"; then
+        view_prepare_step_start "Removing Cert-Manager"
+        model_helm_uninstall "cert-manager" "cert-manager"
+        model_kubectl_delete_namespace "cert-manager" "false"
+        service_exec_wait_and_force_delete_ns "cert-manager" 3
+        view_prepare_step_stop "PASS"
+    fi
+
+    # 6. Registry Secret
+    if _should_uninstall "registry-auth"; then
+        view_prepare_step_start "Removing Registry Secret"
+        kubectl delete secret kcs-registry-secret -n "$NAMESPACE" &>> "$DEBUG_OUT" || true
+        view_prepare_step_stop "PASS"
+    fi
+
+    view_prepare_summary_header
+    echo -e "${BRIGHT_GREEN}${ICON_OK} Infrastructure cleanup completed.${NC}"
 }
