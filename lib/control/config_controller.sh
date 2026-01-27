@@ -94,15 +94,15 @@ _config_controller_wizard() {
     # 2. Kubernetes Environment
     config_view_section "$MSG_SECTION_ENVIRONMENT"
 
-    # K8s Context (Step 2)
+    # Platform (Step 2)
+    config_view_step_generic 2 "$TOTAL_STEPS" "$MSG_STEP_PLATFORM" "$MSG_STEP_PLATFORM_DESC" "$MSG_INPUT_PLATFORM" "kubernetes" "$CUR_PLAT"
+    PLATFORM="$RET_VAL"
+
+    # K8s Context (Step 3)
     local DEF_CTX=$(config_service_get_current_context)
     local AVAIL_CTX=$(config_service_get_all_contexts)
-    config_view_step_context 2 "$TOTAL_STEPS" "$AVAIL_CTX" "$DEF_CTX" "$CUR_K8S_CTX"
+    config_view_step_context 3 "$TOTAL_STEPS" "$AVAIL_CTX" "$DEF_CTX" "$CUR_K8S_CTX"
     K8S_CONTEXT="$RET_VAL"
-
-    # Platform (Step 3)
-    config_view_step_generic 3 "$TOTAL_STEPS" "$MSG_STEP_PLATFORM" "$MSG_STEP_PLATFORM_DESC" "$MSG_INPUT_PLATFORM" "kubernetes" "$CUR_PLAT"
-    PLATFORM="$RET_VAL"
 
     # CRI Socket (Step 4)
     local SUGGESTED_CRI=$(kubeconfig_get_suggested_cri "$CUR_CRI")
