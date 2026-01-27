@@ -13,6 +13,7 @@ MSG_CMD_HELP_DESC="Show this help message"
 MSG_VERSION="Version"
 MSG_AUTHOR="Author"
 MSG_CMD_BOOTSTRAP_DESC="Configure KCS API Integration (API Token)"
+MSG_CMD_EXTRAS_DESC="Manage infrastructure extra-packs (Discovery, Install, Uninstall)"
 MSG_ERROR_CONFIG_NOT_FOUND="Error: Configuration not found. Please run 'kcspoc config' first."
 
 # --- Helper UI ---
@@ -325,3 +326,8 @@ MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --core upgrade\nkcspoc d
 MSG_HELP_BOOTSTRAP_DESC="Post-installation wizard to integrate the tool with the KCS API for automated operations."
 MSG_HELP_BOOTSTRAP_OPTS="No options required. Interactive collection of the ADMIN_API_TOKEN."
 MSG_HELP_BOOTSTRAP_EX="kcspoc bootstrap"
+
+# Extras Help
+MSG_HELP_EXTRAS_DESC="Central hub for managing optional infrastructure components (extra-packs). Connects to the project repository for dynamic discovery."
+MSG_HELP_EXTRAS_OPTS="--list|Display all available extra-packs from the online catalog.\n--install <pack>|Install a specific component (e.g. ingress-nginx).\n--uninstall <pack>|Remove a specific component."
+MSG_HELP_EXTRAS_EX="kcspoc extras --list\nkcspoc extras --install cert-manager\nkcspoc extras --uninstall metallb"

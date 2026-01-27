@@ -75,6 +75,14 @@ base_controller_dispatch() {
             fi
             bootstrap_controller "$@"
             ;;
+        extras)
+            shift
+            if _base_control_needs_logging "$@"; then
+                service_exec_init_logging "extras" "$VERSION"
+                view_ui_slim_header "$VERSION" "$EXEC_HASH"
+            fi
+            extras_controller "$@"
+            ;;
         help|*)
             view_ui_usage "$VERSION" "$EXEC_HASH"
             exit 0

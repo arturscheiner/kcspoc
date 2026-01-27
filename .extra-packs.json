@@ -1,0 +1,37 @@
+[
+    {
+        "id": "registry-auth",
+        "name": "Registry Secret",
+        "description": "KCS Registry authentication credentials"
+    },
+    {
+        "id": "cert-manager",
+        "name": "Cert-Manager",
+        "description": "Automated certificate management (Jetstack)"
+    },
+    {
+        "id": "metallb",
+        "name": "MetalLB",
+        "description": "L2 LoadBalancer for On-Premise clusters"
+    },
+    {
+        "id": "ingress-nginx",
+        "name": "Ingress-Nginx",
+        "description": "Gateway and Load Balancer for KCS"
+    },
+    {
+        "id": "local-path-storage",
+        "name": "Local Path Storage",
+        "description": "Local node storage provisioner (Rancher)"
+    },
+    {
+        "id": "metrics-server",
+        "name": "Metrics Server",
+        "description": "Resource usage monitoring for K8s API"
+    },
+    {
+        "id": "kernel-headers",
+        "name": "Kernel Headers",
+        "description": "eBPF prerequisite for runtime security"
+    }
+]
