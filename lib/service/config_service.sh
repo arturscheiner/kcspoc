@@ -46,3 +46,20 @@ config_service_save() {
     mkdir -p "$CONFIG_DIR"
     kubeconfig_save "$config_data"
 }
+
+config_service_verify_ai() {
+    local endpoint="$1"
+    local model="$2"
+    
+    # 1. Check endpoint
+    if ! ai_model_check_endpoint "$endpoint"; then
+        return 1 # Endpoint unreachable
+    fi
+    
+    # 2. Check model
+    if ! ai_model_verify_presence "$endpoint" "$model"; then
+        return 2 # Model not found
+    fi
+    
+    return 0
+}
