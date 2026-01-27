@@ -8,7 +8,8 @@ Your report MUST follow this exact Markdown structure:
 
 # KCS Execution Analysis Report
 ## 📋 Metadata
-*   **Execution ID**: [Extracted from log]
+*   **Report ID**: [Extracted from instructions]
+*   **Source Execution ID**: [Extracted from instructions]
 *   **Command**: [Extracted from log]
 *   **Timestamp**: [Extracted from log]
 

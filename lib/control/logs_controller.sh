@@ -77,21 +77,24 @@ logs_controller() {
                 fi
                 local log_content=$(cat "$log_file")
                 
+                # Generate a unique hash for the report itself
+                local report_hash=$(model_report_generate_hash)
+                
                 # UI: Starting Analysis
                 logs_view_report_start "$target" "$mod"
                 
-                # Service Call
-                local ai_report=$(ai_service_generate_log_report "$target" "$log_content" "$ep" "$mod")
+                # Service Call (passing report_hash for prompt injection)
+                local ai_report=$(ai_service_generate_log_report "$target" "$log_content" "$ep" "$mod" "$report_hash")
                 
                 if [ -n "$ai_report" ]; then
                     # Save Report
-                    local tmp_report="/tmp/kcspoc_report_${target}.md"
+                    local tmp_report="/tmp/kcspoc_report_${report_hash}.md"
                     echo "$ai_report" > "$tmp_report"
-                    model_report_save "logs" "$target" "$tmp_report" "md" "ai" "$mod"
+                    model_report_save "logs" "$report_hash" "$tmp_report" "md" "ai" "$mod" "$target"
                     rm "$tmp_report"
                     
                     # UI: Success
-                    logs_view_report_success "logs" "$target" "md"
+                    logs_view_report_success "logs" "$report_hash" "md"
                 else
                     # UI: Failure
                     logs_view_report_fail "$target"

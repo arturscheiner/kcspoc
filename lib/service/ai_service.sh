@@ -11,6 +11,7 @@ ai_service_generate_log_report() {
     local log_content="$2"
     local endpoint="$3"
     local model="$4"
+    local report_hash="$5"
     
     local schema_file="$SCRIPT_DIR/lib/model/ai/schemas/log_report.md"
     if [ ! -f "$schema_file" ]; then
@@ -21,6 +22,11 @@ ai_service_generate_log_report() {
     
     local full_prompt="
 $base_instructions
+
+---
+## METADATA FOR YOUR REPORT
+- Report ID: $report_hash
+- Source Execution ID: $log_hash
 
 ---
 ## RAW LOG CONTENT TO ANALYZE

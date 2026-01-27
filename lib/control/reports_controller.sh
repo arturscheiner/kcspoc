@@ -50,7 +50,8 @@ reports_controller() {
                     local e=$(echo "$report" | jq -r '.extension')
                     local type=$(echo "$report" | jq -r '.type // "template"')
                     local model=$(echo "$report" | jq -r '.ai_model // "-"')
-                    view_reports_list_item "$h" "$t" "$c" "$e" "$type" "$model"
+                    local source=$(echo "$report" | jq -r '.orig_exec_id // "-"')
+                    view_reports_list_item "$h" "$t" "$c" "$e" "$type" "$model" "$source"
                 done
             fi
             echo ""

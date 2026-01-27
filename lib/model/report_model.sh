@@ -12,8 +12,12 @@ model_report_init() {
     [ -d "$REPORTS_BASE_DIR" ] || mkdir -p "$REPORTS_BASE_DIR"
 }
 
+model_report_generate_hash() {
+    cat /dev/urandom | tr -dc 'A-Z0-9' | fold -w 6 | head -n 1
+}
+
 # Saves a report artifact
-# Usage: model_report_save <command> <hash> <content_file> [suffix] [type] [ai_model]
+# Usage: model_report_save <command> <hash> <content_file> [suffix] [type] [ai_model] [orig_exec_id]
 model_report_save() {
     local cmd="$1"
     local hash="$2"
@@ -21,6 +25,7 @@ model_report_save() {
     local suffix="${4:-txt}"
     local type="${5:-template}"
     local ai_model="${6:-}"
+    local orig_exec_id="${7:-}"
     
     local cmd_dir="$REPORTS_BASE_DIR/$cmd"
     [ -d "$cmd_dir" ] || mkdir -p "$cmd_dir"
@@ -28,15 +33,18 @@ model_report_save() {
     local report_file="$cmd_dir/${hash}.${suffix}"
     
     # Prepend AI metadata if it's an AI report
-    if [ "$type" == "ai" ] && [ -n "$ai_model" ]; then
-        echo -e "<!-- origin: ai | model: $ai_model -->\n" > "$report_file"
+    if [ "$type" == "ai" ]; then
+        {
+            echo "<!-- origin: ai | model: ${ai_model:-?} | source_exec: ${orig_exec_id:-?} | report_id: $hash -->"
+            echo ""
+        } > "$report_file"
         cat "$src_file" >> "$report_file"
     else
         cp "$src_file" "$report_file"
     fi
     
     # Update index
-    _model_report_index_add "$cmd" "$hash" "$suffix" "$type" "$ai_model"
+    _model_report_index_add "$cmd" "$hash" "$suffix" "$type" "$ai_model" "$orig_exec_id"
 }
 
 # Internal helper to maintain a metadata index
@@ -46,6 +54,7 @@ _model_report_index_add() {
     local suffix="$3"
     local type="$4"
     local ai_model="$5"
+    local orig_exec_id="$6"
     local index_file="$REPORTS_BASE_DIR/index.json"
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     
@@ -58,7 +67,8 @@ _model_report_index_add() {
         \"timestamp\": \"$timestamp\",
         \"extension\": \"$suffix\",
         \"type\": \"$type\",
-        \"ai_model\": \"$ai_model\"
+        \"ai_model\": \"$ai_model\",
+        \"orig_exec_id\": \"$orig_exec_id\"
     }]" "$index_file" > "$temp_file"
     mv "$temp_file" "$index_file"
 }

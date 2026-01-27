@@ -9,6 +9,7 @@
 view_reports_list_header() {
     view_ui_table_header \
         "HASH:8" \
+        "SOURCE:8" \
         "DATE/TIME:22" \
         "COMMAND:12" \
         "FORMAT:8" \
@@ -23,12 +24,14 @@ view_reports_list_item() {
     local ext="$4"
     local type="$5"
     local model="$6"
+    local source="$7"
     
     local type_color=$DIM
     if [ "$type" == "ai" ]; then type_color=$BRIGHT_MAGENTA; fi
     
     view_ui_table_row \
         "${BRIGHT_CYAN}${hash}${NC}:8" \
+        "${BRIGHT_YELLOW}${source}${NC}:8" \
         "${DIM}${timestamp}${NC}:22" \
         "${BOLD}${cmd}${NC}:12" \
         "${DIM}${ext}${NC}:8" \
