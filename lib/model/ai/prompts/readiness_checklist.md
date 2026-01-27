@@ -46,15 +46,14 @@ Your goal is to analyze the provided "Cluster Facts" (JSON) and determine if the
 
 ---
 
-## 🛑 AUDITOR DECISION MATRIX
+## 🛑 AUDITOR DECISION LOGIC
 
-| Cluster Fact | Verdict | Required Action |
-| :--- | :--- | :--- |
-| `Kernel: < 4.18` | **FAILED** | Upgrade Node OS. Runtime features (eBPF) will not function. |
-| `CNI: Flannel` | **WARNING** | ACTIVE DEFENSE RESTRICTION: Network blocking will not work (Detection only). |
-| `StorageClass: <none>` | **FAILED** | INSTALLATION IMPOSSIBLE: PVCs will remain 'Pending'. Configure a default StorageClass. |
-| `K8s Version: < 1.21` | **FAILED** | Upgrade Cluster. Version 1.21 is the absolute minimum. |
-| `Kernel: >= 5.8` | **PASS (CONDITIONAL)** | Requires `privileged: true` in the Helm `values.yaml`. |
+Analyze facts using these scenarios:
+*   **Kernel < 4.18**: FAILED. Reasoning: eBPF/Runtime features impossible.
+*   **CNI: Flannel**: WARNING. Reasoning: Network blocking non-functional.
+*   **StorageClass: <none>**: FAILED. Reasoning: Installation will block on PVCs.
+*   **K8s Version < 1.21**: FAILED. Reasoning: Unsupported API version.
+*   **Kernel >= 5.8**: PASS (CONDITIONAL). Reasoning: Requires `privileged: true` in Helm.
 
 ---
 
@@ -62,17 +61,18 @@ Your goal is to analyze the provided "Cluster Facts" (JSON) and determine if the
 
 1.  **Ingest Cluster Facts**: Parse the provided JSON data.
 2.  **Evaluate**: Compare each fact against the requirements above.
-3.  **Audit Report**: Generate a structured report in the following format:
+3.  **Audit Report**: Generate a structured report in the following format. 
+    **IMPORTANT**: Avoid Markdown tables. Use headers, bullet points, and bold text for maximum readability in a terminal.
 
 ### REPORT STRUCTURE
-- **AUDIT SUMMARY**: A high-level [PASS / FAIL / WARN] assessment.
-- **DETAILED EVALUATION**:
-    - **Control Plane & Versions**: Evaluation of K8s and CRI.
+- **1. AUDIT SUMMARY**: A high-level [PASS / FAIL / WARN] assessment with a summary sentence.
+- **2. DETAILED EVALUATION**: (Use bullet points, no tables)
+    - **Control Plane & Versions**: Evaluation of K8s, CRI, and Architecture.
     - **Resource Capacity**: Evaluation vs Requirements (Total and Per-Node).
-    - **Security Readiness**: eBPF/BTF and Kernel Headers status.
-    - **Infrastructure Dependencies**: Status of cert-manager, SC, Ingress.
-- **CRITICAL GAPS**: List specifically what MUST be fixed before installation.
-- **OPTIMIZATION TIPS**: Suggestions for better performance or configuration flags (e.g., `privileged: true`).
+    - **Security Readiness**: eBPF/BTF, Kernel, and Headers status.
+    - **Infrastructure Dependencies**: Status of cert-manager, SC, Ingress, and Registry.
+- **3. CRITICAL GAPS**: Numbered list of items that MUST be fixed.
+- **4. CONFIGURATION TIPS**: Suggestions for Helm flags or OS commands.
 
 ---
 
