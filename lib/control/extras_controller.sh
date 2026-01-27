@@ -97,5 +97,5 @@ extras_controller() {
     fi
 
     # Default if no args
-    view_ui_usage "extras" "$EXEC_HASH"
+    view_ui_help "extras" "$MSG_HELP_EXTRAS_DESC" "$MSG_HELP_EXTRAS_OPTS" "$MSG_HELP_EXTRAS_EX" "$VERSION"
 }
