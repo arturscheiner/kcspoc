@@ -141,12 +141,14 @@ view_ui_banner() {
     echo "██║  ██╗╚██████╗ ███████║██║     ╚██████╔╝╚██████╗"
     echo "╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝      ╚═════╝  ╚═════╝"
     echo -e "${NC}"
-    echo -e "        ${BRIGHT_WHITE}🐳  ${BOLD}KCSPOC${NC}${BRIGHT_WHITE} — Kaspersky Container Security PoC Tool - v${version}${NC}"
+    echo -e "        ${BRIGHT_WHITE}🐳  ${BOLD}KCSPOC${NC}${BRIGHT_WHITE} — Kaspersky Container Security PoC Tool${NC}"
     
     if [ -n "$exec_hash" ]; then
         echo -e "   Execution ID: ${BRIGHT_ORANGE}${BOLD}${exec_hash}${NC}"
     fi
     echo -e "${ORANGE}================================================================================${NC}"
+    echo -e "${DIM}  Version: ${version}${NC}"
+    echo -e "${DIM}  Author:  Artur Scheiner${NC}"
     echo ""
 }
 
