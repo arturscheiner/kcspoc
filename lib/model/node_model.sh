@@ -12,8 +12,10 @@ model_node_get_raw_baseline_data() {
 }
 
 model_node_get_global_totals() {
-    local cpu=$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.capacity.cpu}{"\n"}{end}' | awk '{s+=$1} END {print s}')
-    local mem_ki=$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.capacity.memory}{"\n"}{end}' | sed 's/Ki//g' | awk '{s+=$1} END {print s}')
+    local cpu=$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.capacity.cpu}{"\n"}{end}' 2>/dev/null | awk '{s+=$1} END {print s}')
+    [ -z "$cpu" ] && cpu=0
+    local mem_ki=$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.capacity.memory}{"\n"}{end}' 2>/dev/null | sed 's/Ki//g' | awk '{s+=$1} END {print s}')
+    [ -z "$mem_ki" ] && mem_ki=0
     local mem_gb=$((mem_ki / 1024 / 1024))
     echo "$cpu|$mem_gb"
 }

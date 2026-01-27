@@ -52,31 +52,35 @@ check_controller() {
                 error=1
             fi
 
-            # 3. Cluster Topology
-            view_check_section_title "" "Cluster Topology"
-            service_check_topology || error=1
+            if [ "$error" -eq 0 ]; then
+                # 3. Cluster Topology
+                view_check_section_title "" "Cluster Topology"
+                service_check_topology || error=1
 
-            # 4. Infrastructure Status
-            view_check_section_title "" "$MSG_CHECK_INFRA_TITLE"
-            service_check_infrastructure
+                # 4. Infrastructure Status
+                view_check_section_title "" "$MSG_CHECK_INFRA_TITLE"
+                service_check_infrastructure
 
-            # 5. Cloud Provider & Topology
-            view_check_section_title "" "$MSG_CHECK_CLOUD_TITLE"
-            service_check_cloud_and_cri
+                # 5. Cloud Provider & Topology
+                view_check_section_title "" "$MSG_CHECK_CLOUD_TITLE"
+                service_check_cloud_and_cri
 
-            # 6. Node Resources & Health (includes Audit as section 7 internally)
-            view_check_section_title "" "$MSG_CHECK_NODE_RES_TITLE"
-            service_check_resources "$deep_enabled" "$deep_ns"
+                # 6. Node Resources & Health (includes Audit as section 7 internally)
+                view_check_section_title "" "$MSG_CHECK_NODE_RES_TITLE"
+                service_check_resources "$deep_enabled" "$deep_ns"
 
-            # 8. Repository Connectivity
-            view_check_section_title "" "Repository Connectivity"
-            service_check_repo_connectivity "$deep_ns" || error=1
+                # 8. Repository Connectivity
+                view_check_section_title "" "Repository Connectivity"
+                service_check_repo_connectivity "$deep_ns" || error=1
+            fi
         fi
     fi
 
     # Results
-    view_check_section_title "" "Summary Results"
-    service_check_summary || error=1
+    if [ "$error" -eq 0 ]; then
+        view_check_section_title "" "Summary Results"
+        service_check_summary || error=1
+    fi
 
     # Cleanup
     if [ "$error" -eq 0 ] || [ -d "$CONFIG_DIR" ]; then

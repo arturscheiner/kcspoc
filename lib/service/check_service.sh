@@ -66,7 +66,7 @@ service_check_context() {
     view_check_step_stop "PASS"
     view_check_info_ctx "$ctx"
 
-    view_check_step_start "Verifying Cluster Connectivity"
+    view_check_step_start "${MSG_CHECK_CONN_VERIFY:-Verifying Cluster Connectivity}"
     local conn_err="/tmp/kcspoc_conn_err.tmp"
     if model_cluster_verify_connectivity "$conn_err"; then
         view_check_step_stop "PASS"
