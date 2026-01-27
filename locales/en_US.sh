@@ -318,6 +318,13 @@ MSG_DEPLOY_ERR_NO_ARTIFACTS="Error: No KCS versions found in local cache. Please
 MSG_DEPLOY_TEMPLATE_CHECK="Checking for remote template updates..."
 MSG_DEPLOY_TEMPLATE_UPDATED="A newer version of the template is available online."
 MSG_DEPLOY_TEMPLATE_PROMPT="Do you want to backup the current one and download the new version? [y/N]"
+
+# --- Logs Command ---
+MSG_LOGS_ANALYSIS_START="AI Analysis in progress for execution %s (Model: %s)"
+MSG_LOGS_ANALYSIS_SUCCESS="AI Analysis complete. Report saved to: %s"
+MSG_LOGS_ANALYSIS_FAIL="AI Analysis failed for execution %s."
+
+# Config Help
 MSG_DEPLOY_TEMPLATE_BACKUP="Backup created:"
 MSG_DEPLOY_TEMPLATE_DOWNLOAD_OK="Template updated successfully."
 
@@ -340,6 +347,11 @@ MSG_HELP_PULL_EX="kcspoc pull\nkcspoc pull -v 2.2.0"
 MSG_HELP_CHECK_DESC="Performs a comprehensive diagnostic of your Kubernetes cluster, including tool checks, connectivity, and resource compliance auditing."
 MSG_HELP_CHECK_OPTS="--deep|Enable privileged pods to check kernel headers and eBPF readiness.\n--report|Generate and store a structured diagnostic report in ~/.kcspoc/reports/\n--ai-model <model>|Override the default AI model for this execution."
 MSG_HELP_CHECK_EX="kcspoc check\nkcspoc check --deep\nkcspoc check --report\nkcspoc check --report --ai-model llama3"
+
+# Logs Help
+MSG_HELP_LOGS_DESC="Manage and view command execution logs."
+MSG_HELP_LOGS_OPTS="--list [cmd]|List execution history (optionally filtered by command).\n--show <hash>|Display raw log content for a specific execution.\n--show <hash> --report|Generate an AI-powered structured analysis report.\n--cleanup|Delete all local log files.\n--ai-model <model>|Override the default AI model for report generation."
+MSG_HELP_LOGS_EX="kcspoc logs --list\nkcspoc logs --show A1B2C3\nkcspoc logs --show A1B2C3 --report"
 
 # Prepare Help
 MSG_HELP_PREPARE_DESC="Prepares the mandatory environment for KCS (secrets, namespaces, and prerequisites)."

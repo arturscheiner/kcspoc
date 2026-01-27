@@ -45,3 +45,24 @@ ai_model_verify_presence() {
     done
     return $found
 }
+
+ai_model_generate() {
+    local endpoint="$1"
+    local model="$2"
+    local prompt="$3"
+    
+    # Use the generate endpoint for simple completion
+    # We use -N to avoid buffering and get the result as a stream of JSON objects
+    # but for simplicity in a controller/service, we'll collect it.
+    # Note: /api/generate is the correct endpoint for non-chat completion.
+    
+    local data
+    data=$(jq -n \
+        --arg model "$model" \
+        --arg prompt "$prompt" \
+        '{model: $model, prompt: $prompt, stream: false}')
+    
+    curl -s -f --connect-timeout 60 \
+        -X POST "$endpoint/api/generate" \
+        -d "$data" | jq -r '.response'
+}

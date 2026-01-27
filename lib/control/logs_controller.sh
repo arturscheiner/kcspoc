@@ -9,6 +9,7 @@
 logs_controller() {
     local action=""
     local target=""
+    local report=false
     
     while [[ "$#" -gt 0 ]]; do
         case $1 in
@@ -26,6 +27,10 @@ logs_controller() {
                 action="show"
                 target="$2"
                 shift 2
+                ;;
+            --report)
+                report=true
+                shift 1
                 ;;
             --cleanup)
                 action="cleanup"
@@ -56,7 +61,45 @@ logs_controller() {
                 echo -e "${RED}Error: Hash required for --show (e.g., --show A1B2C3)${NC}"
                 return 1
             fi
-            service_logs_show_entry "$target"
+            
+            if [ "$report" = true ]; then
+                # Load configuration for AI settings
+                config_service_load
+                
+                local ep="${OLLAMA_ENDPOINT:-http://localhost:11434}"
+                local mod="${OLLAMA_MODEL_OVERRIDE:-${OLLAMA_MODEL:-llama3}}"
+                
+                # Fetch log content
+                local log_file=$(model_logs_find_by_hash "$target")
+                if [ ! -f "$log_file" ]; then
+                    echo -e "${RED}Error: Log entry $target not found.${NC}"
+                    return 1
+                fi
+                local log_content=$(cat "$log_file")
+                
+                # UI: Starting Analysis
+                logs_view_report_start "$target" "$mod"
+                
+                # Service Call
+                local ai_report=$(ai_service_generate_log_report "$target" "$log_content" "$ep" "$mod")
+                
+                if [ -n "$ai_report" ]; then
+                    # Save Report
+                    local tmp_report="/tmp/kcspoc_report_${target}.md"
+                    echo "$ai_report" > "$tmp_report"
+                    model_report_save "logs" "$target" "$tmp_report" "md"
+                    rm "$tmp_report"
+                    
+                    # UI: Success
+                    logs_view_report_success "logs" "$target" "md"
+                else
+                    # UI: Failure
+                    logs_view_report_fail "$target"
+                    return 1
+                fi
+            else
+                service_logs_show_entry "$target"
+            fi
             ;;
         cleanup)
             service_logs_perform_cleanup

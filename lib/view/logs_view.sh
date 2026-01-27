@@ -99,3 +99,28 @@ view_logs_cleanup_stop() {
         fi
     fi
 }
+
+logs_view_report_start() {
+    local hash="$1"
+    local model="$2"
+    local msg=$(printf "$MSG_LOGS_ANALYSIS_START" "$hash" "$model")
+    service_spinner_start "$msg"
+}
+
+logs_view_report_success() {
+    local cmd="$1"
+    local hash="$2"
+    local suffix="$3"
+    local report_path="$REPORTS_BASE_DIR/$cmd/${hash}.${suffix}"
+    
+    service_spinner_stop "PASS"
+    local msg=$(printf "$MSG_LOGS_ANALYSIS_SUCCESS" "$report_path")
+    echo -e "      ${BRIGHT_GREEN}${ICON_OK} ${msg}${NC}"
+}
+
+logs_view_report_fail() {
+    local hash="$1"
+    service_spinner_stop "FAIL"
+    local msg=$(printf "$MSG_LOGS_ANALYSIS_FAIL" "$hash")
+    echo -e "      ${BRIGHT_RED}${ICON_FAIL} ${msg}${NC}"
+}
