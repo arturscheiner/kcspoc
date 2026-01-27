@@ -374,9 +374,9 @@ MSG_HELP_DEPLOY_OPTS="--core|Deploy the Central Console and DB components.\n--ag
 MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --agents"
 
 # Reports Help
-MSG_HELP_REPORTS_DESC="Manage generated reports (AI analysis, diagnostics, or templates)."
-MSG_HELP_REPORTS_OPTS="--list|-l|List all reports stored in ~/.kcspoc/reports/\n--ai-model <model>|Override the default AI model for report generation."
-MSG_HELP_REPORTS_EX="kcspoc reports --list\nkcspoc reports --generate check --ai-model llama3"
+MSG_HELP_REPORTS_DESC="Management command for generated diagnostic and analysis reports."
+MSG_HELP_REPORTS_OPTS="--list|-l|List all generated reports with hash, type (AI/Template), and model details.\n--show|-s <hash>|Open and display a specific report content."
+MSG_HELP_REPORTS_EX="kcspoc reports --list\nkcspoc reports --show A1B2C3"
 
 MSG_CMD_REPORTS_DESC="Manage generated reports (Discovery, View)"
 MSG_HELP_DEPLOY_DESC="Manages the deployment lifecycle of Kaspersky Container Security components."

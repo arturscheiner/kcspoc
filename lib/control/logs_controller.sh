@@ -87,7 +87,7 @@ logs_controller() {
                     # Save Report
                     local tmp_report="/tmp/kcspoc_report_${target}.md"
                     echo "$ai_report" > "$tmp_report"
-                    model_report_save "logs" "$target" "$tmp_report" "md"
+                    model_report_save "logs" "$target" "$tmp_report" "md" "ai" "$mod"
                     rm "$tmp_report"
                     
                     # UI: Success

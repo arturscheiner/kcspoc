@@ -13,21 +13,30 @@ model_report_init() {
 }
 
 # Saves a report artifact
-# Usage: model_report_save <command> <hash> <content_file> [suffix]
+# Usage: model_report_save <command> <hash> <content_file> [suffix] [type] [ai_model]
 model_report_save() {
     local cmd="$1"
     local hash="$2"
     local src_file="$3"
     local suffix="${4:-txt}"
+    local type="${5:-template}"
+    local ai_model="${6:-}"
     
     local cmd_dir="$REPORTS_BASE_DIR/$cmd"
     [ -d "$cmd_dir" ] || mkdir -p "$cmd_dir"
     
     local report_file="$cmd_dir/${hash}.${suffix}"
-    cp "$src_file" "$report_file"
     
-    # Optional: Log the report in a central index for faster --list
-    _model_report_index_add "$cmd" "$hash" "$suffix"
+    # Prepend AI metadata if it's an AI report
+    if [ "$type" == "ai" ] && [ -n "$ai_model" ]; then
+        echo -e "<!-- origin: ai | model: $ai_model -->\n" > "$report_file"
+        cat "$src_file" >> "$report_file"
+    else
+        cp "$src_file" "$report_file"
+    fi
+    
+    # Update index
+    _model_report_index_add "$cmd" "$hash" "$suffix" "$type" "$ai_model"
 }
 
 # Internal helper to maintain a metadata index
@@ -35,6 +44,8 @@ _model_report_index_add() {
     local cmd="$1"
     local hash="$2"
     local suffix="$3"
+    local type="$4"
+    local ai_model="$5"
     local index_file="$REPORTS_BASE_DIR/index.json"
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     
@@ -45,9 +56,26 @@ _model_report_index_add() {
         \"hash\": \"$hash\",
         \"command\": \"$cmd\",
         \"timestamp\": \"$timestamp\",
-        \"extension\": \"$suffix\"
+        \"extension\": \"$suffix\",
+        \"type\": \"$type\",
+        \"ai_model\": \"$ai_model\"
     }]" "$index_file" > "$temp_file"
     mv "$temp_file" "$index_file"
+}
+
+model_report_find_by_hash() {
+    local hash="$1"
+    local index=$(model_report_get_index)
+    # Select all matching entries, and pick the last one (most recent)
+    local entry=$(echo "$index" | jq -c "map(select(.hash == \"$hash\")) | last")
+    
+    if [ "$entry" != "null" ] && [ -n "$entry" ]; then
+        local cmd=$(echo "$entry" | jq -r '.command')
+        local ext=$(echo "$entry" | jq -r '.extension')
+        echo "$REPORTS_BASE_DIR/$cmd/${hash}.${ext}"
+    else
+        echo ""
+    fi
 }
 
 model_report_get_index() {
