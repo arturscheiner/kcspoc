@@ -124,12 +124,9 @@ _config_controller_wizard() {
     config_view_step_generic 7 "$TOTAL_STEPS" "$MSG_STEP_DOMAIN" "$MSG_STEP_DOMAIN_DESC" "$MSG_INPUT_DOMAIN" "kcs.cluster.lab" "$CUR_DOMAIN"
     DOMAIN="$RET_VAL"
 
-    # Version (Step 8)
+    # KCS Version (Step 8)
     config_view_step_generic 8 "$TOTAL_STEPS" "$MSG_STEP_VERSION" "$MSG_STEP_VERSION_DESC" "$MSG_INPUT_VERSION" "latest" "$CUR_VER"
     KCS_VERSION="$RET_VAL"
-
-    # 4. Registry & Security
-    config_view_section "$MSG_SECTION_SECURITY"
 
     # Registry (Step 9)
     view_ui_step 9 "$TOTAL_STEPS" "$MSG_STEP_REG" "$MSG_STEP_REG_DESC"
@@ -173,21 +170,21 @@ _config_controller_wizard() {
         view_ui_input "$MSG_INPUT_APP_SECRET" "Ka5per5Ky!" "$CUR_APP_SECRET"; APP_SECRET="$RET_VAL"
     fi
 
-    # 5. Infrastructure & Networking
+    # 4. Infrastructure & Networking
     config_view_section "$MSG_SECTION_NETWORKING"
 
     # MetalLB (Step 11)
     config_view_step_generic 11 "$TOTAL_STEPS" "$MSG_STEP_METALLB" "$MSG_STEP_METALLB_DESC" "$MSG_INPUT_IP_RANGE" "" "$CUR_IP_RANGE"
     IP_RANGE="$RET_VAL"
 
-    # 6. Operational Diagnostics
+    # 5. Operational Diagnostics
     config_view_section "$MSG_SECTION_DIAGNOSTICS"
 
     # Deep Check (Step 12)
     config_view_step_generic 12 "$TOTAL_STEPS" "$MSG_STEP_DEEP" "$MSG_STEP_DEEP_DESC" "$MSG_INPUT_DEEP" "false" "$CUR_DEEP"
     ENABLE_DEEP_CHECK="$RET_VAL"
 
-    # 7. AI Capabilities (Ollama)
+    # 6. AI Capabilities (Ollama)
     config_view_section "$MSG_SECTION_AI"
 
     # AI Endpoint (Step 13)
