@@ -8,32 +8,32 @@
 
 view_reports_list_header() {
     view_ui_table_header \
-        "HASH:8" \
-        "SOURCE:8" \
-        "DATE/TIME:22" \
-        "COMMAND:12" \
+        "DATE/TIME:17" \
+        "ID:8" \
+        "COM:10" \
+        "EXEC ID:8" \
         "FORMAT:8" \
         "TYPE:10" \
         "AI MODEL:20"
 }
 
 view_reports_list_item() {
-    local hash="$1"
-    local timestamp="$2"
-    local cmd="$3"
-    local ext="$4"
-    local type="$5"
-    local model="$6"
-    local source="$7"
+    local date="$1"
+    local id="$2"
+    local com="$3"
+    local exec_id="$4"
+    local ext="$5"
+    local type="$6"
+    local model="$7"
     
     local type_color=$DIM
     if [ "$type" == "ai" ]; then type_color=$BRIGHT_MAGENTA; fi
     
     view_ui_table_row \
-        "${BRIGHT_CYAN}${hash}${NC}:8" \
-        "${BRIGHT_YELLOW}${source}${NC}:8" \
-        "${DIM}${timestamp}${NC}:22" \
-        "${BOLD}${cmd}${NC}:12" \
+        "$date:17" \
+        "${BRIGHT_CYAN}${id}${NC}:8" \
+        "${BOLD}${com}${NC}:10" \
+        "${BRIGHT_YELLOW}${exec_id}${NC}:8" \
         "${DIM}${ext}${NC}:8" \
         "${type_color}${type}${NC}:10" \
         "${DIM}${model}${NC}:20"

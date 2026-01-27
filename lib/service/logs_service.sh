@@ -39,7 +39,7 @@ service_logs_get_history() {
         local status="${meta%|*}"
         local version="${meta#*|}"
         
-        view_logs_list_row "$fmt_date" "$cmd_from_path" "$hash_part" "$status" "$version" "$target"
+        view_logs_list_row "$fmt_date" "$hash_part" "$cmd_from_path" "-" "$status" "$version"
     done
     echo ""
 }

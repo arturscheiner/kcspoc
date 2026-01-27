@@ -30,7 +30,11 @@ service_reports_list() {
         local type=$(echo "$report" | jq -r '.type // "template"')
         local model=$(echo "$report" | jq -r '.ai_model // "-"')
         local source=$(echo "$report" | jq -r '.orig_exec_id // "-"')
-        view_reports_list_item "$h" "$t" "$c" "$e" "$type" "$model" "$source"
+        
+        # Convert YYYY-MM-DDTHH:MM:SSZ to YYYY-MM-DD HH:MM
+        local fmt_date="${t:0:10} ${t:11:5}"
+        
+        view_reports_list_item "$fmt_date" "$h" "$c" "$source" "$e" "$type" "$model"
     done
 }
 

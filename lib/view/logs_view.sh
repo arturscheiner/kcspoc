@@ -15,30 +15,22 @@ view_logs_section() {
 }
 
 view_logs_list_header() {
-    local target="$1"
-    if [ -n "$target" ]; then
-        view_ui_table_header \
-            "DATE/TIME:20" \
-            "HASH:10" \
-            "STATUS:15" \
-            "VERSION:10"
-    else
-        view_ui_table_header \
-            "DATE/TIME:20" \
-            "COMMAND:12" \
-            "HASH:10" \
-            "STATUS:15" \
-            "VERSION:10"
-    fi
+    view_ui_table_header \
+        "DATE/TIME:17" \
+        "ID:8" \
+        "COM:10" \
+        "EXEC ID:8" \
+        "STATUS:15" \
+        "VERSION:10"
 }
 
 view_logs_list_row() {
     local date="$1"
-    local cmd="$2"
-    local hash="$3"
-    local status="$4"
-    local version="$5"
-    local target="$6"
+    local id="$2"
+    local com="$3"
+    local exec_id="$4"
+    local status="$5"
+    local version="$6"
 
     local color=$NC
     if [ "$status" == "SUCCESS" ]; then color=$BRIGHT_GREEN; 
@@ -47,20 +39,13 @@ view_logs_list_row() {
 
     local colored_status="${color}${status}${NC}"
 
-    if [ -n "$target" ]; then
-        view_ui_table_row \
-            "$date:20" \
-            "$hash:10" \
-            "$colored_status:15" \
-            "$version:10"
-    else
-        view_ui_table_row \
-            "$date:20" \
-            "$cmd:12" \
-            "$hash:10" \
-            "$colored_status:15" \
-            "$version:10"
-    fi
+    view_ui_table_row \
+        "$date:17" \
+        "${BRIGHT_CYAN}${id}${NC}:8" \
+        "${BOLD}${com}${NC}:10" \
+        "${DIM}${exec_id}${NC}:8" \
+        "$colored_status:15" \
+        "$version:10"
 }
 
 view_logs_show_content() {
