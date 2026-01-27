@@ -27,7 +27,10 @@ export NC='\033[0m'
 export BRIGHT_GREEN='\033[1;32m'
 export BRIGHT_RED='\033[1;31m'
 export BRIGHT_YELLOW='\033[1;33m'
+export BRIGHT_CYAN='\033[1;36m'
+export BRIGHT_WHITE='\033[1;37m'
 export ORANGE='\033[38;5;208m'
+export BRIGHT_ORANGE='\033[1;38;5;208m'
 export BRIGHT_CYAN='\033[1;36m'
 
 # Structural Components
@@ -130,21 +133,20 @@ view_ui_banner() {
     local version="$1"
     local exec_hash="$2"
     
-    echo -e "${BRIGHT_GREEN}${BOLD}"
-    echo "  _  __ _____ ____  ____   ___   ____ "
-    echo " | |/ // ____/ ___||  _ \ / _ \ / ___|"
-    echo " | ' /| |    \___ \| |_) | | | | |    "
-    echo " |  < | |___  ___) |  __/| |_| | |___ "
-    echo " |_|\_\\____/|____/|_|    \___/ \____|"
+    echo -e "${BRIGHT_CYAN}${BOLD}"
+    echo "██╗  ██╗ ██████╗ ███████╗██████╗  ██████╗  ██████╗"
+    echo "██║ ██╔╝██╔════╝ ██╔════╝██╔══██╗██╔═══██╗██╔════╝"
+    echo "█████╔╝ ██║      ███████╗██████╔╝██║   ██║██║     "
+    echo "██╔═██╗ ██║      ╚════██║██╔═══╝ ██║   ██║██║     "
+    echo "██║  ██╗╚██████╗ ███████║██║     ╚██████╔╝╚██████╗"
+    echo "╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝      ╚═════╝  ╚═════╝"
     echo -e "${NC}"
-    echo -e "   Kaspersky Container Security PoC Tool - v${version}"
+    echo -e "        ${BRIGHT_WHITE}🐳  ${BOLD}KCSPOC${NC}${BRIGHT_WHITE} — Kaspersky Container Security PoC Tool - v${version}${NC}"
+    
     if [ -n "$exec_hash" ]; then
-        echo -e "   ${DIM}Execution ID: ${BOLD}${exec_hash}${NC}"
+        echo -e "   Execution ID: ${BRIGHT_ORANGE}${BOLD}${exec_hash}${NC}"
     fi
-    echo ""
-    echo -e "${ORANGE}  ====================================================${NC}"
-    echo -e "${DIM}  Version: ${version}${NC}"
-    echo -e "${DIM}  ${MSG_AUTHOR}: Artur Scheiner${NC}"
+    echo -e "${ORANGE}================================================================================${NC}"
     echo ""
 }
 
