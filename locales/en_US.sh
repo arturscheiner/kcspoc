@@ -302,8 +302,8 @@ MSG_HELP_PULL_EX="kcspoc pull\nkcspoc pull -v 2.2.0"
 
 # Check Help
 MSG_HELP_CHECK_DESC="Performs a comprehensive diagnostic of your Kubernetes cluster, including tool checks, connectivity, and resource compliance auditing."
-MSG_HELP_CHECK_OPTS="--deep|Enable privileged pods to check kernel headers and eBPF readiness."
-MSG_HELP_CHECK_EX="kcspoc check\nkcspoc check --deep"
+MSG_HELP_CHECK_OPTS="--deep|Enable privileged pods to check kernel headers and eBPF readiness.\n--report|Generate and store a structured diagnostic report in ~/.kcspoc/reports/"
+MSG_HELP_CHECK_EX="kcspoc check\nkcspoc check --deep\nkcspoc check --report"
 
 # Prepare Help
 MSG_HELP_PREPARE_DESC="Prepares the mandatory environment for KCS (secrets, namespaces, and prerequisites)."
@@ -321,6 +321,16 @@ MSG_HELP_LOGS_OPTS="--list [cmd]|Show last 10 logs (optionally filtered by comma
 MSG_HELP_LOGS_EX="kcspoc logs --list\nkcspoc logs --list prepare\nkcspoc logs --show A1B2C3\nkcspoc logs --cleanup"
 
 # Deploy Help
+MSG_HELP_DEPLOY_DESC="Orchestrates the deployment of KCS components (Console, Agents, or Gateways) to the cluster."
+MSG_HELP_DEPLOY_OPTS="--core|Deploy the Central Console and DB components.\n--agents|Deploy the node-level security agents."
+MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --agents"
+
+# Reports Help
+MSG_HELP_REPORTS_DESC="Manage generated reports (AI analysis, diagnostics, or templates)."
+MSG_HELP_REPORTS_OPTS="--list|-l|List all reports stored in ~/.kcspoc/reports/"
+MSG_HELP_REPORTS_EX="kcspoc reports --list"
+
+MSG_CMD_REPORTS_DESC="Manage generated reports (Discovery, View)"
 MSG_HELP_DEPLOY_DESC="Manages the deployment lifecycle of Kaspersky Container Security components."
 MSG_HELP_DEPLOY_OPTS="--core [mode]|Deploy the Management Console. Modes: install (fresh), update (patch), upgrade (version change).\n--agents|Deploy security agents to worker nodes (Requires active API Token).\n--check <target>|Verify deployment integrity. Targets: hash (config sync), version (parity).\n--values <file>|Specify a custom values.yaml override for advanced configurations."
 MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --core upgrade\nkcspoc deploy --agents\nkcspoc deploy --check hash"

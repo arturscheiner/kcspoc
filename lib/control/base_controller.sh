@@ -83,6 +83,13 @@ base_controller_dispatch() {
             fi
             extras_controller "$@"
             ;;
+        reports)
+            shift
+            if _base_control_needs_logging "$@"; then
+                view_ui_slim_header "$VERSION" ""
+            fi
+            reports_controller "$@"
+            ;;
         help|*)
             view_ui_usage "$VERSION" "$EXEC_HASH"
             exit 0

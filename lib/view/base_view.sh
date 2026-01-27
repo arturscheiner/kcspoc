@@ -258,6 +258,7 @@ view_ui_usage() {
     printf "  ${BRIGHT_CYAN}%-10s${NC} %s\n" "check"   "$MSG_CMD_CHECK_DESC"
     printf "  ${BRIGHT_CYAN}%-10s${NC} %s\n" "prepare" "$MSG_CMD_PREPARE_DESC"
     printf "  ${BRIGHT_CYAN}%-10s${NC} %s\n" "extras"  "$MSG_CMD_EXTRAS_DESC"
+    printf "  ${BRIGHT_CYAN}%-10s${NC} %s\n" "reports" "$MSG_CMD_REPORTS_DESC"
     printf "  ${BRIGHT_CYAN}%-10s${NC} %s\n" "deploy"  "$MSG_CMD_DEPLOY_DESC"
     printf "  ${BRIGHT_CYAN}%-10s${NC} %s\n" "destroy" "$MSG_DESTROY_TITLE"
     printf "  ${BRIGHT_CYAN}%-10s${NC} %s\n" "logs"    "Manage logs (--list, --show, --cleanup)"

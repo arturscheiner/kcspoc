@@ -8,10 +8,12 @@
 
 check_controller() {
     local deep_override=""
+    local report_enabled="false"
     
     while [[ "$#" -gt 0 ]]; do
         case $1 in
             -d|--deep) deep_override="true"; shift ;;
+            --report) report_enabled="true"; shift ;;
             --help|help)
                 view_ui_help "check" "$MSG_HELP_CHECK_DESC" "$MSG_HELP_CHECK_OPTS" "$MSG_HELP_CHECK_EX" "$VERSION"
                 return 0
@@ -87,6 +89,15 @@ check_controller() {
         view_check_cleanup_start
         model_cluster_delete_namespace "$deep_ns" "false" &>/dev/null || true
         view_check_cleanup_stop "PASS"
+    fi
+
+    # If report enabled, we capture output. 
+    # For simplicity in this implementation, we will save the LOG file as the report if --report is active.
+    # This ensures consistency with "similar to what we do with logs" while being structured.
+    
+    if [ "$error" -eq 0 ] && [ "$report_enabled" == "true" ]; then
+        model_report_save "check" "$EXEC_HASH" "$EXEC_LOG_FILE" "txt"
+        echo -e "   ${ICON_OK} ${BRIGHT_GREEN}Report generated and stored:${NC} ~/.kcspoc/reports/check/${EXEC_HASH}.txt"
     fi
 
     if [ $error -eq 0 ]; then
