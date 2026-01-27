@@ -7,6 +7,7 @@
 # ==============================================================================
 
 _KCS_CLEANUP_DONE=0
+_MAIN_PID=$$
 
 service_exec_init_logging() {
     local cmd_name="$1"
@@ -82,7 +83,12 @@ service_exec_wait_and_force_delete_ns() {
 service_exec_cleanup() {
     local exit_code="$1"
     
-    # 1. Guard against re-entrancy
+    # 1. Guard against subshells
+    if [ "${BASHPID:-$$}" -ne "$_MAIN_PID" ]; then
+        return
+    fi
+
+    # 2. Guard against re-entrancy
     [ "$_KCS_CLEANUP_DONE" -eq 1 ] && return
     _KCS_CLEANUP_DONE=1
 
