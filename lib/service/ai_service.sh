@@ -39,3 +39,23 @@ $log_content
     # Call Model Layer
     ai_model_generate "$endpoint" "$model" "$full_prompt"
 }
+
+ai_service_generate_audit_report() {
+    local facts_json="$1"
+    local endpoint="$2"
+    local model="$3"
+    local report_hash="$4"
+    
+    local prompt_file="$SCRIPT_DIR/lib/model/ai/prompts/readiness_checklist.md"
+    if [ ! -f "$prompt_file" ]; then
+        return 1
+    fi
+    
+    local base_prompt=$(cat "$prompt_file")
+    
+    # Inject JSON into placeholder
+    local full_prompt="${base_prompt//\{\{CLUSTERT_FACTS_JSON\}\}/$facts_json}"
+    
+    # Call Model Layer
+    ai_model_generate "$endpoint" "$model" "$full_prompt"
+}

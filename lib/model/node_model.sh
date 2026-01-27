@@ -6,9 +6,9 @@
 # Responsibility: Node-level resource data and Deep Inspection probe pods
 # ==============================================================================
 
-# Returns: name|labels|cpu_a|cpu_c|mem_a|mem_c|disk_a|disk_c
+# Returns: name|labels|cpu_a|cpu_c|mem_a|mem_c|disk_a|disk_c|kernel_ver
 model_node_get_raw_baseline_data() {
-    kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}|{.metadata.labels}|{.status.allocatable.cpu}|{.status.capacity.cpu}|{.status.allocatable.memory}|{.status.capacity.memory}|{.status.allocatable.ephemeral-storage}|{.status.capacity.ephemeral-storage}{"\n"}{end}'
+    kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}|{.metadata.labels}|{.status.allocatable.cpu}|{.status.capacity.cpu}|{.status.allocatable.memory}|{.status.capacity.memory}|{.status.allocatable.ephemeral-storage}|{.status.capacity.ephemeral-storage}|{.status.nodeInfo.kernelVersion}{"\n"}{end}'
 }
 
 model_node_get_global_totals() {

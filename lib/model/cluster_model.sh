@@ -63,3 +63,11 @@ model_cluster_delete_namespace() {
     local wait="${2:-false}"
     kubectl delete namespace "$ns" --wait="$wait" &>> "$DEBUG_OUT"
 }
+
+model_cluster_get_default_storageclass() {
+    kubectl get storageclass -o jsonpath='{.items[?(@.metadata.annotations.storageclass\.kubernetes\.io/is-default-class=="true")].metadata.name}' 2>/dev/null
+}
+
+model_cluster_get_helm_version() {
+    helm version --short 2>/dev/null || echo "not-found"
+}

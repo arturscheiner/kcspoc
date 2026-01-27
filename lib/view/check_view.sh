@@ -282,3 +282,14 @@ view_check_prereq_tools_fail() {
     local tools="$1"
     echo -e "      [ ${BRIGHT_RED}${ICON_FAIL}${NC} ] ${BRIGHT_RED}${MSG_CHECK_TOOLS_FAIL}:${NC} ${tools}"
 }
+
+view_check_report_start() {
+    local model="$1"
+    echo -e "\n   ${BOLD}${ICON_GEAR} Generating AI Readiness Audit (Model: ${model})...${NC}"
+}
+
+view_check_report_success() {
+    local hash="$1"
+    echo -e "   ${ICON_OK} ${BRIGHT_GREEN}AI Readiness Audit generated: ${BOLD}${hash}${NC}"
+    echo -e "      ${DIM}View with: ./kcspoc reports --show ${hash}${NC}"
+}

@@ -91,13 +91,36 @@ check_controller() {
         view_check_cleanup_stop "PASS"
     fi
 
-    # If report enabled, we capture output. 
-    # For simplicity in this implementation, we will save the LOG file as the report if --report is active.
-    # This ensures consistency with "similar to what we do with logs" while being structured.
-    
-    if [ "$error" -eq 0 ] && [ "$report_enabled" == "true" ]; then
+    # If report enabled, we capture output. (S-030)
+    if [ "$report_enabled" == "true" ]; then
+        # 1. Baseline: Save execution log
         model_report_save "check" "$EXEC_HASH" "$EXEC_LOG_FILE" "txt"
-        echo -e "   ${ICON_OK} ${BRIGHT_GREEN}Report generated and stored:${NC} ~/.kcspoc/reports/check/${EXEC_HASH}.txt"
+        echo -e "   ${ICON_OK} ${BRIGHT_GREEN}Execution Log saved:${NC} ~/.kcspoc/reports/check/${EXEC_HASH}.txt"
+        
+        # 2. AI Audit (S-030)
+        config_service_load
+        local ep="${OLLAMA_ENDPOINT:-http://localhost:11434}"
+        local mod="${OLLAMA_MODEL_OVERRIDE:-${OLLAMA_MODEL}}"
+        
+        if [ -n "$OLLAMA_ENDPOINT" ] && [ -n "$mod" ]; then
+            view_check_report_start "$mod"
+            
+            # Collect neutral facts (No evaluation, just data)
+            local facts=$(service_check_collect_facts "$deep_enabled" "$deep_ns")
+            
+            # Generate Audit via AI engine using the Requirements Checklist prompt
+            local audit_hash=$(model_report_generate_hash)
+            local audit_content=$(ai_service_generate_audit_report "$facts" "$ep" "$mod" "$audit_hash")
+            
+            if [ -n "$audit_content" ]; then
+                local tmp_audit="/tmp/kcspoc_audit_${audit_hash}.md"
+                echo "$audit_content" > "$tmp_audit"
+                # Store audit with full ID chain linking
+                model_report_save "check" "$audit_hash" "$tmp_audit" "md" "ai" "$mod" "$LOG_ID" "$EXEC_HASH"
+                rm "$tmp_audit"
+                view_check_report_success "$audit_hash"
+            fi
+        fi
     fi
 
     if [ $error -eq 0 ]; then

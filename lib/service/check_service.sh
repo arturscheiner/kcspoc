@@ -367,3 +367,152 @@ service_check_summary() {
     fi
     return $error
 }
+
+# AI-Integrated Fact Collection (S-030)
+# This function aggregates cluster telemetry into an evaluation-neutral JSON object.
+# It MUST NOT print to stdout.
+service_check_collect_facts() {
+    local deep_enabled="${1:-false}"
+    local deep_ns="${2:-kcspoc}"
+    
+    # 1. Cluster Topology
+    local k8s_ver=$(model_cluster_get_version)
+    local archs=$(model_cluster_get_architectures | tr '\n' ' ' | xargs)
+    local runtimes=$(model_cluster_get_runtimes | tr '\n' ' ' | xargs)
+    local helm_ver=$(model_cluster_get_helm_version)
+    local default_sc=$(model_cluster_get_default_storageclass)
+    local cni_pods=$(model_cluster_get_cni_pods)
+    local cni_names="Unknown"
+    if [ -n "$cni_pods" ]; then
+        cni_names=$(echo "$cni_pods" | awk '{print $2}' | grep -oE "calico|flannel|cilium|weave|antrea" | sort | uniq | tr '\n' ' ' | xargs)
+        [ -z "$cni_names" ] && cni_names="kube-proxy (Standard)"
+    fi
+
+    # 2. Infrastructure
+    local infra_json="{}"
+    for item in "cert-manager" "metallb-system" "ingress-nginx" "local-path-storage"; do
+        local status="MISSING"
+        [ -n "$(model_cluster_get_infrastructure_status "namespace" "$item")" ] && status="INSTALLED"
+        infra_json=$(echo "$infra_json" | jq -c ". + {\"$item\": \"$status\"}")
+    done
+    local metrics_status="MISSING"
+    [ -n "$(model_cluster_get_infrastructure_status "deployment" "metrics-server" "kube-system")" ] && metrics_status="INSTALLED"
+    infra_json=$(echo "$infra_json" | jq -c ". + {\"metrics-server\": \"$metrics_status\"}")
+
+    # 3. Cloud Provider
+    local raw_cloud=$(model_cluster_get_raw_provider_data)
+    IFS='|' read -r prov_id region zone os_img <<< "$raw_cloud"
+    unset IFS
+    
+    # 4. Global Connectivity
+    local registry_conn="false"
+    model_network_verify_repo_connectivity "$deep_ns" &>/dev/null && registry_conn="true"
+
+    # 5. Nodes & Resources
+    local nodes_json="[]"
+    local raw_nodes=$(model_node_get_raw_baseline_data)
+    
+    local total_cpu_m=0
+    local total_mem_mib=0
+    local total_disk_gib=0
+
+    while IFS='|' read -r name labels cpu_a cpu_c mem_a mem_c disk_a disk_c kernel_ver; do
+        [ -z "$name" ] && continue
+        
+        local role="worker"
+        [[ "$labels" == *"node-role.kubernetes.io/control-plane"* ]] || [[ "$labels" == *"node-role.kubernetes.io/master"* ]] && role="master"
+        
+        # CPU/MEM conversion to numeric
+        local cpu_val; [[ "$cpu_a" == *m ]] && cpu_val=${cpu_a%m} || cpu_val=$((cpu_a * 1000))
+        
+        _to_mib() {
+            local val=$(echo "$1" | sed 's/[^0-9]*//g'); [ -z "$val" ] && { echo 0; return; }
+            if [[ "$1" == *Gi ]]; then echo $((val * 1024)); elif [[ "$1" == *Mi ]]; then echo $val; 
+            elif [[ "$1" == *Ki ]]; then echo $((val / 1024)); else echo $((val / 1024 / 1024)); fi
+        }
+        local mem_mib=$(_to_mib "$mem_a")
+        
+        _to_gib() {
+            local val=$(echo "$1" | sed 's/[^0-9]*//g'); [ -z "$val" ] && { echo 0; return; }
+            if [[ "$1" == *Gi ]]; then echo $val; elif [[ "$1" == *Ki ]]; then echo $((val / 1024 / 1024)); else echo $((val / 1024 / 1024 / 1024)); fi
+        }
+        local disk_gib=$(_to_gib "$disk_a")
+
+        # Running totals
+        total_cpu_m=$((total_cpu_m + cpu_val))
+        total_mem_mib=$((total_mem_mib + mem_mib))
+        total_disk_gib=$((total_disk_gib + disk_gib))
+
+        local ebpf="unknown"
+        local headers="unknown"
+
+        if [ "$deep_enabled" == "true" ]; then
+            local pod_name="kcspoc-fact-collect-${name}"
+            local pod_file="$CONFIG_DIR/${pod_name}.yaml"
+            if model_node_deploy_probe_pod "$pod_name" "$deep_ns" "$name" "$pod_file" 2>/dev/null; then
+                sleep 2
+                if model_node_wait_probe_pod "$pod_name" "$deep_ns" "15s"; then
+                    # Disk (re-verify with df)
+                    local disk_block=$(model_node_exec_probe "$pod_name" "$deep_ns" chroot /host df -B1 / 2>/dev/null | tail -n 1)
+                    local b_avail=$(echo "$disk_block" | awk '{print $4}')
+                    [ -n "$b_avail" ] && disk_gib=$((b_avail / 1024 / 1024 / 1024))
+                    
+                    # eBPF
+                    model_node_exec_probe "$pod_name" "$deep_ns" chroot /host test -f /sys/kernel/btf/vmlinux && ebpf="true" || ebpf="false"
+                    
+                    # Headers
+                    local headers_out=$(model_node_exec_probe "$pod_name" "$deep_ns" /bin/bash -c "chroot /host sh -c 'dpkg -l 2>/dev/null | grep -i headers || rpm -qa 2>/dev/null | grep -i headers'" 2>/dev/null)
+                    [ -n "$headers_out" ] && headers="true" || headers="false"
+                fi
+                model_node_delete_probe_pod "$pod_name" "$deep_ns"
+            fi
+        fi
+
+        nodes_json=$(echo "$nodes_json" | jq -c ". += [{
+            \"name\": \"$name\",
+            \"role\": \"$role\",
+            \"kernel_version\": \"$kernel_ver\",
+            \"cpu_mcore\": $cpu_val,
+            \"mem_mib\": $mem_mib,
+            \"disk_gib\": $disk_gib,
+            \"ebpf_btf\": \"$ebpf\",
+            \"kernel_headers\": \"$headers\"
+        }]")
+    done <<< "$raw_nodes"
+
+    # Assemble Final JSON
+    local final_json=$(jq -n \
+        --arg kv "$k8s_ver" \
+        --arg arc "$archs" \
+        --arg rt "$runtimes" \
+        --arg hv "$helm_ver" \
+        --arg dsc "$default_sc" \
+        --arg cni "$cni_names" \
+        --arg pid "$prov_id" \
+        --arg rgn "$region" \
+        --arg zon "$zone" \
+        --arg img "$os_img" \
+        --arg rc "$registry_conn" \
+        --arg cpu_t "$((total_cpu_m / 1000))" \
+        --arg mem_t "$((total_mem_mib / 1024))" \
+        --arg dsk_t "$total_disk_gib" \
+        --argjson infra "$infra_json" \
+        --argjson nodes "$nodes_json" \
+        '{
+            cluster: { 
+                version: $kv, 
+                architectures: ($arc | split(" ")), 
+                runtimes: ($rt | split(" ")), 
+                helm_version: $hv, 
+                default_storage_class: $dsc, 
+                cni: $cni, 
+                registry_connectivity: $rc 
+            },
+            infrastructure: $infra,
+            cloud: { provider_id: $pid, region: $rgn, zone: $zon, os_image: $img },
+            hardware_totals: { cpu_cores: $cpu_t, mem_gib: $mem_t, disk_gib: $dsk_t },
+            nodes: $nodes
+        }')
+    
+    echo "$final_json"
+}
