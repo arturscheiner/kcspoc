@@ -12,8 +12,14 @@ config_controller() {
     
     while [[ "$#" -gt 0 ]]; do
         case $1 in
-            --set-version) SET_VER="$2"; shift 2 ;;
-            --verify) VERIFY_TARGET="$2"; shift 2 ;;
+            --set-version) 
+                SET_VER="${2:-}"
+                if [ -z "$SET_VER" ]; then echo "Error: --set-version requires an argument"; return 1; fi
+                shift 2 ;;
+            --verify) 
+                VERIFY_TARGET="${2:-}"
+                if [ -z "$VERIFY_TARGET" ]; then echo "Error: --verify requires a target (e.g., ai)"; return 1; fi
+                shift 2 ;;
             --help|help)
                 view_ui_help "config" "$MSG_HELP_CONFIG_DESC" "$MSG_HELP_CONFIG_OPTS" "$MSG_HELP_CONFIG_EX" "$VERSION"
                 return 0
@@ -52,18 +58,26 @@ config_controller() {
                 0)
                     config_view_verify_result "Ollama Presence ($ep)" "PASS"
                     config_view_verify_result "Model Presence ($mod)" "PASS"
+                    return 0
                     ;;
                 1)
-                    config_view_verify_result "Ollama Presence ($ep)" "FAIL" "Endpoint unreachable."
+                    config_view_verify_result "Ollama Presence ($ep)" "FAIL" "Endpoint unreachable (Ollama might not be running or the URL is incorrect)."
                     return 1
                     ;;
                 2)
                     config_view_verify_result "Ollama Presence ($ep)" "PASS"
-                    config_view_verify_result "Model Presence ($mod)" "FAIL" "Model not found in local Ollama instance."
+                    config_view_verify_result "Model Presence ($mod)" "FAIL" "Model not found in local Ollama instance. Run 'ollama pull $mod' first."
+                    return 1
+                    ;;
+                127)
+                    config_view_verify_result "Ollama Presence ($ep)" "FAIL" "The 'curl' command is not installed. Please install it to use this feature."
+                    return 1
+                    ;;
+                *)
+                    config_view_verify_result "Ollama Presence ($ep)" "FAIL" "An unexpected error occurred (Code: $res)."
                     return 1
                     ;;
             esac
-            return 0
         else
             echo "Error: Unknown verification target '$VERIFY_TARGET'"
             return 1

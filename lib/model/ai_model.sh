@@ -8,8 +8,22 @@
 
 ai_model_check_endpoint() {
     local endpoint="$1"
-    # Try to get the version from the endpoint as a health check
-    curl -s --connect-timeout 5 "$endpoint/api/tags" &>/dev/null
+    
+    if ! command -v curl &>/dev/null; then
+        return 127 # Curl missing
+    fi
+    
+    # Check if endpoint is reachable and returns a success code
+    # /api/tags should return 200 OK and contain "models"
+    local response
+    response=$(curl -s -f --connect-timeout 5 "$endpoint/api/tags" 2>/dev/null)
+    local status=$?
+    
+    if [ $status -ne 0 ]; then
+        return 1 # Connectivity/HTTP error
+    fi
+    
+    [[ "$response" == *"models"* ]]
 }
 
 ai_model_list_local() {

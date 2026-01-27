@@ -52,8 +52,13 @@ config_service_verify_ai() {
     local model="$2"
     
     # 1. Check endpoint
-    if ! ai_model_check_endpoint "$endpoint"; then
-        return 1 # Endpoint unreachable
+    ai_model_check_endpoint "$endpoint"
+    local status=$?
+    
+    if [ "$status" -eq 127 ]; then
+        return 127 # Curl missing
+    elif [ "$status" -ne 0 ]; then
+        return 1 # Endpoint unreachable or non-200
     fi
     
     # 2. Check model
