@@ -38,6 +38,26 @@ export UI_LINE_CHAR="-"
 export UI_SEP_CHAR="="
 export UI_TABLE_SEP="-"
 
+# Standardized Timestamp Formatter
+# Usage: view_ui_format_timestamp "RAW_TIMESTAMP"
+# Supports: YYYYMMDD-HHMMSS (logs) and YYYY-MM-DDTHH:MM:SS (reports/index)
+view_ui_format_timestamp() {
+    local raw="$1"
+    local clean=$(echo "$raw" | tr -d 'TZ:-')
+    
+    # Expected clean format: YYYYMMDDHHMMSS...
+    if [[ ${#clean} -ge 12 ]]; then
+        local yr="${clean:0:4}"
+        local mo="${clean:4:2}"
+        local da="${clean:6:2}"
+        local hr="${clean:8:2}"
+        local mi="${clean:10:2}"
+        echo "${yr}-${mo}-${da} ${hr}:${mi}"
+    else
+        echo "$raw" # Fallback
+    fi
+}
+
 # Icons
 export ICON_OK="${BRIGHT_GREEN}✔${NC}"
 export ICON_FAIL="${BRIGHT_RED}✘${NC}"

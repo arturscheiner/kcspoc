@@ -58,7 +58,7 @@ _model_report_index_add() {
     local orig_log_id="$6"
     local orig_exec_id="$7"
     local index_file="$REPORTS_BASE_DIR/index.json"
-    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local timestamp=$(date +"%Y-%m-%dT%H:%M:%S")
     
     [ -f "$index_file" ] || echo "[]" > "$index_file"
     

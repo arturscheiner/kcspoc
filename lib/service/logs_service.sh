@@ -32,7 +32,7 @@ service_logs_get_history() {
         local time_part=$(echo "$filename" | cut -d'-' -f2)
         local hash_part=$(echo "$filename" | cut -d'-' -f3 | cut -d'.' -f1)
         
-        local fmt_date="${date_part:0:4}-${date_part:4:2}-${date_part:6:2} ${time_part:0:2}:${time_part:2:2}"
+        local fmt_date=$(view_ui_format_timestamp "${date_part}-${time_part}")
 
         # Extract Execution ID (Parent ID) from header
         local exec_id=$(grep -m 1 "Execution ID:" "$log_file" | cut -d':' -f2 | xargs 2>/dev/null || echo "-")
