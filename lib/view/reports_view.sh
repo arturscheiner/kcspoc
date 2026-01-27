@@ -11,6 +11,7 @@ view_reports_list_header() {
         "DATE/TIME:17" \
         "ID:8" \
         "COM:10" \
+        "LOG ID:8" \
         "EXEC ID:8" \
         "FORMAT:8" \
         "TYPE:10" \
@@ -21,10 +22,11 @@ view_reports_list_item() {
     local date="$1"
     local id="$2"
     local com="$3"
-    local exec_id="$4"
-    local ext="$5"
-    local type="$6"
-    local model="$7"
+    local log_id="$4"
+    local exec_id="$5"
+    local ext="$6"
+    local type="$7"
+    local model="$8"
     
     local type_color=$DIM
     if [ "$type" == "ai" ]; then type_color=$BRIGHT_MAGENTA; fi
@@ -33,6 +35,7 @@ view_reports_list_item() {
         "$date:17" \
         "${BRIGHT_CYAN}${id}${NC}:8" \
         "${BOLD}${com}${NC}:10" \
+        "${DIM}${log_id}${NC}:8" \
         "${BRIGHT_YELLOW}${exec_id}${NC}:8" \
         "${DIM}${ext}${NC}:8" \
         "${type_color}${type}${NC}:10" \

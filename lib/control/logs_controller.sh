@@ -77,20 +77,23 @@ logs_controller() {
                 fi
                 local log_content=$(cat "$log_file")
                 
+                # Extract parent Execution ID from log header
+                local parent_exec_id=$(grep -m 1 "Execution ID:" "$log_file" | cut -d':' -f2 | xargs 2>/dev/null || echo "-")
+
                 # Generate a unique hash for the report itself
                 local report_hash=$(model_report_generate_hash)
                 
                 # UI: Starting Analysis
                 logs_view_report_start "$target" "$mod"
                 
-                # Service Call (passing report_hash for prompt injection)
-                local ai_report=$(ai_service_generate_log_report "$target" "$log_content" "$ep" "$mod" "$report_hash")
+                # Service Call (passing IDs for prompt injection)
+                local ai_report=$(ai_service_generate_log_report "$target" "$log_content" "$ep" "$mod" "$report_hash" "$parent_exec_id")
                 
                 if [ -n "$ai_report" ]; then
                     # Save Report
                     local tmp_report="/tmp/kcspoc_report_${report_hash}.md"
                     echo "$ai_report" > "$tmp_report"
-                    model_report_save "logs" "$report_hash" "$tmp_report" "md" "ai" "$mod" "$target"
+                    model_report_save "logs" "$report_hash" "$tmp_report" "md" "ai" "$mod" "$target" "$parent_exec_id"
                     rm "$tmp_report"
                     
                     # UI: Success

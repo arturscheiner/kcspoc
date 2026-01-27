@@ -17,7 +17,7 @@ model_report_generate_hash() {
 }
 
 # Saves a report artifact
-# Usage: model_report_save <command> <hash> <content_file> [suffix] [type] [ai_model] [orig_exec_id]
+# Usage: model_report_save <command> <hash> <content_file> [suffix] [type] [ai_model] [orig_log_id] [orig_exec_id]
 model_report_save() {
     local cmd="$1"
     local hash="$2"
@@ -25,7 +25,8 @@ model_report_save() {
     local suffix="${4:-txt}"
     local type="${5:-template}"
     local ai_model="${6:-}"
-    local orig_exec_id="${7:-}"
+    local orig_log_id="${7:-}"
+    local orig_exec_id="${8:-}"
     
     local cmd_dir="$REPORTS_BASE_DIR/$cmd"
     [ -d "$cmd_dir" ] || mkdir -p "$cmd_dir"
@@ -35,7 +36,7 @@ model_report_save() {
     # Prepend AI metadata if it's an AI report
     if [ "$type" == "ai" ]; then
         {
-            echo "<!-- origin: ai | model: ${ai_model:-?} | source_exec: ${orig_exec_id:-?} | report_id: $hash -->"
+            echo "<!-- origin: ai | model: ${ai_model:-?} | log_id: ${orig_log_id:-?} | exec_id: ${orig_exec_id:-?} | report_id: $hash -->"
             echo ""
         } > "$report_file"
         cat "$src_file" >> "$report_file"
@@ -44,7 +45,7 @@ model_report_save() {
     fi
     
     # Update index
-    _model_report_index_add "$cmd" "$hash" "$suffix" "$type" "$ai_model" "$orig_exec_id"
+    _model_report_index_add "$cmd" "$hash" "$suffix" "$type" "$ai_model" "$orig_log_id" "$orig_exec_id"
 }
 
 # Internal helper to maintain a metadata index
@@ -54,7 +55,8 @@ _model_report_index_add() {
     local suffix="$3"
     local type="$4"
     local ai_model="$5"
-    local orig_exec_id="$6"
+    local orig_log_id="$6"
+    local orig_exec_id="$7"
     local index_file="$REPORTS_BASE_DIR/index.json"
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     
@@ -68,6 +70,7 @@ _model_report_index_add() {
         \"extension\": \"$suffix\",
         \"type\": \"$type\",
         \"ai_model\": \"$ai_model\",
+        \"orig_log_id\": \"$orig_log_id\",
         \"orig_exec_id\": \"$orig_exec_id\"
     }]" "$index_file" > "$temp_file"
     mv "$temp_file" "$index_file"

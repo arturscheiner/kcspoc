@@ -15,17 +15,18 @@ service_exec_init_logging() {
     
     EXPORTED_CMD_NAME="$cmd_name"
     
-    # Generate random 6-char hash
+    # Generate random 6-char hashes
     EXEC_HASH=$(cat /dev/urandom | tr -dc 'A-Z0-9' | fold -w 6 | head -n 1)
+    LOG_ID=$(cat /dev/urandom | tr -dc 'A-Z0-9' | fold -w 6 | head -n 1) # Discrete Log ID
     
     # Setup Log Dir
     local cmd_log_dir="$LOGS_DIR/$cmd_name"
     [ -d "$cmd_log_dir" ] || mkdir -p "$cmd_log_dir"
 
-    # Define Log File: YYYYMMDD-HHMMSS-HASH.log
+    # Define Log File: YYYYMMDD-HHMMSS-LOG_ID.log (where HASH is the Log ID)
     local timestamp
     timestamp=$(date +'%Y%m%d-%H%M%S')
-    EXEC_LOG_FILE="$cmd_log_dir/${timestamp}-${EXEC_HASH}.log"
+    EXEC_LOG_FILE="$cmd_log_dir/${timestamp}-${LOG_ID}.log"
 
     # Global Debug Output override
     DEBUG_OUT="$EXEC_LOG_FILE"
@@ -35,7 +36,8 @@ service_exec_init_logging() {
         echo "--- KCS EXECUTION LOG ---"
         echo "Date: $(date)"
         echo "Command: $cmd_name"
-        echo "Hash: $EXEC_HASH"
+        echo "Log ID: $LOG_ID"
+        echo "Execution ID: $EXEC_HASH"
         echo "Version: $version"
         echo "-------------------------"
     } > "$EXEC_LOG_FILE"
@@ -106,8 +108,8 @@ service_exec_cleanup() {
         service_exec_save_status "$status"
         
         # Only show log info if there was a hash generated (avoids noise for simple logs)
-        if [ -n "$EXEC_HASH" ]; then
-            view_ui_log_info "$EXEC_HASH"
+        if [ -n "$LOG_ID" ]; then
+            view_ui_log_info "$LOG_ID" "$EXEC_HASH"
         fi
     fi
 }

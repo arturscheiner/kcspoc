@@ -312,7 +312,8 @@ view_ui_spinner_cleanup() {
 }
 
 view_ui_log_info() {
-    local hash="$1"
-    echo -e "\n${DIM}${ICON_INFO} Log saved (Hash: ${BOLD}$hash${DIM}). View with:${NC}"
-    echo -e "${DIM}   ./kcspoc logs --show $hash${NC}\n"
+    local log_id="$1"
+    local exec_id="$2"
+    echo -e "\n${DIM}${ICON_INFO} Log saved (ID: ${BOLD}$log_id${DIM}). Parent Execution: ${BOLD}$exec_id${NC}"
+    echo -e "${DIM}   View with: ./kcspoc logs --show $log_id${NC}\n"
 }

@@ -29,12 +29,13 @@ service_reports_list() {
         local e=$(echo "$report" | jq -r '.extension')
         local type=$(echo "$report" | jq -r '.type // "template"')
         local model=$(echo "$report" | jq -r '.ai_model // "-"')
-        local source=$(echo "$report" | jq -r '.orig_exec_id // "-"')
+        local log_id=$(echo "$report" | jq -r '.orig_log_id // "-"')
+        local exec_id=$(echo "$report" | jq -r '.orig_exec_id // "-"')
         
         # Convert YYYY-MM-DDTHH:MM:SSZ to YYYY-MM-DD HH:MM
         local fmt_date="${t:0:10} ${t:11:5}"
         
-        view_reports_list_item "$fmt_date" "$h" "$c" "$source" "$e" "$type" "$model"
+        view_reports_list_item "$fmt_date" "$h" "$c" "$log_id" "$exec_id" "$e" "$type" "$model"
     done
 }
 

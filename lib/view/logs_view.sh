@@ -75,6 +75,20 @@ view_logs_cleanup_start() {
     service_spinner_start "Cleaning all log files"
 }
 
+view_logs_confirm_cleanup() {
+    echo -e "   ${BRIGHT_RED}${ICON_WARN} CAUTION:${NC} This will permanently delete ALL log files."
+    echo -n "   Are you sure? [y/N]: "
+    read -r choice
+    if [[ "$choice" =~ ^[Yy]$ ]]; then
+        return 0
+    fi
+    return 1
+}
+
+view_logs_cleanup_cancel() {
+    echo -e "   ${DIM}Cleanup cancelled.${NC}"
+}
+
 view_logs_cleanup_stop() {
     local status="$1"
     local empty="${2:-false}"
