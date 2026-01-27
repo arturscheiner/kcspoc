@@ -55,5 +55,42 @@ view_reports_show_content() {
 }
 
 view_reports_empty() {
-    echo -e "   ${DIM}No reports found in ~/.kcspoc/reports/${NC}"
+    local cmd="$1"
+    if [ -n "$cmd" ]; then
+        echo -e "   ${DIM}No reports found for command: $cmd${NC}"
+    else
+        echo -e "   ${DIM}No reports found in ~/.kcspoc/reports/${NC}"
+    fi
+}
+
+view_reports_confirm_cleanup() {
+    local cmd="$1"
+    local msg="ALL reports"
+    if [ -n "$cmd" ]; then msg="all reports for command '$cmd'"; fi
+    
+    echo -e "   ${BRIGHT_RED}${ICON_WARN} CAUTION:${NC} This will permanently delete ${msg}."
+    echo -n "   Are you sure? [y/N]: "
+    read -r choice
+    if [[ "$choice" =~ ^[Yy]$ ]]; then
+        return 0
+    fi
+    return 1
+}
+
+view_reports_cleanup_start() {
+    local cmd="$1"
+    local msg="Reports"
+    if [ -n "$cmd" ]; then msg="$cmd reports"; fi
+    service_spinner_start "Cleaning $msg"
+}
+
+view_reports_cleanup_stop() {
+    service_spinner_stop "$1"
+    if [ "$1" == "PASS" ]; then
+        echo -e "      ${BRIGHT_GREEN}${ICON_OK} Cleanup completed successfully.${NC}"
+    fi
+}
+
+view_reports_cleanup_cancel() {
+    echo -e "   ${DIM}Cleanup cancelled.${NC}"
 }

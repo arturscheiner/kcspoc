@@ -12,11 +12,30 @@ reports_controller() {
     
     while [[ "$#" -gt 0 ]]; do
         case $1 in
-            -l|--list) action="list"; shift ;;
+            -l|--list)
+                action="list"
+                if [[ "$2" != --* ]] && [[ -n "$2" ]]; then
+                    target="$2"
+                    shift 2
+                else
+                    target=""
+                    shift 1
+                fi
+                ;;
             -s|--show)
                 action="show"
                 target="$2"
                 shift 2
+                ;;
+            --cleanup)
+                action="cleanup"
+                if [[ "$2" != --* ]] && [[ -n "$2" ]]; then
+                    target="$2"
+                    shift 2
+                else
+                    target=""
+                    shift 1
+                fi
                 ;;
             --help|help)
                 view_ui_help "reports" "$MSG_HELP_REPORTS_DESC" "$MSG_HELP_REPORTS_OPTS" "$MSG_HELP_REPORTS_EX" "$VERSION"
@@ -37,24 +56,12 @@ reports_controller() {
 
     case "$action" in
         list)
-            view_ui_section_header "Report History"
-            local reports=$(model_report_get_index)
-            if [ "$(echo "$reports" | jq 'length')" -eq 0 ]; then
-                view_reports_empty
+            if [ -n "$target" ]; then
+                view_ui_section_header "Report History for '$target'"
             else
-                view_reports_list_header
-                echo "$reports" | jq -c '.[]' | while read -r report; do
-                    local h=$(echo "$report" | jq -r '.hash')
-                    local t=$(echo "$report" | jq -r '.timestamp')
-                    local c=$(echo "$report" | jq -r '.command')
-                    local e=$(echo "$report" | jq -r '.extension')
-                    local type=$(echo "$report" | jq -r '.type // "template"')
-                    local model=$(echo "$report" | jq -r '.ai_model // "-"')
-                    local source=$(echo "$report" | jq -r '.orig_exec_id // "-"')
-                    view_reports_list_item "$h" "$t" "$c" "$e" "$type" "$model" "$source"
-                done
+                view_ui_section_header "Global Report History"
             fi
-            echo ""
+            service_reports_list "$target"
             ;;
         show)
             if [ -z "$target" ]; then
@@ -70,6 +77,9 @@ reports_controller() {
             
             view_ui_section_header "Report Viewer: $target"
             view_reports_show_content "$target" "$report_file"
+            ;;
+        cleanup)
+            service_reports_cleanup "$target"
             ;;
     esac
 }

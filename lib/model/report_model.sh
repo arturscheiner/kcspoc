@@ -96,3 +96,24 @@ model_report_get_index() {
         echo "[]"
     fi
 }
+
+model_report_delete() {
+    local cmd_filter="$1" # Optional
+    local index_file="$REPORTS_BASE_DIR/index.json"
+    
+    if [ -z "$cmd_filter" ]; then
+        # Delete everything
+        rm -rf "${REPORTS_BASE_DIR:?}"/* &>/dev/null
+        echo "[]" > "$index_file"
+    else
+        # Delete specific command directory
+        rm -rf "$REPORTS_BASE_DIR/$cmd_filter" &>/dev/null
+        
+        # Filter index
+        if [ -f "$index_file" ]; then
+            local temp_file="${index_file}.tmp"
+            jq "map(select(.command != \"$cmd_filter\"))" "$index_file" > "$temp_file"
+            mv "$temp_file" "$index_file"
+        fi
+    fi
+}
