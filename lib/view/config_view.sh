@@ -95,3 +95,19 @@ config_view_version_update_success() {
 config_view_error_config_not_found() {
     echo -e "   ${RED}${ICON_FAIL} ${MSG_ERROR_CONFIG_NOT_FOUND}${NC}"
 }
+
+config_view_verify_header() {
+    local component="$1"
+    view_ui_section_header "Verification: $component"
+}
+
+config_view_verify_result() {
+    local msg="$1"
+    local status="$2"
+    local details="$3"
+    
+    config_view_action_line "$msg" "$status"
+    if [ "$status" != "PASS" ] && [ -n "$details" ]; then
+        echo -e "      ${RED}Error:${NC} $details"
+    fi
+}

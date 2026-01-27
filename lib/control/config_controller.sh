@@ -8,10 +8,12 @@
 
 config_controller() {
     local SET_VER=""
+    local VERIFY_TARGET=""
     
     while [[ "$#" -gt 0 ]]; do
         case $1 in
-            --set-version) SET_VER="$2"; shift ;;
+            --set-version) SET_VER="$2"; shift 2 ;;
+            --verify) VERIFY_TARGET="$2"; shift 2 ;;
             --help|help)
                 view_ui_help "config" "$MSG_HELP_CONFIG_DESC" "$MSG_HELP_CONFIG_OPTS" "$MSG_HELP_CONFIG_EX" "$VERSION"
                 return 0
@@ -21,7 +23,6 @@ config_controller() {
                 return 1
                 ;;
         esac
-        shift
     done
 
     if [ -n "$SET_VER" ]; then
@@ -31,6 +32,40 @@ config_controller() {
             return 0
         else
             config_view_error_config_not_found
+            return 1
+        fi
+    fi
+
+    if [ -n "$VERIFY_TARGET" ]; then
+        if [[ "$VERIFY_TARGET" == "ai" ]]; then
+            config_view_verify_header "AI (Ollama)"
+            config_service_load
+            
+            # Use overrides if present, otherwise from config
+            local ep="${OLLAMA_ENDPOINT:-http://localhost:11434}"
+            local mod="${OLLAMA_MODEL_OVERRIDE:-${OLLAMA_MODEL:-llama3}}"
+            
+            config_service_verify_ai "$ep" "$mod"
+            local res=$?
+            
+            case $res in
+                0)
+                    config_view_verify_result "Ollama Presence ($ep)" "PASS"
+                    config_view_verify_result "Model Presence ($mod)" "PASS"
+                    ;;
+                1)
+                    config_view_verify_result "Ollama Presence ($ep)" "FAIL" "Endpoint unreachable."
+                    return 1
+                    ;;
+                2)
+                    config_view_verify_result "Ollama Presence ($ep)" "PASS"
+                    config_view_verify_result "Model Presence ($mod)" "FAIL" "Model not found in local Ollama instance."
+                    return 1
+                    ;;
+            esac
+            return 0
+        else
+            echo "Error: Unknown verification target '$VERIFY_TARGET'"
             return 1
         fi
     fi
