@@ -69,9 +69,12 @@ view_logs_show_content() {
     
     echo -e "${DIM}File: $file_path${NC}\n"
     if command -v less &>/dev/null; then
-        less -R "$file_path"
+        # -R: ANSI colors, -F: Exit if content fits on one screen, -X: No init (don't clear screen)
+        # tr: remove carriage returns (fix ugly progress bars)
+        # sed: strip leading blank lines for cleaner output
+        tr -d '\r' < "$file_path" | sed '/./,$!d' | less -RFX
     else
-        cat "$file_path"
+        tr -d '\r' < "$file_path" | sed '/./,$!d'
     fi
 }
 
