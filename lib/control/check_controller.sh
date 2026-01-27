@@ -34,7 +34,7 @@ check_controller() {
     fi
 
     local deep_enabled="${deep_override:-$ENABLE_DEEP_CHECK}"
-    local deep_ns="kcspoc"
+    local deep_ns="${KCSPOC_NAMESPACE:-kcspoc}"
 
     # 2. Cluster Context
     view_check_section_title "" "Cluster Context"

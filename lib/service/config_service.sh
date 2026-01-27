@@ -33,6 +33,14 @@ config_service_get_locales() {
     ls "$SCRIPT_DIR/locales/"*.sh 2>/dev/null | xargs -n 1 basename | sed 's/\.sh//' | tr '\n' ' '
 }
 
+config_service_get_current_context() {
+    kubeconfig_get_current_context
+}
+
+config_service_get_all_contexts() {
+    kubeconfig_get_all_contexts
+}
+
 config_service_save() {
     local config_data="$1"
     mkdir -p "$CONFIG_DIR"

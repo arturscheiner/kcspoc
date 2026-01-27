@@ -100,6 +100,13 @@ service_destroy_run() {
          kubectl delete -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.31/deploy/local-path-storage.yaml &>> "$DEBUG_OUT" || true
          kubectl delete deployment metrics-server -n kube-system &>> "$DEBUG_OUT" || true
          view_destroy_step_stop "PASS"
+
+         # KCSPOC Isolation Namespace
+         local kcspoc_ns="${KCSPOC_NAMESPACE:-kcspoc}"
+         view_destroy_step_start "Cleaning $kcspoc_ns"
+         model_kubectl_delete_namespace "$kcspoc_ns" "false"
+         service_exec_wait_and_force_delete_ns "$kcspoc_ns" 3
+         view_destroy_step_stop "PASS"
     else
          view_destroy_infra_skipped
     fi

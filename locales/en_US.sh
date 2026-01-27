@@ -29,9 +29,9 @@ MSG_CONFIG_NEXT_STEPS="Next steps: run 'kcspoc check' to verify your environment
 MSG_CONFIG_SECRETS_GEN="Secrets generated randomly."
 
 MSG_SECTION_LOCALIZATION="Localization Settings"
-MSG_SECTION_CLUSTER="Cluster Context"
-MSG_SECTION_PRODUCT="Product Configuration"
-MSG_SECTION_NETWORKING="Networking"
+MSG_SECTION_ENVIRONMENT="Kubernetes Environment"
+MSG_SECTION_KCS="Kaspersky Container Security (KCS)"
+MSG_SECTION_NETWORKING="Infrastructure & Networking"
 MSG_SECTION_SECURITY="Registry & Security"
 MSG_SECTION_DIAGNOSTICS="Operational Diagnostics"
 MSG_SECTION_AI="AI Capabilities (Ollama)"
@@ -41,23 +41,48 @@ MSG_STEP_LANG_DESC="Select the interface language."
 MSG_INPUT_LANG="Language (en_US, pt_BR, etc)"
 MSG_LANG_AVAILABLE="Available"
 
-MSG_STEP_NS="Kubernetes Namespace"
-MSG_STEP_NS_DESC="Where KCS resources will be created."
-MSG_INPUT_NS="Namespace"
+MSG_STEP_CONTEXT="Kubernetes Context"
+MSG_STEP_CONTEXT_DESC="Current active cluster context from your kubeconfig."
+MSG_INPUT_CONTEXT="Confirm or enter context"
+MSG_CONTEXT_AVAILABLE="Available contexts"
 
-MSG_STEP_DOMAIN="Base Domain"
-MSG_STEP_DOMAIN_DESC="Domain for KCS console/services (e.g. kcs.lab)."
+MSG_STEP_PLATFORM="Target Platform"
+MSG_STEP_PLATFORM_DESC="Select the Kubernetes distribution where KCS will be deployed."
+MSG_INPUT_PLATFORM="Platform (kubernetes/openshift)"
+
+MSG_STEP_CRI="CRI Socket Path"
+MSG_STEP_CRI_DESC="Specify the container runtime socket (e.g., /run/containerd/containerd.sock)."
+MSG_INPUT_CRI_SOCKET="Socket Path (Leave blank to auto-detect)"
+
+MSG_STEP_KCSPOC_NS="Tool Namespace (Internal)"
+MSG_STEP_KCSPOC_NS_DESC="Isolated namespace for kcspoc diagnostic workloads."
+MSG_INPUT_KCSPOC_NS="KCSPOC Namespace"
+
+MSG_STEP_NS="KCS Application Namespace"
+MSG_STEP_NS_DESC="Where the KCS Console and main components will be created."
+MSG_INPUT_NS="KCS Namespace"
+
+MSG_STEP_DOMAIN="KCS Base Domain"
+MSG_STEP_DOMAIN_DESC="Domain to access the KCS Web Console (e.g. kcs.cluster.lab)."
 MSG_INPUT_DOMAIN="Domain"
 
+MSG_STEP_VERSION="KCS Version"
+MSG_STEP_VERSION_DESC="Target version for deployment and manifests."
+MSG_INPUT_VERSION="Version"
+
 MSG_STEP_REG="Registry Credentials"
-MSG_STEP_REG_DESC="Access to KCS container images."
+MSG_STEP_REG_DESC="Access to KCS container images (pull credentials)."
 MSG_INPUT_REG_URL="Server URL"
 MSG_INPUT_REG_USER="Username"
 MSG_INPUT_REG_PASS="Password"
 MSG_INPUT_REG_EMAIL="Email"
 
+MSG_STEP_SECRETS="Internal Service Secrets"
+MSG_STEP_SECRETS_DESC="Configure passwords for databases and application secrets."
+MSG_INPUT_SECRETS_AUTO="Auto-generate all secrets randomly? [y/N]"
+
 MSG_STEP_METALLB="MetalLB IP Range"
-MSG_STEP_METALLB_DESC="Range for LoadBalancer (e.g. 172.16.0.10-172.16.0.20)"
+MSG_STEP_METALLB_DESC="Range for LoadBalancer (Required for on-premise ingress)."
 MSG_INPUT_IP_RANGE="IP Range"
 
 MSG_STEP_DEEP="Deep Node Inspection"

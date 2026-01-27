@@ -49,3 +49,11 @@ kubeconfig_get_suggested_cri() {
         echo ""
     fi
 }
+
+kubeconfig_get_current_context() {
+    kubectl config current-context 2>/dev/null || echo "none"
+}
+
+kubeconfig_get_all_contexts() {
+    kubectl config get-contexts -o name 2>/dev/null | tr '\n' ' '
+}

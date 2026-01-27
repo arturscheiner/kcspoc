@@ -36,6 +36,18 @@ config_view_step_lang() {
     view_ui_input "$MSG_INPUT_LANG" "$def_lang" "$cur_lang"
 }
 
+config_view_step_context() {
+    local step_num="$1"
+    local total_steps="$2"
+    local avail_contexts="$3"
+    local def_ctx="$4"
+    local cur_ctx="$5"
+
+    view_ui_step "$step_num" "$total_steps" "$MSG_STEP_CONTEXT" "$MSG_STEP_CONTEXT_DESC"
+    echo -e "   ${DIM}${MSG_CONTEXT_AVAILABLE}: [ $avail_contexts]${NC}"
+    view_ui_input "$MSG_INPUT_CONTEXT" "$def_ctx" "$cur_ctx"
+}
+
 config_view_step_generic() {
     local step_num="$1"
     local total_steps="$2"
