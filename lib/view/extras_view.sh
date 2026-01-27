@@ -17,20 +17,26 @@ view_extras_catalog_header() {
 
 view_extras_catalog_table_header() {
     view_ui_table_header \
-        "ID:20" \
-        "Name:25" \
-        "Description:50"
+        "State:8" \
+        "ID:18" \
+        "Name:22" \
+        "Description:45"
 }
 
 view_extras_catalog_item() {
     local id="$1"
     local name="$2"
     local desc="$3"
+    local is_installed="$4"
+
+    local state_icon=" "
+    [ "$is_installed" == "true" ] && state_icon="${BRIGHT_GREEN}${ICON_OK}${NC}"
 
     view_ui_table_row \
-        "${BRIGHT_CYAN}${id}${NC}:20" \
-        "${BOLD}${name}${NC}:25" \
-        "${DIM}${desc}${NC}:50"
+        "$state_icon:8" \
+        "${BRIGHT_CYAN}${id}${NC}:18" \
+        "${BOLD}${name}${NC}:22" \
+        "${DIM}${desc}${NC}:45"
 }
 
 view_extras_catalog_footer() {

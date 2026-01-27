@@ -293,9 +293,9 @@ MSG_HELP_CONFIG_OPTS="--set-version <ver>|Pin the target KCS version without ent
 MSG_HELP_CONFIG_EX="kcspoc config\nkcspoc config --set-version 2.3.0"
 
 # Pull Help
-MSG_HELP_PULL_DESC="Downloads the Kaspersky Container Security Helm chart from the official registry. Authenticates using your config credentials."
-MSG_HELP_PULL_OPTS="--version <ver>|Specifically target a chart version (e.g., 2.3.0)\n--list-local|List all chart versions already pulled and available locally."
-MSG_HELP_PULL_EX="kcspoc pull\nkcspoc pull --version 2.2.0"
+MSG_HELP_PULL_DESC="Downloads the Kaspersky Container Security Helm chart. Authenticates using your config credentials."
+MSG_HELP_PULL_OPTS="--version|-v <ver>|Specifically target a chart version (e.g., 2.3.0)\n--list-local|-l|List all chart versions already pulled and available locally."
+MSG_HELP_PULL_EX="kcspoc pull\nkcspoc pull -v 2.2.0"
 
 # Check Help
 MSG_HELP_CHECK_DESC="Performs a comprehensive diagnostic of your Kubernetes cluster, including tool checks, connectivity, and resource compliance auditing."
@@ -303,9 +303,9 @@ MSG_HELP_CHECK_OPTS="--deep|Enable privileged pods to check kernel headers and e
 MSG_HELP_CHECK_EX="kcspoc check\nkcspoc check --deep"
 
 # Prepare Help
-MSG_HELP_PREPARE_DESC="Orchestrates the installation of infrastructure dependencies (MetalLB, Nginx, Cert-Manager) and local storage to prepare for KCS."
-MSG_HELP_PREPARE_OPTS="--unattended|Install all components without asking for user confirmation.\n--install <list>|Comma-separated list (e.g. metallb,cert-manager) or 'all'.\n--uninstall <list>|Remove components (e.g. ingress-nginx) or 'all'."
-MSG_HELP_PREPARE_EX="kcspoc prepare\nkcspoc prepare --unattended\nkcspoc prepare --install all\nkcspoc prepare --uninstall metallb,cert-manager"
+MSG_HELP_PREPARE_DESC="Prepares the mandatory environment for KCS (secrets, namespaces, and prerequisites)."
+MSG_HELP_PREPARE_OPTS="--help|-h|Display help for this command.\n--unattended|Run without confirmation."
+MSG_HELP_PREPARE_EX="kcspoc prepare"
 
 # Destroy Help
 MSG_HELP_DESTROY_DESC="Safely uninstalls KCS and its associated resources from your cluster. Includes optional cleanup of infrastructure dependencies."

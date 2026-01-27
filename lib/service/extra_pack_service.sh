@@ -6,9 +6,24 @@
 # Responsibility: Business logic for extra-packs (Install/Uninstall/List)
 # ==============================================================================
 
+_service_extra_get_name() {
+    case "$1" in
+        "registry-auth") echo "Registry Secret" ;;
+        "cert-manager") echo "Cert-Manager" ;;
+        "local-path-storage") echo "Local Path Storage" ;;
+        "metrics-server") echo "Metrics Server" ;;
+        "metallb") echo "MetalLB" ;;
+        "ingress-nginx") echo "Ingress-Nginx" ;;
+        "kernel-headers") echo "Kernel Headers" ;;
+        *) echo "$1" ;;
+    esac
+}
+
 service_extra_pack_install() {
     local pack="$1"
     local unattended="${2:-false}"
+    local context
+    context=$(model_cluster_get_current_context)
 
     case "$pack" in
         "registry-auth")
@@ -17,9 +32,9 @@ service_extra_pack_install() {
                 if model_kubectl_create_docker_secret "kcs-registry-secret" "$NAMESPACE" "$REGISTRY_SERVER" "$REGISTRY_USER" "$REGISTRY_PASS" && \
                    model_kubectl_label "secret" "kcs-registry-secret" "$NAMESPACE" "$POC_LABEL"; then
                     view_prepare_step_stop "PASS"
-                    # Verification check
                     if model_ns_check_label "secret" "kcs-registry-secret" "$NAMESPACE" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
                         view_prepare_infra_status "PASS" "secret" "kcs-registry-secret"
+                        model_state_record_install "$pack" "$(_service_extra_get_name "$pack")" "$context"
                     else
                         view_prepare_infra_status "FAIL" "secret" "kcs-registry-secret"
                     fi
@@ -40,9 +55,9 @@ service_extra_pack_install() {
                     model_kubectl_label "namespace" "cert-manager" "" "$POC_LABEL"
                     model_kubectl_label_all "deployment" "cert-manager" "$POC_LABEL"
                     view_prepare_step_stop "PASS"
-                    # Verification check
                     if model_ns_check_label "namespace" "cert-manager" "" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
                         view_prepare_infra_status "PASS" "namespace" "cert-manager"
+                        model_state_record_install "$pack" "$(_service_extra_get_name "$pack")" "$context"
                     else
                         view_prepare_infra_status "FAIL" "namespace" "cert-manager"
                     fi
@@ -65,9 +80,9 @@ service_extra_pack_install() {
                     model_kubectl_patch_storageclass "local-path" '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
                     model_kubectl_label "sc" "local-path" "" "$POC_LABEL"
                     view_prepare_step_stop "PASS"
-                    # Verification check
                     if model_ns_check_label "sc" "local-path" "" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
                         view_prepare_infra_status "PASS" "sc" "local-path"
+                        model_state_record_install "$pack" "$(_service_extra_get_name "$pack")" "$context"
                     else
                         view_prepare_infra_status "FAIL" "sc" "local-path"
                     fi
@@ -89,9 +104,9 @@ service_extra_pack_install() {
                    ]' && \
                    model_kubectl_label "deployment" "metrics-server" "kube-system" "$POC_LABEL"; then
                     view_prepare_step_stop "PASS"
-                    # Verification check
                     if model_ns_check_label "deployment" "metrics-server" "kube-system" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
                         view_prepare_infra_status "PASS" "deployment" "metrics-server"
+                        model_state_record_install "$pack" "$(_service_extra_get_name "$pack")" "$context"
                     else
                         view_prepare_infra_status "FAIL" "deployment" "metrics-server"
                     fi
@@ -135,9 +150,9 @@ spec:
   - first-pool
 EOF
                     view_prepare_step_stop "PASS"
-                    # Verification check
                     if model_ns_check_label "namespace" "metallb-system" "" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
                         view_prepare_infra_status "PASS" "namespace" "metallb-system"
+                        model_state_record_install "$pack" "$(_service_extra_get_name "$pack")" "$context"
                     else
                         view_prepare_infra_status "FAIL" "namespace" "metallb-system"
                     fi
@@ -160,9 +175,9 @@ EOF
                     model_kubectl_label "namespace" "ingress-nginx" "" "$POC_LABEL"
                     model_kubectl_label_all "deployment" "ingress-nginx" "$POC_LABEL"
                     view_prepare_step_stop "PASS"
-                    # Verification check
                     if model_ns_check_label "namespace" "ingress-nginx" "" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
                         view_prepare_infra_status "PASS" "namespace" "ingress-nginx"
+                        model_state_record_install "$pack" "$(_service_extra_get_name "$pack")" "$context"
                     else
                         view_prepare_infra_status "FAIL" "namespace" "ingress-nginx"
                     fi
@@ -180,6 +195,7 @@ EOF
                 view_prepare_step_start "$MSG_PREPARE_STEP_5"
                 if model_system_install_headers; then
                     view_prepare_step_stop "PASS"
+                    model_state_record_install "$pack" "$(_service_extra_get_name "$pack")" "host"
                 else
                     view_prepare_step_stop "FAIL"
                     return 1
@@ -195,6 +211,8 @@ EOF
 
 service_extra_pack_uninstall() {
     local pack="$1"
+    local context
+    context=$(model_cluster_get_current_context)
     
     case "$pack" in
         "ingress-nginx")
@@ -203,6 +221,7 @@ service_extra_pack_uninstall() {
             model_kubectl_delete_namespace "ingress-nginx" "false"
             service_exec_wait_and_force_delete_ns "ingress-nginx" 3
             view_prepare_step_stop "PASS"
+            model_state_record_uninstall "$pack" "$context"
             ;;
         "metallb")
             view_prepare_step_start "Removing MetalLB"
@@ -210,11 +229,13 @@ service_extra_pack_uninstall() {
             model_kubectl_delete_namespace "metallb-system" "false"
             service_exec_wait_and_force_delete_ns "metallb-system" 3
             view_prepare_step_stop "PASS"
+            model_state_record_uninstall "$pack" "$context"
             ;;
         "metrics-server")
             view_prepare_step_start "Removing Metrics Server"
             kubectl delete deployment metrics-server -n kube-system &>> "$DEBUG_OUT" || true
             view_prepare_step_stop "PASS"
+            model_state_record_uninstall "$pack" "kube-system" # Special case or default context
             ;;
         "local-path-storage")
             view_prepare_step_start "Removing Local Path Storage"
@@ -222,6 +243,7 @@ service_extra_pack_uninstall() {
             model_kubectl_delete_namespace "local-path-storage" "false"
             service_exec_wait_and_force_delete_ns "local-path-storage" 3
             view_prepare_step_stop "PASS"
+            model_state_record_uninstall "$pack" "$context"
             ;;
         "cert-manager")
             view_prepare_step_start "Removing Cert-Manager"
@@ -229,11 +251,13 @@ service_extra_pack_uninstall() {
             model_kubectl_delete_namespace "cert-manager" "false"
             service_exec_wait_and_force_delete_ns "cert-manager" 3
             view_prepare_step_stop "PASS"
+            model_state_record_uninstall "$pack" "$context"
             ;;
         "registry-auth")
             view_prepare_step_start "Removing Registry Secret"
             kubectl delete secret kcs-registry-secret -n "$NAMESPACE" &>> "$DEBUG_OUT" || true
             view_prepare_step_stop "PASS"
+            model_state_record_uninstall "$pack" "$context"
             ;;
     esac
 }

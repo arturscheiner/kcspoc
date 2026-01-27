@@ -7,27 +7,16 @@
 # ==============================================================================
 
 prepare_controller() {
-    local install_list=""
-    local uninstall_list=""
+    # Prepare now focuses on core bootstrap by default
     
     while [[ "$#" -gt 0 ]]; do
         case $1 in
-            --help|help)
+            --help|-h|help)
                 view_ui_help "prepare" "$MSG_HELP_PREPARE_DESC" "$MSG_HELP_PREPARE_OPTS" "$MSG_HELP_PREPARE_EX" "$VERSION"
                 return 0
                 ;;
-            --install)
-                install_list="$2"
-                shift 2
-                ;;
-            --uninstall)
-                uninstall_list="$2"
-                shift 2
-                ;;
             *)
-                # Prepare often takes positional args or flags like --unattended in global context
-                # but cmd_prepare historically didn't have specific flags. 
-                # Just catch-all to avoid help on unknown flags if intended.
+                # Prepare takes --unattended or positional args handled higher up or ignored
                 shift
                 ;;
         esac
@@ -39,10 +28,6 @@ prepare_controller() {
         return 1
     fi
 
-    # Dispatch based on operation
-    if [ -n "$uninstall_list" ]; then
-        service_prepare_uninstall "$uninstall_list"
-    else
-        service_prepare_run_all "$install_list"
-    fi
+    # Core environment bootstrap sequence
+    service_prepare_run_all ""
 }

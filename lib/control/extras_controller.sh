@@ -13,18 +13,18 @@ extras_controller() {
     
     while [[ "$#" -gt 0 ]]; do
         case $1 in
-            --list)
+            --list|-l)
                 list=true
                 ;;
-            --install)
+            --install|-i)
                 install_pack="$2"
                 shift
                 ;;
-            --uninstall)
+            --uninstall|-u)
                 uninstall_pack="$2"
                 shift
                 ;;
-            --help|help)
+            --help|-h|help)
                 view_ui_help "extras" "$MSG_HELP_EXTRAS_DESC" "$MSG_HELP_EXTRAS_OPTS" "$MSG_HELP_EXTRAS_EX" "$VERSION"
                 return 0
                 ;;
@@ -47,15 +47,28 @@ extras_controller() {
         
         if [ -n "$catalog_json" ]; then
             view_extras_catalog_table_header
+            
+            # Get local installed state
+            local current_context
+            current_context=$(model_cluster_get_current_context)
+            local installed_ids
+            installed_ids=$(model_state_get_installed_in_context "$current_context")
+            
             # Loop through JSON array using jq
             local count
             count=$(echo "$catalog_json" | jq '. | length')
             for (( i=0; i<$count; i++ )); do
-                local id name desc
+                local id name desc is_installed
                 id=$(echo "$catalog_json" | jq -r ".[$i].id")
                 name=$(echo "$catalog_json" | jq -r ".[$i].name")
                 desc=$(echo "$catalog_json" | jq -r ".[$i].description")
-                view_extras_catalog_item "$id" "$name" "$desc"
+                
+                is_installed="false"
+                if [[ " $installed_ids " == *" $id "* ]]; then
+                    is_installed="true"
+                fi
+                
+                view_extras_catalog_item "$id" "$name" "$desc" "$is_installed"
             done
             view_extras_catalog_footer
         else

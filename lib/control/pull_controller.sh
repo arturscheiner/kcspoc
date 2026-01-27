@@ -12,8 +12,8 @@ pull_controller() {
     
     while [[ "$#" -gt 0 ]]; do
         case $1 in
-            --version) force_version="$2"; shift ;;
-            --list-local) list_local="true" ;;
+            --version|-v) force_version="$2"; shift ;;
+            --list-local|-l) list_local="true" ;;
             --help|help)
                 view_ui_help "pull" "$MSG_HELP_PULL_DESC" "$MSG_HELP_PULL_OPTS" "$MSG_HELP_PULL_EX" "$VERSION"
                 return 0
