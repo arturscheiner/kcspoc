@@ -28,6 +28,14 @@ MSG_CONFIG_VER_UPDATED="KCS version pinned to"
 MSG_CONFIG_NEXT_STEPS="Next steps: run 'kcspoc check' to verify your environment."
 MSG_CONFIG_SECRETS_GEN="Secrets generated randomly."
 
+MSG_SECTION_LOCALIZATION="Localization Settings"
+MSG_SECTION_CLUSTER="Cluster Context"
+MSG_SECTION_PRODUCT="Product Configuration"
+MSG_SECTION_NETWORKING="Networking"
+MSG_SECTION_SECURITY="Registry & Security"
+MSG_SECTION_DIAGNOSTICS="Operational Diagnostics"
+MSG_SECTION_AI="AI Capabilities (Ollama)"
+
 MSG_STEP_LANG="Preferred Language"
 MSG_STEP_LANG_DESC="Select the interface language."
 MSG_INPUT_LANG="Language (en_US, pt_BR, etc)"
@@ -64,6 +72,8 @@ MSG_STEP_PLATFORM="Target Platform"
 MSG_STEP_PLATFORM_DESC="Select the Kubernetes distribution where KCS will be deployed."
 MSG_STEP_CRI="CRI Socket Path"
 MSG_STEP_CRI_DESC="Specify the container runtime socket (e.g., /run/containerd/containerd.sock)."
+MSG_STEP_AI="AI Analysis Settings"
+MSG_STEP_AI_DESC="Configure Ollama connection for log analysis and reports."
 MSG_INPUT_VERSION="Version"
 MSG_INPUT_PLATFORM="Platform (kubernetes/openshift)"
 MSG_INPUT_CRI_SOCKET="Socket Path (Leave blank to auto-detect)"
@@ -78,6 +88,8 @@ MSG_INPUT_CH_READ_PASS="Clickhouse Read Password"
 MSG_INPUT_MCHD_USER="MCHD Username"
 MSG_INPUT_MCHD_PASS="MCHD Password"
 MSG_INPUT_APP_SECRET="Application Secret (APP_SECRET)"
+MSG_INPUT_AI_ENDPOINT="Ollama Endpoint"
+MSG_INPUT_AI_MODEL="Default AI Model"
 
 # --- Pull Command ---
 MSG_PULL_TITLE="Pulling KCS Chart"
@@ -302,8 +314,8 @@ MSG_HELP_PULL_EX="kcspoc pull\nkcspoc pull -v 2.2.0"
 
 # Check Help
 MSG_HELP_CHECK_DESC="Performs a comprehensive diagnostic of your Kubernetes cluster, including tool checks, connectivity, and resource compliance auditing."
-MSG_HELP_CHECK_OPTS="--deep|Enable privileged pods to check kernel headers and eBPF readiness.\n--report|Generate and store a structured diagnostic report in ~/.kcspoc/reports/"
-MSG_HELP_CHECK_EX="kcspoc check\nkcspoc check --deep\nkcspoc check --report"
+MSG_HELP_CHECK_OPTS="--deep|Enable privileged pods to check kernel headers and eBPF readiness.\n--report|Generate and store a structured diagnostic report in ~/.kcspoc/reports/\n--ai-model <model>|Override the default AI model for this execution."
+MSG_HELP_CHECK_EX="kcspoc check\nkcspoc check --deep\nkcspoc check --report\nkcspoc check --report --ai-model llama3"
 
 # Prepare Help
 MSG_HELP_PREPARE_DESC="Prepares the mandatory environment for KCS (secrets, namespaces, and prerequisites)."
@@ -317,8 +329,8 @@ MSG_HELP_DESTROY_EX="kcspoc destroy\nkcspoc destroy --unattended"
 
 # Logs Help
 MSG_HELP_LOGS_DESC="Manage the execution logs of the kcspoc tool. Allows viewing history and deep-diving into specific execution IDs."
-MSG_HELP_LOGS_OPTS="--list [cmd]|Show last 10 logs (optionally filtered by command)\n--show <hash>|View the full debug output for a specific execution ID\n--cleanup|Delete all stored logs from ~/.kcspoc/logs"
-MSG_HELP_LOGS_EX="kcspoc logs --list\nkcspoc logs --list prepare\nkcspoc logs --show A1B2C3\nkcspoc logs --cleanup"
+MSG_HELP_LOGS_OPTS="--list [cmd]|Show last 10 logs (optionally filtered by command)\n--show <hash>|View the full debug output for a specific execution ID\n--cleanup|Delete all stored logs from ~/.kcspoc/logs\n--ai-model <model>|Override the default AI model for analysis."
+MSG_HELP_LOGS_EX="kcspoc logs --list\nkcspoc logs --show A1B2C3\nkcspoc logs --show A1B2C3 --analyze --ai-model llama3"
 
 # Deploy Help
 MSG_HELP_DEPLOY_DESC="Orchestrates the deployment of KCS components (Console, Agents, or Gateways) to the cluster."
@@ -327,8 +339,8 @@ MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --agents"
 
 # Reports Help
 MSG_HELP_REPORTS_DESC="Manage generated reports (AI analysis, diagnostics, or templates)."
-MSG_HELP_REPORTS_OPTS="--list|-l|List all reports stored in ~/.kcspoc/reports/"
-MSG_HELP_REPORTS_EX="kcspoc reports --list"
+MSG_HELP_REPORTS_OPTS="--list|-l|List all reports stored in ~/.kcspoc/reports/\n--ai-model <model>|Override the default AI model for report generation."
+MSG_HELP_REPORTS_EX="kcspoc reports --list\nkcspoc reports --generate check --ai-model llama3"
 
 MSG_CMD_REPORTS_DESC="Manage generated reports (Discovery, View)"
 MSG_HELP_DEPLOY_DESC="Manages the deployment lifecycle of Kaspersky Container Security components."

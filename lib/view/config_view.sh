@@ -16,6 +16,11 @@ config_view_wizard_intro() {
     echo ""
 }
 
+config_view_section() {
+    local title="$1"
+    view_ui_section_header "$title"
+}
+
 config_view_config_loaded() {
     config_view_action_line "$MSG_CONFIG_LOADED" "PASS"
 }

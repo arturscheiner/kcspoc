@@ -45,6 +45,7 @@ _config_controller_wizard() {
     # Load existing config logic
     local CUR_NS="" CUR_DOMAIN="" CUR_REG_SRV="" CUR_REG_USER="" CUR_REG_EMAIL="" CUR_IP_RANGE="" CUR_DEEP="" CUR_VER="" CUR_LANG="" CUR_PLAT="" CUR_CRI=""
     local CUR_PG_USER="" CUR_PG_PASS="" CUR_MINIO_USER="" CUR_MINIO_PASS="" CUR_CH_ADMIN_PASS="" CUR_CH_WRITE_PASS="" CUR_CH_READ_PASS="" CUR_MCHD_USER="" CUR_MCHD_PASS="" CUR_APP_SECRET=""
+    local CUR_AI_ENDPOINT="" CUR_AI_MODEL=""
     
     if config_service_load; then
         CUR_NS="$NAMESPACE"
@@ -68,12 +69,15 @@ _config_controller_wizard() {
         CUR_MCHD_USER="$MCHD_USER"
         CUR_MCHD_PASS="$MCHD_PASS"
         CUR_APP_SECRET="$APP_SECRET"
+        CUR_AI_ENDPOINT="$OLLAMA_ENDPOINT"
+        CUR_AI_MODEL="$OLLAMA_MODEL"
         config_view_config_loaded
     fi
 
-    local TOTAL_STEPS=10
+    local TOTAL_STEPS=12
 
-    # 1. Language
+    # 1. Localization
+    config_view_section "$MSG_SECTION_LOCALIZATION"
     local AVAIL_STR=$(config_service_get_locales)
     local DEF_LANG="en_US"
     [ -n "$CUR_LANG" ] && DEF_LANG="$CUR_LANG"
@@ -81,20 +85,49 @@ _config_controller_wizard() {
     config_view_step_lang "$TOTAL_STEPS" "$AVAIL_STR" "$DEF_LANG" "$CUR_LANG"
     PREFERRED_LANG="$RET_VAL"
 
-    # Hot-swap locale (Service Layer is implementation detail, sourcing is fine in Controller for UI)
+    # Hot-swap locale
     NEW_LOCALE_FILE="$SCRIPT_DIR/locales/${PREFERRED_LANG}.sh"
     [ -f "$NEW_LOCALE_FILE" ] && source "$NEW_LOCALE_FILE"
 
-    # 2. Namespace
-    config_view_step_generic 2 "$TOTAL_STEPS" "$MSG_STEP_NS" "$MSG_STEP_NS_DESC" "$MSG_INPUT_NS" "kcs" "$CUR_NS"
-    NAMESPACE="$RET_VAL"
+    # 2. Cluster Context
+    config_view_section "$MSG_SECTION_CLUSTER"
 
-    # 3. Domain
-    config_view_step_generic 3 "$TOTAL_STEPS" "$MSG_STEP_DOMAIN" "$MSG_STEP_DOMAIN_DESC" "$MSG_INPUT_DOMAIN" "kcs.cluster.lab" "$CUR_DOMAIN"
+    # Platform (Step 2)
+    config_view_step_generic 2 "$TOTAL_STEPS" "$MSG_STEP_PLATFORM" "$MSG_STEP_PLATFORM_DESC" "$MSG_INPUT_PLATFORM" "kubernetes" "$CUR_PLAT"
+    PLATFORM="$RET_VAL"
+
+    # CRI Socket (Step 3)
+    local SUGGESTED_CRI=$(kubeconfig_get_suggested_cri "$CUR_CRI")
+    config_view_step_generic 3 "$TOTAL_STEPS" "$MSG_STEP_CRI" "$MSG_STEP_CRI_DESC" "$MSG_INPUT_CRI_SOCKET" "$SUGGESTED_CRI" "$CUR_CRI"
+    CRI_SOCKET="$RET_VAL"
+
+    # Domain (Step 4)
+    config_view_step_generic 4 "$TOTAL_STEPS" "$MSG_STEP_DOMAIN" "$MSG_STEP_DOMAIN_DESC" "$MSG_INPUT_DOMAIN" "kcs.cluster.lab" "$CUR_DOMAIN"
     DOMAIN="$RET_VAL"
 
-    # 4. Registry
-    view_ui_step 4 "$TOTAL_STEPS" "$MSG_STEP_REG" "$MSG_STEP_REG_DESC"
+    # 3. Product Configuration
+    config_view_section "$MSG_SECTION_PRODUCT"
+
+    # Version (Step 5)
+    config_view_step_generic 5 "$TOTAL_STEPS" "$MSG_STEP_VERSION" "$MSG_STEP_VERSION_DESC" "$MSG_INPUT_VERSION" "latest" "$CUR_VER"
+    KCS_VERSION="$RET_VAL"
+
+    # Namespace (Step 6)
+    config_view_step_generic 6 "$TOTAL_STEPS" "$MSG_STEP_NS" "$MSG_STEP_NS_DESC" "$MSG_INPUT_NS" "kcs" "$CUR_NS"
+    NAMESPACE="$RET_VAL"
+
+    # 4. Networking
+    config_view_section "$MSG_SECTION_NETWORKING"
+
+    # MetalLB (Step 7)
+    config_view_step_generic 7 "$TOTAL_STEPS" "$MSG_STEP_METALLB" "$MSG_STEP_METALLB_DESC" "$MSG_INPUT_IP_RANGE" "" "$CUR_IP_RANGE"
+    IP_RANGE="$RET_VAL"
+
+    # 5. Registry & Security
+    config_view_section "$MSG_SECTION_SECURITY"
+
+    # Registry (Step 8)
+    view_ui_step 8 "$TOTAL_STEPS" "$MSG_STEP_REG" "$MSG_STEP_REG_DESC"
     view_ui_input "$MSG_INPUT_REG_URL" "repo.kcs.kaspersky.com" "$CUR_REG_SRV"
     REGISTRY_SERVER="$RET_VAL"
     view_ui_input "$MSG_INPUT_REG_USER" "" "$CUR_REG_USER"
@@ -106,30 +139,8 @@ _config_controller_wizard() {
     view_ui_input "$MSG_INPUT_REG_EMAIL" "" "$CUR_REG_EMAIL"
     REGISTRY_EMAIL="$RET_VAL"
 
-    # 5. MetalLB
-    config_view_step_generic 5 "$TOTAL_STEPS" "$MSG_STEP_METALLB" "$MSG_STEP_METALLB_DESC" "$MSG_INPUT_IP_RANGE" "" "$CUR_IP_RANGE"
-    IP_RANGE="$RET_VAL"
-
-    # 6. Deep Check
-    config_view_step_generic 6 "$TOTAL_STEPS" "$MSG_STEP_DEEP" "$MSG_STEP_DEEP_DESC" "$MSG_INPUT_DEEP" "false" "$CUR_DEEP"
-    ENABLE_DEEP_CHECK="$RET_VAL"
-
-    # 7. Version
-    config_view_step_generic 7 "$TOTAL_STEPS" "$MSG_STEP_VERSION" "$MSG_STEP_VERSION_DESC" "$MSG_INPUT_VERSION" "latest" "$CUR_VER"
-    KCS_VERSION="$RET_VAL"
-
-    # 8. Platform
-    config_view_step_generic 8 "$TOTAL_STEPS" "$MSG_STEP_PLATFORM" "$MSG_STEP_PLATFORM_DESC" "$MSG_INPUT_PLATFORM" "kubernetes" "$CUR_PLAT"
-    PLATFORM="$RET_VAL"
-
-    # 9. CRI Socket
-    # Suggested CRI still comes from Model (via Controller)
-    local SUGGESTED_CRI=$(kubeconfig_get_suggested_cri "$CUR_CRI")
-    config_view_step_generic 9 "$TOTAL_STEPS" "$MSG_STEP_CRI" "$MSG_STEP_CRI_DESC" "$MSG_INPUT_CRI_SOCKET" "$SUGGESTED_CRI" "$CUR_CRI"
-    CRI_SOCKET="$RET_VAL"
-
-    # 10. Secrets
-    config_view_step_generic 10 "$TOTAL_STEPS" "$MSG_STEP_SECRETS" "$MSG_STEP_SECRETS_DESC" "$MSG_INPUT_SECRETS_AUTO" "y" "y"
+    # Secrets (Step 9)
+    config_view_step_generic 9 "$TOTAL_STEPS" "$MSG_STEP_SECRETS" "$MSG_STEP_SECRETS_DESC" "$MSG_INPUT_SECRETS_AUTO" "y" "y"
     local AUTO_GEN="$RET_VAL"
 
     if [[ "$AUTO_GEN" =~ ^[yY]$ ]]; then
@@ -156,6 +167,24 @@ _config_controller_wizard() {
         view_ui_input "$MSG_INPUT_MCHD_PASS" "Ka5per5Ky!" "$CUR_MCHD_PASS"; MCHD_PASS="$RET_VAL"
         view_ui_input "$MSG_INPUT_APP_SECRET" "Ka5per5Ky!" "$CUR_APP_SECRET"; APP_SECRET="$RET_VAL"
     fi
+
+    # 6. Operational Diagnostics
+    config_view_section "$MSG_SECTION_DIAGNOSTICS"
+
+    # Deep Check (Step 10)
+    config_view_step_generic 10 "$TOTAL_STEPS" "$MSG_STEP_DEEP" "$MSG_STEP_DEEP_DESC" "$MSG_INPUT_DEEP" "false" "$CUR_DEEP"
+    ENABLE_DEEP_CHECK="$RET_VAL"
+
+    # 7. AI Capabilities (Ollama)
+    config_view_section "$MSG_SECTION_AI"
+
+    # AI Endpoint (Step 11)
+    config_view_step_generic 11 "$TOTAL_STEPS" "$MSG_STEP_AI" "$MSG_STEP_AI_DESC" "$MSG_INPUT_AI_ENDPOINT" "http://localhost:11434" "$CUR_AI_ENDPOINT"
+    OLLAMA_ENDPOINT="$RET_VAL"
+
+    # AI Model (Step 12)
+    config_view_step_generic 12 "$TOTAL_STEPS" "$MSG_STEP_AI" "$MSG_STEP_AI_DESC" "$MSG_INPUT_AI_MODEL" "llama3" "$CUR_AI_MODEL"
+    OLLAMA_MODEL="$RET_VAL"
 
     local NEW_CONFIG=" # KCS PoC Configuration
 # Generated on $(date)
@@ -193,7 +222,11 @@ CLICKHOUSE_WRITE_PASSWORD=\"$CLICKHOUSE_WRITE_PASSWORD\"
 CLICKHOUSE_READ_PASSWORD=\"$CLICKHOUSE_READ_PASSWORD\"
 MCHD_USER=\"$MCHD_USER\"
 MCHD_PASS=\"$MCHD_PASS\"
-APP_SECRET=\"$APP_SECRET\""
+APP_SECRET=\"$APP_SECRET\"
+
+# AI / Ollama
+OLLAMA_ENDPOINT=\"$OLLAMA_ENDPOINT\"
+OLLAMA_MODEL=\"$OLLAMA_MODEL\""
 
     config_service_save "$NEW_CONFIG"
     config_view_config_saved "$CONFIG_FILE"

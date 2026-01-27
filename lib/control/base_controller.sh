@@ -5,11 +5,26 @@
 # ==============================================================================
 
 base_controller_dispatch() {
+    # AI Model Override (Global Flag Detection)
+    export OLLAMA_MODEL_OVERRIDE=""
+    local NEW_ARGS=()
+    while [[ "$#" -gt 0 ]]; do
+        case "$1" in
+            --ai-model)
+                export OLLAMA_MODEL_OVERRIDE="$2"
+                shift 2
+                ;;
+            *)
+                NEW_ARGS+=("$1")
+                shift
+                ;;
+        esac
+    done
+    set -- "${NEW_ARGS[@]}"
+
     local cmd="$1"
     
     # Global Debug is now ALWAYS ON by default (via service_exec_init_logging)
-    KCS_DEBUG=true
-
     case "$cmd" in
         config)
             shift
