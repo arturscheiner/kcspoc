@@ -26,19 +26,19 @@ _service_extra_is_installed() {
             model_kubectl_get_resource_exists "secret" "kcs-registry-secret" "$NAMESPACE"
             ;;
         "cert-manager")
-            model_kubectl_get_resource_exists "namespace" "cert-manager" ""
+            model_helm_status "cert-manager" "cert-manager" &>/dev/null
             ;;
         "local-path-storage")
-            model_kubectl_get_resource_exists "storageclass" "local-path" ""
+            model_helm_status "local-path-storage" "local-path-storage" &>/dev/null
             ;;
         "metrics-server")
             model_kubectl_get_resource_exists "deployment" "metrics-server" "kube-system"
             ;;
         "metallb")
-            model_kubectl_get_resource_exists "namespace" "metallb-system" ""
+            model_helm_status "metallb" "metallb-system" &>/dev/null
             ;;
         "ingress-nginx")
-            model_kubectl_get_resource_exists "namespace" "ingress-nginx" ""
+            model_helm_status "ingress-nginx" "ingress-nginx" &>/dev/null
             ;;
         "kernel-headers")
             [ -d "/usr/src/linux-headers-$(uname -r)" ] || [ -f "/boot/config-$(uname -r)" ]
@@ -93,7 +93,9 @@ service_extra_pack_install() {
 
             if [ "$proceed" == "true" ]; then
                 view_prepare_step_start "$MSG_PREPARE_INSTALL_CERT"
-                model_cluster_delete_namespace "cert-manager"
+                model_helm_uninstall "cert-manager" "cert-manager"
+                model_kubectl_delete_namespace "cert-manager" "false"
+                service_exec_wait_and_force_delete_ns "cert-manager" 5
                 model_helm_repo_add "jetstack" "https://charts.jetstack.io"
                 local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
                 if model_helm_upgrade_install "cert-manager" "jetstack/cert-manager" "cert-manager" "300s" "$HELM_ERR" \
@@ -127,7 +129,9 @@ service_extra_pack_install() {
             if [ "$proceed" == "true" ]; then
                 model_fs_download_artifact "local-path-provisioner" "https://github.com/rancher/local-path-provisioner.git"
                 view_prepare_step_start "$MSG_PREPARE_INSTALL_LOCAL"
-                model_cluster_delete_namespace "local-path-storage"
+                model_helm_uninstall "local-path-storage" "local-path-storage"
+                model_kubectl_delete_namespace "local-path-storage" "false"
+                service_exec_wait_and_force_delete_ns "local-path-storage" 5
                 local CHART_PATH="$ARTIFACTS_DIR/local-path-provisioner/deploy/chart/local-path-provisioner"
                 if model_helm_upgrade_install_local "local-path-storage" "$CHART_PATH" "local-path-storage"; then
                     model_kubectl_patch_storageclass "local-path" '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
@@ -186,7 +190,9 @@ service_extra_pack_install() {
 
             if [ "$proceed" == "true" ]; then
                 view_prepare_step_start "$MSG_PREPARE_STEP_3"
-                model_cluster_delete_namespace "metallb-system"
+                model_helm_uninstall "metallb" "metallb-system"
+                model_kubectl_delete_namespace "metallb-system" "false"
+                service_exec_wait_and_force_delete_ns "metallb-system" 5
                 model_helm_repo_add "metallb" "https://metallb.github.io/metallb"
                 local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
                 if model_helm_upgrade_install "metallb" "metallb/metallb" "metallb-system" "300s" "$HELM_ERR"; then
@@ -242,7 +248,9 @@ EOF
 
             if [ "$proceed" == "true" ]; then
                 view_prepare_step_start "$MSG_PREPARE_STEP_4"
-                model_cluster_delete_namespace "ingress-nginx"
+                model_helm_uninstall "ingress-nginx" "ingress-nginx"
+                model_kubectl_delete_namespace "ingress-nginx" "false"
+                service_exec_wait_and_force_delete_ns "ingress-nginx" 5
                 model_helm_repo_add "ingress-nginx" "https://kubernetes.github.io/ingress-nginx"
                 local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
                 if model_helm_upgrade_install "ingress-nginx" "ingress-nginx/ingress-nginx" "ingress-nginx" "300s" "$HELM_ERR"; then
