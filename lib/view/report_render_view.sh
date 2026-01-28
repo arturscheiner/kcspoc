@@ -44,9 +44,9 @@ _view_render_audit_html() {
     t_res+="<tr><td>RAM (GiB)</td><td>$(echo "$data" | jq -r '.evaluation.resources.ram_gib.available')</td><td>20</td><td>$(echo "$data" | jq -r '.evaluation.resources.ram_gib.status')</td></tr>"
     t_res+="<tr><td>Disk (GiB)</td><td>$(echo "$data" | jq -r '.evaluation.resources.disk_gib.available')</td><td>40</td><td>$(echo "$data" | jq -r '.evaluation.resources.disk_gib.status')</td></tr></table>"
     
-    local t_nodes="<table><tr><th>Node Name</th><th>Role</th><th>Kernel</th><th>eBPF</th><th>Headers</th></tr>"
+    local t_nodes="<table><tr><th>Node Name</th><th>Role</th><th>Kernel</th><th>CPU</th><th>RAM</th><th>Disk</th><th>eBPF</th><th>Headers</th></tr>"
     while read -r row; do
-        t_nodes+="<tr><td>$(echo "$row" | jq -r '.name')</td><td>$(echo "$row" | jq -r '.role')</td><td>$(echo "$row" | jq -r '.kernel')</td><td>$(echo "$row" | jq -r '.ebpf_status')</td><td>$(echo "$row" | jq -r '.headers_status')</td></tr>"
+        t_nodes+="<tr><td>$(echo "$row" | jq -r '.name')</td><td>$(echo "$row" | jq -r '.role')</td><td>$(echo "$row" | jq -r '.kernel')</td><td>$(echo "$row" | jq -r '.cpu_cores')</td><td>$(echo "$row" | jq -r '.ram_gib')G</td><td>$(echo "$row" | jq -r '.disk_gib')G</td><td>$(echo "$row" | jq -r '.ebpf_status')</td><td>$(echo "$row" | jq -r '.headers_status')</td></tr>"
     done < <(echo "$data" | jq -c '.evaluation.nodes[]')
     t_nodes+="</table>"
     
@@ -91,9 +91,9 @@ _view_render_audit_md() {
     
     local t_res="| Resource | Available | Required | Status |\n|---|---|---|---|\n| CPU Cores | $(echo "$data" | jq -r '.evaluation.resources.cpu_cores.available') | 12 | $(echo "$data" | jq -r '.evaluation.resources.cpu_cores.status') |\n| RAM (GiB) | $(echo "$data" | jq -r '.evaluation.resources.ram_gib.available') | 20 | $(echo "$data" | jq -r '.evaluation.resources.ram_gib.status') |\n| Disk (GiB) | $(echo "$data" | jq -r '.evaluation.resources.disk_gib.available') | 40 | $(echo "$data" | jq -r '.evaluation.resources.disk_gib.status') |"
     
-    local t_nodes="| Node Name | Role | Kernel | eBPF | Headers |\n|---|---|---|---|---|"
+    local t_nodes="| Node Name | Role | Kernel | CPU | RAM | Disk | eBPF | Headers |\n|---|---|---|---|---|---|---|---|"
     while read -r row; do
-        t_nodes+="\n| $(echo "$row" | jq -r '.name') | $(echo "$row" | jq -r '.role') | $(echo "$row" | jq -r '.kernel') | $(echo "$row" | jq -r '.ebpf_status') | $(echo "$row" | jq -r '.headers_status') |"
+        t_nodes+="\n| $(echo "$row" | jq -r '.name') | $(echo "$row" | jq -r '.role') | $(echo "$row" | jq -r '.kernel') | $(echo "$row" | jq -r '.cpu_cores') | $(echo "$row" | jq -r '.ram_gib')G | $(echo "$row" | jq -r '.disk_gib')G | $(echo "$row" | jq -r '.ebpf_status') | $(echo "$row" | jq -r '.headers_status') |"
     done < <(echo "$data" | jq -c '.evaluation.nodes[]')
     
     local t_infra="| Component | Status | Notes |\n|---|---|---|"
@@ -136,7 +136,7 @@ _view_render_audit_txt() {
     
     local t_nodes=""
     while read -r row; do
-        t_nodes+="* $(echo "$row" | jq -r '.name') ($(echo "$row" | jq -r '.role')): Kernel $(echo "$row" | jq -r '.kernel') | eBPF: $(echo "$row" | jq -r '.ebpf_status')\n"
+        t_nodes+="* $(echo "$row" | jq -r '.name') ($(echo "$row" | jq -r '.role')): Kernel $(echo "$row" | jq -r '.kernel') | CPU: $(echo "$row" | jq -r '.cpu_cores') | RAM: $(echo "$row" | jq -r '.ram_gib')G | Disk: $(echo "$row" | jq -r '.disk_gib')G | eBPF: $(echo "$row" | jq -r '.ebpf_status')\n"
     done < <(echo "$data" | jq -c '.evaluation.nodes[]')
     
     local t_infra=""

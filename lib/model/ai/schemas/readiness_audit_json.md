@@ -30,6 +30,9 @@ Do not skip any structural nesting.
         "name": "string",
         "role": "master | worker",
         "kernel": "string",
+        "cpu_cores": number,
+        "ram_gib": number,
+        "disk_gib": number,
         "ebpf_status": "READY | UNKNOWN | INCOMPATIBLE",
         "headers_status": "INSTALLED | MISSING",
         "privileged_required": true

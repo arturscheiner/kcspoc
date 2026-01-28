@@ -465,7 +465,7 @@ service_check_collect_facts() {
 
         total_cpu_m=$((total_cpu_m + cpu_val)); total_mem_mib=$((total_mem_mib + mem_mib)); total_disk_gib=$((total_disk_gib + disk_gib))
 
-        local ebpf="unknown"; local headers="unknown"
+        local ebpf_status="UNKNOWN"; local headers_status="MISSING"
         if [ "$deep_enabled" == "true" ]; then
             local pod_name="kcspoc-fact-collect-${name}"
             if model_node_deploy_probe_pod "$pod_name" "$deep_ns" "$name" "$CONFIG_DIR/${pod_name}.yaml" 2>/dev/null; then
@@ -474,18 +474,36 @@ service_check_collect_facts() {
                     local disk_block=$(model_node_exec_probe "$pod_name" "$deep_ns" chroot /host df -B1 / 2>/dev/null | tail -n 1)
                     local b_avail=$(echo "$disk_block" | awk '{print $4}')
                     [ -n "$b_avail" ] && disk_gib=$((b_avail / 1024 / 1024 / 1024))
-                    model_node_exec_probe "$pod_name" "$deep_ns" chroot /host test -f /sys/kernel/btf/vmlinux && ebpf="true" || ebpf="false"
+                    
+                    # eBPF Mapping
+                    model_node_exec_probe "$pod_name" "$deep_ns" chroot /host test -f /sys/kernel/btf/vmlinux && ebpf_status="READY" || ebpf_status="INCOMPATIBLE"
+                    
+                    # Headers Mapping
                     local headers_out=$(model_node_exec_probe "$pod_name" "$deep_ns" /bin/bash -c "chroot /host sh -c 'dpkg -l 2>/dev/null | grep -i headers || rpm -qa 2>/dev/null | grep -i headers'" 2>/dev/null)
-                    [ -n "$headers_out" ] && headers="true" || headers="false"
+                    [ -n "$headers_out" ] && headers_status="INSTALLED" || headers_status="MISSING"
                 fi
                 model_node_delete_probe_pod "$pod_name" "$deep_ns"
             fi
         fi
 
+        # Privilege Requirement (Kernel >= 5.8)
+        local priv_req="false"
+        local k_major=$(echo "$kernel_ver" | cut -d. -f1)
+        local k_minor=$(echo "$kernel_ver" | cut -d. -f2)
+        if [ "$k_major" -gt 5 ] || { [ "$k_major" -eq 5 ] && [ "$k_minor" -ge 8 ]; }; then
+            priv_req="true"
+        fi
+
         nodes_json=$(echo "$nodes_json" | jq -c ". += [{
-            \"name\": \"$name\", \"role\": \"$role\", \"kernel_version\": \"$kernel_ver\",
-            \"cpu_mcore\": $cpu_val, \"mem_mib\": $mem_mib, \"disk_gib\": $disk_gib,
-            \"ebpf_btf\": \"$ebpf\", \"kernel_headers\": \"$headers\"
+            \"name\": \"$name\", 
+            \"role\": \"$role\", 
+            \"kernel\": \"$kernel_ver\",
+            \"cpu_cores\": $((cpu_val / 1000)),
+            \"ram_gib\": $((mem_mib / 1024)),
+            \"disk_gib\": $disk_gib,
+            \"ebpf_status\": \"$ebpf_status\", 
+            \"headers_status\": \"$headers_status\",
+            \"privileged_required\": $priv_req
         }]")
     done <<< "$raw_nodes"
 

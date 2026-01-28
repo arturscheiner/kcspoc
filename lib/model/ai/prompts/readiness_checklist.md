@@ -31,37 +31,33 @@ Your goal is to synthesize a professional readiness report based on **authoritat
 
 ---
 
-## 📜 OUTPUT STRUCTURE (MANDATORY ORDER)
+## 📜 REPORT STRUCTURE (For synthesis logic)
 
-1.  **Executive Summary**
-    *   Overall readiness status (Ready / Partially Ready / Not Ready).
-    *   Count of mandatory failures.
-    *   High-level risk statement.
-2.  **Key Findings**
-    *   Bullet list grouped by severity.
-3.  **Compliance Breakdown**
-    *   One subsection per category (Orchestrator, Hardware, etc.).
-4.  **Required Remediations**
-    *   Ordered by severity.
-    *   Action-oriented language.
-5.  **Observations & Notes**
-    *   Only if explicitly supported by input data.
+1.  **Executive Summary**: Verdict (Ready/Partial/Not), count of failures, risk statement.
+2.  **Key Findings**: Grouped by severity.
+3.  **Compliance Breakdown**: One section per category.
+4.  **Remediation Plan**: Action-oriented, ordered by severity.
 
 ---
 
 ## 🎨 TONE & STYLE
-- Professional
-- Deterministic
-- No speculation
-- No "hallucinated" remediation commands outside our baseline context.
+- Professional, deterministic, no speculation.
 
 ---
 
-## 📤 OUTPUT FORMAT (MANDATORY)
-The FINAL OUTPUT FORMAT must be the one requested by the controller (Markdown, HTML, or Text). 
-Ensure the **Structured JSON** for internal rendering is NOT shown to the user if you are asked to produce a final report.
-Wait: The controller expects you to return the **JSON Finding Object** which it will then render using local templates.
+## 📤 YOUR TASK: JSON SYNTHESIS
 
-**YOUR TASK**: Generate the **JSON Finding Object** based on the inputs.
-Follow the JSON schema exactly as defined in `readiness_audit_json.md`.
-Use the `failure_reason` provided in the evaluation to fill notes and rationale.
+Generate a **JSON Finding Object** that follows the schema in `readiness_audit_json.md`.
+
+### Data Mapping Rules:
+1. **Cluster Info**: Map from `environment_evaluation.json` results.
+2. **Resources**: Map available totals from the evaluation results.
+3. **Infrastructure**: Map from `raw_facts.infrastructure`.
+4. **Node Matrix (CRITICAL)**: 
+   - Map EVERY node from `raw_facts.nodes`.
+   - Preserve `kernel`, `cpu_cores`, `ram_gib`, and `disk_gib`.
+   - Use the strings `READY`, `UNKNOWN`, `INCOMPATIBLE` for `ebpf_status`.
+   - Use `INSTALLED` or `MISSING` for `headers_status`.
+   - Set `privileged_required` exactly as provided in the facts.
+
+**Wait**: The controller expects you to return ONLY the JSON block. Do not add conversational filler.

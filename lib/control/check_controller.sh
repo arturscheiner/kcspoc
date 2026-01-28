@@ -94,13 +94,6 @@ check_controller() {
         service_check_summary || error=1
     fi
 
-    # Cleanup
-    if [ "$error" -eq 0 ] || [ -d "$CONFIG_DIR" ]; then
-        view_check_cleanup_start
-        model_cluster_delete_namespace "$deep_ns" "false" &>/dev/null || true
-        view_check_cleanup_stop "PASS"
-    fi
-
     # If report enabled, we capture output. (S-030)
     if [ "$report_enabled" == "true" ]; then
         # 1. Baseline: Save execution log
@@ -126,7 +119,6 @@ check_controller() {
                 local tmp_audit="/tmp/kcspoc_audit_${audit_hash}.${report_format}"
                 
                 # NEW: Local Rendering Engine (S-033)
-                # This ensures consistent aesthetics independent of the AI model output.
                 view_render_audit_report "$json_findings" "$report_format" "$tmp_audit"
                 
                 # Store audit with full ID chain linking
@@ -135,6 +127,13 @@ check_controller() {
                 view_check_report_success "$audit_hash"
             fi
         fi
+    fi
+
+    # Cleanup
+    if [ "$error" -eq 0 ] || [ -d "$CONFIG_DIR" ]; then
+        view_check_cleanup_start
+        model_cluster_delete_namespace "$deep_ns" "false" &>/dev/null || true
+        view_check_cleanup_stop "PASS"
     fi
 
     if [ $error -eq 0 ]; then
