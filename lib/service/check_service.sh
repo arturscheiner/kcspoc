@@ -377,8 +377,14 @@ service_check_collect_facts() {
     
     # 1. Cluster Topology
     local k8s_ver=$(model_cluster_get_version)
-    local archs=$(model_cluster_get_architectures | tr '\n' ' ' | xargs)
+    # Clean architectures: "1 amd64" -> "amd64"
+    local raw_archs=$(model_cluster_get_architectures | awk '{$1=""; print $0}' | xargs)
+    local all_archs=$(echo "$raw_archs" | tr ' ' '\n' | sort | uniq | tr '\n' ' ' | xargs)
+    local primary_arch=$(echo "$all_archs" | awk '{print $1}')
+    
     local runtimes=$(model_cluster_get_runtimes | tr '\n' ' ' | xargs)
+    local primary_runtime=$(echo "$runtimes" | awk -F'://' '{print $1}')
+    
     local helm_ver=$(model_cluster_get_helm_version)
     local default_sc=$(model_cluster_get_default_storageclass)
     local cni_pods=$(model_cluster_get_cni_pods)
@@ -483,8 +489,10 @@ service_check_collect_facts() {
     # Assemble Final JSON
     local final_json=$(jq -n \
         --arg kv "$k8s_ver" \
-        --arg arc "$archs" \
-        --arg rt "$runtimes" \
+        --arg arc "$primary_arch" \
+        --arg arcs "$all_archs" \
+        --arg rt "$primary_runtime" \
+        --arg rts "$runtimes" \
         --arg hv "$helm_ver" \
         --arg dsc "$default_sc" \
         --arg cni "$cni_names" \
@@ -500,17 +508,19 @@ service_check_collect_facts() {
         --argjson nodes "$nodes_json" \
         '{
             cluster: { 
-                version: $kv, 
-                architectures: ($arc | split(" ")), 
-                runtimes: ($rt | split(" ")), 
+                k8s_version: $kv, 
+                architecture: $arc, 
+                all_architectures: ($arcs | split(" ")),
+                cri_runtime: $rt, 
+                all_runtimes: ($rts | split(" ")), 
                 helm_version: $hv, 
                 default_storage_class: $dsc, 
-                cni: $cni, 
+                cni_plugin: $cni, 
                 registry_connectivity: $rc 
             },
             infrastructure: $infra,
             cloud: { provider_id: $pid, region: $rgn, zone: $zon, os_image: $img },
-            hardware_totals: { cpu_cores: $cpu_t, mem_gib: $mem_t, disk_gib: $dsk_t },
+            hardware_totals: { cpu_cores: ( $cpu_t | tonumber ), mem_gib: ( $mem_t | tonumber ), disk_gib: ( $dsk_t | tonumber ) },
             nodes: $nodes
         }')
     

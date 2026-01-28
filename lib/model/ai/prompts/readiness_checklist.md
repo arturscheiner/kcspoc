@@ -60,7 +60,11 @@ Analyze facts using these scenarios:
 
 ## YOUR TASK (Logic Only)
 
-1.  **Ingest Cluster Facts**: Parse the provided JSON data.
+1.  **Ingest Cluster Facts**: Parse the provided JSON data. Pay special attention to:
+    *   `cluster.k8s_version` for Kubernetes versioning.
+    *   `cluster.architecture` for the primary node architecture.
+    *   `cluster.cri_runtime` for the container runtime.
+    *   `cluster.cni_plugin` for networking details.
 2.  **Evaluate**: Compare each fact against the requirements and decision logic above.
 3.  **Generate Insights**: Formulate the verdict, facts evaluation, and gaps.
     *   The FINAL OUTPUT FORMAT is **Structured JSON**. You MUST adhere to the JSON schema provided in the following section.
