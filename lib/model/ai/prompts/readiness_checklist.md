@@ -57,24 +57,10 @@ Analyze facts using these scenarios:
 
 ---
 
-## YOUR TASK
+
+## YOUR TASK (Logic Only)
 
 1.  **Ingest Cluster Facts**: Parse the provided JSON data.
-2.  **Evaluate**: Compare each fact against the requirements above.
-3.  **Audit Report**: Generate a structured report in the following format. 
-    **IMPORTANT**: Avoid Markdown tables. Use headers, bullet points, and bold text for maximum readability in a terminal.
-
-### REPORT STRUCTURE
-- **1. AUDIT SUMMARY**: A high-level [PASS / FAIL / WARN] assessment with a summary sentence.
-- **2. DETAILED EVALUATION**: (Use bullet points, no tables)
-    - **Control Plane & Versions**: Evaluation of K8s, CRI, and Architecture.
-    - **Resource Capacity**: Evaluation vs Requirements (Total and Per-Node).
-    - **Security Readiness**: eBPF/BTF, Kernel, and Headers status.
-    - **Infrastructure Dependencies**: Status of cert-manager, SC, Ingress, and Registry.
-- **3. CRITICAL GAPS**: Numbered list of items that MUST be fixed.
-- **4. CONFIGURATION TIPS**: Suggestions for Helm flags or OS commands.
-
----
-
-## INPUT DATA (CLUSTER FACTS)
-{{CLUSTERT_FACTS_JSON}}
+2.  **Evaluate**: Compare each fact against the requirements and decision logic above.
+3.  **Generate Insights**: Formulate the verdict and critical gaps.
+    *   The FINAL OUTPUT FORMAT (HTML, MD, or TXT) will be provided in the following section. You MUST adhere to that format specifically.

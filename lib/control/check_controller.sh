@@ -9,11 +9,21 @@
 check_controller() {
     local deep_override=""
     local report_enabled="false"
+    local report_format="txt"
     
     while [[ "$#" -gt 0 ]]; do
         case $1 in
             -d|--deep) deep_override="true"; shift ;;
             --report) report_enabled="true"; shift ;;
+            --format)
+                if [[ "$2" =~ ^(html|md|txt)$ ]]; then
+                    report_format="$2"
+                    shift 2
+                else
+                    echo "Error: Invalid format '$2'. Supported: html, md, txt"
+                    return 1
+                fi
+                ;;
             --help|help)
                 view_ui_help "check" "$MSG_HELP_CHECK_DESC" "$MSG_HELP_CHECK_OPTS" "$MSG_HELP_CHECK_EX" "$VERSION"
                 return 0
@@ -110,13 +120,13 @@ check_controller() {
             
             # Generate Audit via AI engine using the Requirements Checklist prompt
             local audit_hash=$(model_report_generate_hash)
-            local audit_content=$(ai_service_generate_audit_report "$facts" "$ep" "$mod" "$audit_hash")
+            local audit_content=$(ai_service_generate_audit_report "$facts" "$ep" "$mod" "$audit_hash" "$report_format")
             
             if [ -n "$audit_content" ]; then
-                local tmp_audit="/tmp/kcspoc_audit_${audit_hash}.md"
+                local tmp_audit="/tmp/kcspoc_audit_${audit_hash}.${report_format}"
                 echo "$audit_content" > "$tmp_audit"
                 # Store audit with full ID chain linking
-                model_report_save "check" "$audit_hash" "$tmp_audit" "md" "ai" "$mod" "$LOG_ID" "$EXEC_HASH"
+                model_report_save "check" "$audit_hash" "$tmp_audit" "$report_format" "ai" "$mod" "$LOG_ID" "$EXEC_HASH"
                 rm "$tmp_audit"
                 view_check_report_success "$audit_hash"
             fi

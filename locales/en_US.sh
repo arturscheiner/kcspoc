@@ -345,8 +345,8 @@ MSG_HELP_PULL_EX="kcspoc pull\nkcspoc pull -v 2.2.0"
 
 # Check Help
 MSG_HELP_CHECK_DESC="Performs a comprehensive diagnostic of your Kubernetes cluster, including tool checks, connectivity, and resource compliance auditing."
-MSG_HELP_CHECK_OPTS="--deep|Enable privileged pods to check kernel headers and eBPF readiness.\n--report|Generate and store a structured diagnostic report in ~/.kcspoc/reports/\n--ai-model <model>|Override the default AI model for this execution."
-MSG_HELP_CHECK_EX="kcspoc check\nkcspoc check --deep\nkcspoc check --report\nkcspoc check --report --ai-model llama3"
+MSG_HELP_CHECK_OPTS="--deep|Enable privileged pods to check kernel headers and eBPF readiness.\n--report|Generate and store a structured diagnostic report in ~/.kcspoc/reports/\n--format <fmt>|Define report format: html, md, or txt (Default: txt). Coupled with --report.\n--ai-model <model>|Override the default AI model for this execution."
+MSG_HELP_CHECK_EX="kcspoc check\nkcspoc check --deep\nkcspoc check --report\nkcspoc check --report --format html\nkcspoc check --report --ai-model llama3"
 
 # Logs Help
 MSG_HELP_LOGS_DESC="Manage and view command execution logs."
@@ -375,8 +375,8 @@ MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --agents"
 
 # Reports Help
 MSG_HELP_REPORTS_DESC="Management command for generated diagnostic and analysis reports."
-MSG_HELP_REPORTS_OPTS="--list|-l [cmd]|List all generated reports (optionally filtered by command).\n--show|-s <hash>|Open and display a specific report content.\n--cleanup [cmd]|Permanently delete all reports (optionally filtered by command)."
-MSG_HELP_REPORTS_EX="kcspoc reports --list\nkcspoc reports --list logs\nkcspoc reports --show A1B2C3\nkcspoc reports --cleanup\nkcspoc reports --cleanup check"
+MSG_HELP_REPORTS_OPTS="--list|-l [cmd]|List all generated reports (optionally filtered by command).\n--show|-v <hash>|Open and display a specific report content.\n--save-as|-s <path>|Export a report to a specific file path (Coupled with --show).\n--cleanup [cmd]|Permanently delete all reports (optionally filtered by command)."
+MSG_HELP_REPORTS_EX="kcspoc reports --list\nkcspoc reports --show A1B2C3\nkcspoc reports --show A1B2C3 --save-as audit.html\nkcspoc reports --cleanup check"
 
 MSG_CMD_REPORTS_DESC="Manage generated reports (Discovery, View)"
 MSG_HELP_DEPLOY_DESC="Manages the deployment lifecycle of Kaspersky Container Security components."

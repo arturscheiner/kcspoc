@@ -120,3 +120,14 @@ model_report_delete() {
         fi
     fi
 }
+
+model_report_export() {
+    local src_file="$1"
+    local dest_path="$2"
+    
+    # Ensure parent directory exists
+    local dest_dir=$(dirname "$dest_path")
+    [ -d "$dest_dir" ] || mkdir -p "$dest_dir"
+    
+    cp "$src_file" "$dest_path"
+}

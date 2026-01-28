@@ -45,16 +45,30 @@ ai_service_generate_audit_report() {
     local endpoint="$2"
     local model="$3"
     local report_hash="$4"
+    local format="${5:-txt}"
     
     local prompt_file="$SCRIPT_DIR/lib/model/ai/prompts/readiness_checklist.md"
-    if [ ! -f "$prompt_file" ]; then
+    local schema_file="$SCRIPT_DIR/lib/model/ai/schemas/readiness_audit_${format}.md"
+    
+    if [ ! -f "$prompt_file" ] || [ ! -f "$schema_file" ]; then
         return 1
     fi
     
     local base_prompt=$(cat "$prompt_file")
+    local schema_instructions=$(cat "$schema_file")
     
-    # Inject JSON into placeholder
-    local full_prompt="${base_prompt//\{\{CLUSTERT_FACTS_JSON\}\}/$facts_json}"
+    # Combine Logic (Prompt) with Formatting (Schema)
+    local full_prompt="
+$base_prompt
+
+---
+## OUTPUT SCHEMA (MANDATORY FORMAT)
+$schema_instructions
+
+---
+## INPUT DATA (CLUSTER FACTS)
+$facts_json
+"
     
     # Call Model Layer
     ai_model_generate "$endpoint" "$model" "$full_prompt"
