@@ -45,10 +45,9 @@ ai_service_generate_audit_report() {
     local endpoint="$2"
     local model="$3"
     local report_hash="$4"
-    local format="${5:-txt}"
     
     local prompt_file="$SCRIPT_DIR/lib/model/ai/prompts/readiness_checklist.md"
-    local schema_file="$SCRIPT_DIR/lib/model/ai/schemas/readiness_audit_${format}.md"
+    local schema_file="$SCRIPT_DIR/lib/model/ai/schemas/readiness_audit_json.md"
     
     if [ ! -f "$prompt_file" ] || [ ! -f "$schema_file" ]; then
         return 1
@@ -57,12 +56,12 @@ ai_service_generate_audit_report() {
     local base_prompt=$(cat "$prompt_file")
     local schema_instructions=$(cat "$schema_file")
     
-    # Combine Logic (Prompt) with Formatting (Schema)
+    # Combine Logic (Prompt) with Formatting (JSON Schema)
     local full_prompt="
 $base_prompt
 
 ---
-## OUTPUT SCHEMA (MANDATORY FORMAT)
+## MANDATORY OUTPUT FORMAT (JSON ONLY)
 $schema_instructions
 
 ---
@@ -71,5 +70,16 @@ $facts_json
 "
     
     # Call Model Layer
-    ai_model_generate "$endpoint" "$model" "$full_prompt"
+    local raw_response=$(ai_model_generate "$endpoint" "$model" "$full_prompt")
+    
+    # Clean output (AI often wraps JSON in backticks)
+    local clean_json=$(echo "$raw_response" | sed -n '/{/,/}/p' | sed 's/```json//g; s/```//g')
+    
+    # Validate JSON structure
+    if ! echo "$clean_json" | jq empty &>/dev/null; then
+        [ -n "$DEBUG_OUT" ] && echo "Error: AI produced invalid JSON" >&2
+        return 1
+    fi
+    
+    echo "$clean_json"
 }

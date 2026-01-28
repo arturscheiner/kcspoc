@@ -118,13 +118,17 @@ check_controller() {
             # Collect neutral facts (No evaluation, just data)
             local facts=$(service_check_collect_facts "$deep_enabled" "$deep_ns")
             
-            # Generate Audit via AI engine using the Requirements Checklist prompt
+            # Generate Audit via AI engine using the Requirements Checklist prompt (JSON FINDINGS)
             local audit_hash=$(model_report_generate_hash)
-            local audit_content=$(ai_service_generate_audit_report "$facts" "$ep" "$mod" "$audit_hash" "$report_format")
+            local json_findings=$(ai_service_generate_audit_report "$facts" "$ep" "$mod" "$audit_hash")
             
-            if [ -n "$audit_content" ]; then
+            if [ -n "$json_findings" ]; then
                 local tmp_audit="/tmp/kcspoc_audit_${audit_hash}.${report_format}"
-                echo "$audit_content" > "$tmp_audit"
+                
+                # NEW: Local Rendering Engine (S-033)
+                # This ensures consistent aesthetics independent of the AI model output.
+                view_render_audit_report "$json_findings" "$report_format" "$tmp_audit"
+                
                 # Store audit with full ID chain linking
                 model_report_save "check" "$audit_hash" "$tmp_audit" "$report_format" "ai" "$mod" "$LOG_ID" "$EXEC_HASH"
                 rm "$tmp_audit"

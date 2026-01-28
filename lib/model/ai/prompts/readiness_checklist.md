@@ -62,5 +62,5 @@ Analyze facts using these scenarios:
 
 1.  **Ingest Cluster Facts**: Parse the provided JSON data.
 2.  **Evaluate**: Compare each fact against the requirements and decision logic above.
-3.  **Generate Insights**: Formulate the verdict and critical gaps.
-    *   The FINAL OUTPUT FORMAT (HTML, MD, or TXT) will be provided in the following section. You MUST adhere to that format specifically.
+3.  **Generate Insights**: Formulate the verdict, facts evaluation, and gaps.
+    *   The FINAL OUTPUT FORMAT is **Structured JSON**. You MUST adhere to the JSON schema provided in the following section.
