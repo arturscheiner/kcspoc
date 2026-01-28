@@ -64,3 +64,23 @@ Analyze facts using these scenarios:
 2.  **Evaluate**: Compare each fact against the requirements and decision logic above.
 3.  **Generate Insights**: Formulate the verdict, facts evaluation, and gaps.
     *   The FINAL OUTPUT FORMAT is **Structured JSON**. You MUST adhere to the JSON schema provided in the following section.
+
+## MANDATORY JSON EXAMPLE (FOLLOW THIS EXACT STRUCTURE)
+```json
+{
+  "audit_summary": { "verdict": "FAIL", "rationale": "Example description..." },
+  "evaluation": {
+    "cluster_info": { "k8s_version": "v1.25", "architecture": "amd64", "cri_runtime": "containerd", "helm_version": "v3.10", "cni_plugin": "calico" },
+    "resources": {
+      "cpu_cores": { "available": 8, "required": 12, "status": "FAIL" },
+      "ram_gib": { "available": 16, "required": 20, "status": "FAIL" },
+      "disk_gib": { "available": 30, "required": 40, "status": "FAIL" }
+    },
+    "infrastructure": [ { "name": "StorageClass", "status": "INSTALLED", "notes": "local-path" } ],
+    "nodes": [ { "name": "node-1", "role": "worker", "kernel": "5.15", "ebpf_status": "READY", "headers_status": "INSTALLED", "privileged_required": true } ]
+  },
+  "critical_gaps": [ { "id": "CPU_LOW", "description": "Insufficient CPU cores", "impact": "BLOCKER" } ],
+  "remediation": [ { "title": "Add Resources", "description": "Add more CPU cores to the cluster.", "command": "lscpu", "category": "ARCH" } ]
+}
+```
+*Note: Ensure no trailing commas and valid JSON syntax.*

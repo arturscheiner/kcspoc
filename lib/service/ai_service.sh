@@ -72,13 +72,29 @@ $facts_json
     # Call Model Layer
     local raw_response=$(ai_model_generate "$endpoint" "$model" "$full_prompt")
     
-    # Clean output (AI often wraps JSON in backticks)
-    local clean_json=$(echo "$raw_response" | sed -n '/{/,/}/p' | sed 's/```json//g; s/```//g')
+    # Extract JSON block using line range (first { to last })
+    # 1. Strip potential Markdown code blocks first
+    local stripped=$(echo "$raw_response" | sed 's/```json//g; s/```//g')
     
-    # Validate JSON structure
+    # 2. Find line numbers of the outermost braces
+    local first_line=$(echo "$stripped" | grep -n "{" | head -n 1 | cut -d: -f1)
+    local last_line=$(echo "$stripped" | grep -n "}" | tail -n 1 | cut -d: -f1)
+    
+    if [ -z "$first_line" ] || [ -z "$last_line" ]; then
+        [ -n "$DEBUG_OUT" ] && echo "Error: No JSON braces found in AI response" >&2
+        return 1
+    fi
+    
+    local clean_json=$(echo "$stripped" | sed -n "${first_line},${last_line}p")
+    
+    # Sanitize: Remove any hallucinated template placeholders from the AI content
+    clean_json=$(echo "$clean_json" | sed 's/\[\[[^]]*\]\]//g')
+    
+    # Validate JSON structure using jq
     if ! echo "$clean_json" | jq empty &>/dev/null; then
         [ -n "$DEBUG_OUT" ] && echo "Error: AI produced invalid JSON" >&2
-        return 1
+        # Fallback: try to see if just stripping everything except the object works
+        clean_json=$(echo "$clean_json" | jq -c '.' 2>/dev/null) || return 1
     fi
     
     echo "$clean_json"
