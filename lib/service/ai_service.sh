@@ -41,32 +41,38 @@ $log_content
 }
 
 ai_service_generate_audit_report() {
-    local facts_json="$1"
+    local evaluation_json="$1"
     local endpoint="$2"
     local model="$3"
     local report_hash="$4"
     
+    local baseline_file="$SCRIPT_DIR/lib/model/ai/baselines/kcs_v1_baseline.json"
     local prompt_file="$SCRIPT_DIR/lib/model/ai/prompts/readiness_checklist.md"
     local schema_file="$SCRIPT_DIR/lib/model/ai/schemas/readiness_audit_json.md"
     
-    if [ ! -f "$prompt_file" ] || [ ! -f "$schema_file" ]; then
+    if [ ! -f "$baseline_file" ] || [ ! -f "$prompt_file" ] || [ ! -f "$schema_file" ]; then
         return 1
     fi
     
+    local kcs_baseline=$(cat "$baseline_file")
     local base_prompt=$(cat "$prompt_file")
     local schema_instructions=$(cat "$schema_file")
     
-    # Combine Logic (Prompt) with Formatting (JSON Schema)
+    # Combine Inputs for the AI Analyst
     local full_prompt="
 $base_prompt
 
 ---
-## MANDATORY OUTPUT FORMAT (JSON ONLY)
-$schema_instructions
+## INPUT 1: kcs_baseline.json (Canonical Requirements)
+$kcs_baseline
 
 ---
-## INPUT DATA (CLUSTER FACTS)
-$facts_json
+## INPUT 2: environment_evaluation.json (Authoritative Results)
+$evaluation_json
+
+---
+## MANDATORY OUTPUT SCHEMA (JSON ONLY)
+$schema_instructions
 "
     
     # Call Model Layer
@@ -87,8 +93,10 @@ $facts_json
     
     local clean_json=$(echo "$stripped" | sed -n "${first_line},${last_line}p")
     
-    # Sanitize: Remove any hallucinated template placeholders from the AI content
+    # Sanitize: Remove any hallucinated template placeholders from the AI content (e.g. [[REMEDIATION_PLAN]])
     clean_json=$(echo "$clean_json" | sed 's/\[\[[^]]*\]\]//g')
+    # Also remove common AI markers if they leaked into JSON
+    clean_json=$(echo "$clean_json" | sed 's/Note:.*//g; s/Remember:.*//g')
     
     # Validate JSON structure using jq
     if ! echo "$clean_json" | jq empty &>/dev/null; then

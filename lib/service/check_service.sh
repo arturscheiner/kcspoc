@@ -375,9 +375,8 @@ service_check_collect_facts() {
     local deep_enabled="${1:-false}"
     local deep_ns="${2:-kcspoc}"
     
-    # 1. Cluster Topology
+    # --- 1. Cluster Topology ---
     local k8s_ver=$(model_cluster_get_version)
-    # Clean architectures: "1 amd64" -> "amd64"
     local raw_archs=$(model_cluster_get_architectures | awk '{$1=""; print $0}' | xargs)
     local all_archs=$(echo "$raw_archs" | tr ' ' '\n' | sort | uniq | tr '\n' ' ' | xargs)
     local primary_arch=$(echo "$all_archs" | awk '{print $1}')
@@ -389,12 +388,37 @@ service_check_collect_facts() {
     local default_sc=$(model_cluster_get_default_storageclass)
     local cni_pods=$(model_cluster_get_cni_pods)
     local cni_names="Unknown"
-    if [ -n "$cni_pods" ]; then
-        cni_names=$(echo "$cni_pods" | awk '{print $2}' | grep -oE "calico|flannel|cilium|weave|antrea" | sort | uniq | tr '\n' ' ' | xargs)
-        [ -z "$cni_names" ] && cni_names="kube-proxy (Standard)"
+    [ -n "$cni_pods" ] && cni_names=$(echo "$cni_pods" | awk '{print $2}' | grep -oE "calico|flannel|cilium|weave|antrea" | sort | uniq | tr '\n' ' ' | xargs)
+    [ -z "$cni_names" ] && cni_names="kube-proxy (Standard)"
+
+    # --- 2. Programmatic Evaluation Logic ---
+    
+    # K8s Version (1.21 - 1.34)
+    local k8s_comp="true"; local k8s_fail=""
+    local v_clean=$(echo "$k8s_ver" | sed 's/v//'); local major=$(echo "$v_clean" | cut -d. -f1); local minor=$(echo "$v_clean" | cut -d. -f2)
+    if [ "$major" -ne 1 ] || [ "$minor" -lt 21 ] || [ "$minor" -gt 34 ]; then
+        k8s_comp="false"; k8s_fail="Kubernetes $k8s_ver is outside supported range (1.21-1.34)."
     fi
 
-    # 2. Infrastructure
+    # Architecture (AMD64)
+    local arch_comp="true"; local arch_fail=""
+    if [[ "$primary_arch" != "amd64" ]]; then
+        arch_comp="false"; arch_fail="Primary architecture $primary_arch is not supported (AMD64 required)."
+    fi
+
+    # CNI (NetworkPolicy support check - semantic)
+    local cni_comp="true"; local cni_fail=""
+    if [[ "$cni_names" == *"flannel"* ]] && [[ "$cni_names" != *"calico"* ]]; then
+        cni_comp="false"; cni_fail="Flannel CNI detected. NetworkPolicies (microsegmentation) will NOT be enforced."
+    fi
+
+    # StorageClass
+    local sc_comp="true"; local sc_fail=""
+    if [ -z "$default_sc" ]; then
+        sc_comp="false"; sc_fail="No default StorageClass found. Dynamic PVC provisioning will fail."
+    fi
+
+    # Infrastructure
     local infra_json="{}"
     for item in "cert-manager" "metallb-system" "ingress-nginx" "local-path-storage"; do
         local status="MISSING"
@@ -405,68 +429,52 @@ service_check_collect_facts() {
     [ -n "$(model_cluster_get_infrastructure_status "deployment" "metrics-server" "kube-system")" ] && metrics_status="INSTALLED"
     infra_json=$(echo "$infra_json" | jq -c ". + {\"metrics-server\": \"$metrics_status\"}")
 
-    # 3. Cloud Provider
+    # Cloud Provider
     local raw_cloud=$(model_cluster_get_raw_provider_data)
     IFS='|' read -r prov_id region zone os_img <<< "$raw_cloud"
     unset IFS
     
-    # 4. Global Connectivity
-    local registry_conn="false"
-    model_network_verify_repo_connectivity "$deep_ns" &>/dev/null && registry_conn="true"
+    # Global Connectivity
+    local registry_conn="false"; local reg_fail="Cluster cannot reach repo.kcs.kaspersky.com."
+    if model_network_verify_repo_connectivity "$deep_ns" &>/dev/null; then
+        registry_conn="true"; reg_fail=""
+    fi
 
-    # 5. Nodes & Resources
+    # --- 3. Nodes & Resources ---
     local nodes_json="[]"
     local raw_nodes=$(model_node_get_raw_baseline_data)
-    
-    local total_cpu_m=0
-    local total_mem_mib=0
-    local total_disk_gib=0
+    local total_cpu_m=0; local total_mem_mib=0; local total_disk_gib=0
 
     while IFS='|' read -r name labels cpu_a cpu_c mem_a mem_c disk_a disk_c kernel_ver; do
         [ -z "$name" ] && continue
-        
         local role="worker"
         [[ "$labels" == *"node-role.kubernetes.io/control-plane"* ]] || [[ "$labels" == *"node-role.kubernetes.io/master"* ]] && role="master"
         
-        # CPU/MEM conversion to numeric
         local cpu_val; [[ "$cpu_a" == *m ]] && cpu_val=${cpu_a%m} || cpu_val=$((cpu_a * 1000))
-        
         _to_mib() {
             local val=$(echo "$1" | sed 's/[^0-9]*//g'); [ -z "$val" ] && { echo 0; return; }
             if [[ "$1" == *Gi ]]; then echo $((val * 1024)); elif [[ "$1" == *Mi ]]; then echo $val; 
             elif [[ "$1" == *Ki ]]; then echo $((val / 1024)); else echo $((val / 1024 / 1024)); fi
         }
         local mem_mib=$(_to_mib "$mem_a")
-        
         _to_gib() {
             local val=$(echo "$1" | sed 's/[^0-9]*//g'); [ -z "$val" ] && { echo 0; return; }
             if [[ "$1" == *Gi ]]; then echo $val; elif [[ "$1" == *Ki ]]; then echo $((val / 1024 / 1024)); else echo $((val / 1024 / 1024 / 1024)); fi
         }
         local disk_gib=$(_to_gib "$disk_a")
 
-        # Running totals
-        total_cpu_m=$((total_cpu_m + cpu_val))
-        total_mem_mib=$((total_mem_mib + mem_mib))
-        total_disk_gib=$((total_disk_gib + disk_gib))
+        total_cpu_m=$((total_cpu_m + cpu_val)); total_mem_mib=$((total_mem_mib + mem_mib)); total_disk_gib=$((total_disk_gib + disk_gib))
 
-        local ebpf="unknown"
-        local headers="unknown"
-
+        local ebpf="unknown"; local headers="unknown"
         if [ "$deep_enabled" == "true" ]; then
             local pod_name="kcspoc-fact-collect-${name}"
-            local pod_file="$CONFIG_DIR/${pod_name}.yaml"
-            if model_node_deploy_probe_pod "$pod_name" "$deep_ns" "$name" "$pod_file" 2>/dev/null; then
+            if model_node_deploy_probe_pod "$pod_name" "$deep_ns" "$name" "$CONFIG_DIR/${pod_name}.yaml" 2>/dev/null; then
                 sleep 2
                 if model_node_wait_probe_pod "$pod_name" "$deep_ns" "15s"; then
-                    # Disk (re-verify with df)
                     local disk_block=$(model_node_exec_probe "$pod_name" "$deep_ns" chroot /host df -B1 / 2>/dev/null | tail -n 1)
                     local b_avail=$(echo "$disk_block" | awk '{print $4}')
                     [ -n "$b_avail" ] && disk_gib=$((b_avail / 1024 / 1024 / 1024))
-                    
-                    # eBPF
                     model_node_exec_probe "$pod_name" "$deep_ns" chroot /host test -f /sys/kernel/btf/vmlinux && ebpf="true" || ebpf="false"
-                    
-                    # Headers
                     local headers_out=$(model_node_exec_probe "$pod_name" "$deep_ns" /bin/bash -c "chroot /host sh -c 'dpkg -l 2>/dev/null | grep -i headers || rpm -qa 2>/dev/null | grep -i headers'" 2>/dev/null)
                     [ -n "$headers_out" ] && headers="true" || headers="false"
                 fi
@@ -475,54 +483,46 @@ service_check_collect_facts() {
         fi
 
         nodes_json=$(echo "$nodes_json" | jq -c ". += [{
-            \"name\": \"$name\",
-            \"role\": \"$role\",
-            \"kernel_version\": \"$kernel_ver\",
-            \"cpu_mcore\": $cpu_val,
-            \"mem_mib\": $mem_mib,
-            \"disk_gib\": $disk_gib,
-            \"ebpf_btf\": \"$ebpf\",
-            \"kernel_headers\": \"$headers\"
+            \"name\": \"$name\", \"role\": \"$role\", \"kernel_version\": \"$kernel_ver\",
+            \"cpu_mcore\": $cpu_val, \"mem_mib\": $mem_mib, \"disk_gib\": $disk_gib,
+            \"ebpf_btf\": \"$ebpf\", \"kernel_headers\": \"$headers\"
         }]")
     done <<< "$raw_nodes"
 
-    # Assemble Final JSON
-    local final_json=$(jq -n \
-        --arg kv "$k8s_ver" \
-        --arg arc "$primary_arch" \
-        --arg arcs "$all_archs" \
+    # Hardware Totals Evaluation
+    local cpu_tot_comp="true"; local cpu_tot_fail=""
+    [ $((total_cpu_m / 1000)) -lt 12 ] && { cpu_tot_comp="false"; cpu_tot_fail="Total CPU $((total_cpu_m / 1000)) cores is below required 12."; }
+    local ram_tot_comp="true"; local ram_tot_fail=""
+    [ $((total_mem_mib / 1024)) -lt 20 ] && { ram_tot_comp="false"; ram_tot_fail="Total RAM $((total_mem_mib / 1024)) GiB is below required 20."; }
+    local disk_tot_comp="true"; local disk_tot_fail=""
+    [ "$total_disk_gib" -lt 40 ] && { disk_tot_comp="false"; disk_tot_fail="Total Disk ${total_disk_gib} GiB is below required 40."; }
+
+    # --- 4. Assemble Programmatic Evaluation Result ---
+    echo $(jq -n \
+        --arg kv "$k8s_ver" --arg k8s_c "$k8s_comp" --arg k8s_f "$k8s_fail" \
+        --arg arc "$primary_arch" --arg arc_c "$arch_comp" --arg arc_f "$arch_fail" \
         --arg rt "$primary_runtime" \
-        --arg rts "$runtimes" \
         --arg hv "$helm_ver" \
-        --arg dsc "$default_sc" \
-        --arg cni "$cni_names" \
-        --arg pid "$prov_id" \
-        --arg rgn "$region" \
-        --arg zon "$zone" \
-        --arg img "$os_img" \
-        --arg rc "$registry_conn" \
-        --arg cpu_t "$((total_cpu_m / 1000))" \
-        --arg mem_t "$((total_mem_mib / 1024))" \
-        --arg dsk_t "$total_disk_gib" \
+        --arg dsc "$default_sc" --arg sc_c "$sc_comp" --arg sc_f "$sc_fail" \
+        --arg cni "$cni_names" --arg cni_c "$cni_comp" --arg cni_f "$cni_fail" \
+        --arg rc "$registry_conn" --arg rc_f "$reg_fail" \
+        --arg cpu_t "$((total_cpu_m / 1000))" --arg cpu_c "$cpu_tot_comp" --arg cpu_f "$cpu_tot_fail" \
+        --arg mem_t "$((total_mem_mib / 1024))" --arg mem_c "$ram_tot_comp" --arg mem_f "$ram_tot_fail" \
+        --arg dsk_t "$total_disk_gib" --arg dsk_c "$disk_tot_comp" --arg dsk_f "$disk_tot_fail" \
         --argjson infra "$infra_json" \
         --argjson nodes "$nodes_json" \
         '{
-            cluster: { 
-                k8s_version: $kv, 
-                architecture: $arc, 
-                all_architectures: ($arcs | split(" ")),
-                cri_runtime: $rt, 
-                all_runtimes: ($rts | split(" ")), 
-                helm_version: $hv, 
-                default_storage_class: $dsc, 
-                cni_plugin: $cni, 
-                registry_connectivity: $rc 
-            },
-            infrastructure: $infra,
-            cloud: { provider_id: $pid, region: $rgn, zone: $zon, os_image: $img },
-            hardware_totals: { cpu_cores: ( $cpu_t | tonumber ), mem_gib: ( $mem_t | tonumber ), disk_gib: ( $dsk_t | tonumber ) },
-            nodes: $nodes
+            evaluation_scope: { environment_type: "PoC", target_product: "Kaspersky Container Security", evaluation_goal: "Readiness Assessment" },
+            results: [
+              { requirement_id: "KCS-K8S-VER-01", compliant: ($k8s_c == "true"), observed: $kv, failure_reason: $k8s_f },
+              { requirement_id: "KCS-ARCH-AMD64-01", compliant: ($arc_c == "true"), observed: $arc, failure_reason: $arc_f },
+              { requirement_id: "KCS-RES-CPU-01", compliant: ($cpu_c == "true"), observed: ($cpu_t + " cores"), failure_reason: $cpu_f },
+              { requirement_id: "KCS-RES-RAM-01", compliant: ($mem_c == "true"), observed: ($mem_t + " Gi"), failure_reason: $mem_f },
+              { requirement_id: "KCS-RES-DISK-01", compliant: ($dsk_c == "true"), observed: ($dsk_t + " Gi"), failure_reason: $dsk_f },
+              { requirement_id: "KCS-NET-CNI-POL-01", compliant: ($cni_c == "true"), observed: $cni, failure_reason: $cni_f },
+              { requirement_id: "KCS-INF-STORAGE-01", compliant: ($sc_c == "true"), observed: $dsc, failure_reason: $sc_f },
+              { requirement_id: "KCS-CONN-REPO-01", compliant: ($rc == "true"), observed: ($rc == "true" | tostring), failure_reason: $rc_f }
+            ],
+            raw_facts: { k8s_version: $kv, helm_version: $hv, runtime: $rt, infrastructure: $infra, nodes: $nodes }
         }')
-    
-    echo "$final_json"
 }

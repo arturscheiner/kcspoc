@@ -1,0 +1,97 @@
+{
+    "version": "1.0.0",
+    "product": "Kaspersky Container Security",
+    "requirements": [
+        {
+            "id": "KCS-K8S-VER-01",
+            "category": "orchestrator",
+            "title": "Kubernetes Version",
+            "description": "KCS requires a supported Kubernetes version (1.21 - 1.34).",
+            "mandatory": true,
+            "expected": {
+                "min": "1.21",
+                "max": "1.34",
+                "target": "1.25+"
+            }
+        },
+        {
+            "id": "KCS-ARCH-AMD64-01",
+            "category": "orchestrator",
+            "title": "Node Architecture",
+            "description": "Worker nodes must be x86_64 (amd64) for node-agent compatibility.",
+            "mandatory": true,
+            "expected": {
+                "value": "amd64"
+            }
+        },
+        {
+            "id": "KCS-RES-CPU-01",
+            "category": "hardware",
+            "title": "CPU Capacity",
+            "description": "Total cluster CPU capacity should meet KCS management requirements.",
+            "mandatory": true,
+            "expected": {
+                "value": 12,
+                "unit": "cores"
+            }
+        },
+        {
+            "id": "KCS-RES-RAM-01",
+            "category": "hardware",
+            "title": "RAM Capacity",
+            "description": "Total cluster RAM capacity should meet KCS management requirements.",
+            "mandatory": true,
+            "expected": {
+                "value": 20,
+                "unit": "Gi"
+            }
+        },
+        {
+            "id": "KCS-RES-DISK-01",
+            "category": "hardware",
+            "title": "Disk Capacity",
+            "description": "Nodes must have sufficient free disk space for vulnerability databases.",
+            "mandatory": true,
+            "expected": {
+                "value": 40,
+                "unit": "Gi"
+            }
+        },
+        {
+            "id": "KCS-NET-CNI-POL-01",
+            "category": "networking",
+            "title": "Network Policy Support",
+            "description": "CNI must support Kubernetes NetworkPolicies for microsegmentation features.",
+            "mandatory": false,
+            "severity": "WARNING",
+            "expected": {
+                "feature": "NetworkPolicy",
+                "recommeded_cnis": [
+                    "calico",
+                    "cilium",
+                    "canal"
+                ]
+            }
+        },
+        {
+            "id": "KCS-INF-STORAGE-01",
+            "category": "infrastructure",
+            "title": "Default StorageClass",
+            "description": "A default StorageClass is required for dynamic volume provisioning.",
+            "mandatory": true,
+            "expected": {
+                "exists": true
+            }
+        },
+        {
+            "id": "KCS-CONN-REPO-01",
+            "category": "connectivity",
+            "title": "Repository Access",
+            "description": "Cluster must be able to reach repo.kcs.kaspersky.com.",
+            "mandatory": true,
+            "expected": {
+                "url": "https://repo.kcs.kaspersky.com"
+            }
+        }
+    ]
+}
