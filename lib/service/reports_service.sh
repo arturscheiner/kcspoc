@@ -56,7 +56,7 @@ service_report_serve() {
     local index_file="$reports_dir/index.html"
     
     # Generate the Dashboard
-    view_render_report_dashboard "$reports_index" > "$index_file"
+    view_render_report_dashboard "$reports_index" "$VERSION" > "$index_file"
     
     # Start the server
     view_reports_serve_start "$port"

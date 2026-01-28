@@ -168,6 +168,7 @@ _view_render_audit_txt() {
 
 view_render_report_dashboard() {
     local index_json="$1"
+    local version="$2"
     
     cat <<EOF
 <!DOCTYPE html>
@@ -213,10 +214,10 @@ view_render_report_dashboard() {
     <div class="container">
         <div class="header">
             <div>
-                <h1>KCS Report Hub</h1>
+                <h1>KCSPOC Report Hub</h1>
                 <p>Diagnostic and Operational Insights</p>
             </div>
-            <span class="badge">V$(date +"%Y.%m")</span>
+            <span class="badge">V${version}</span>
         </div>
         
         <table>
