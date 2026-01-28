@@ -42,6 +42,16 @@ reports_controller() {
                     shift 1
                 fi
                 ;;
+            -p|--serve)
+                serve="true"
+                if [[ "$2" != --* ]] && [[ -n "$2" ]]; then
+                    port="$2"
+                    shift 2
+                else
+                    port="6000"
+                    shift 1
+                fi
+                ;;
             --help|help)
                 view_ui_help "reports" "$MSG_HELP_REPORTS_DESC" "$MSG_HELP_REPORTS_OPTS" "$MSG_HELP_REPORTS_EX" "$VERSION"
                 return 0
@@ -67,6 +77,9 @@ reports_controller() {
                 view_ui_section_header "Global Report History"
             fi
             service_reports_list "$target"
+            if [ "$serve" == "true" ]; then
+                service_report_serve "$port"
+            fi
             ;;
         show)
             if [ -z "$target" ]; then

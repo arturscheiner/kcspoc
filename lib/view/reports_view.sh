@@ -94,3 +94,12 @@ view_reports_cleanup_stop() {
 view_reports_cleanup_cancel() {
     echo -e "   ${DIM}Cleanup cancelled.${NC}"
 }
+
+view_reports_serve_start() {
+    local port="$1"
+    view_ui_section_header "Report Serving Hub"
+    echo -e "   ${ICON_OK} ${BRIGHT_GREEN}Dashboard generated successfully.${NC}"
+    echo -e "   ${ICON_GEAR} Starting local HTTP server on port ${BRIGHT_CYAN}${port}${NC}..."
+    echo -e "   ${ICON_INFO} ${BOLD}Open in browser:${NC} ${BRIGHT_BLUE}http://localhost:${port}${NC}"
+    echo -e "   ${DIM}Press Ctrl+C to stop the server.${NC}\n"
+}

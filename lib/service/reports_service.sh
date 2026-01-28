@@ -48,3 +48,17 @@ service_reports_cleanup() {
         view_reports_cleanup_cancel
     fi
 }
+
+service_report_serve() {
+    local port="${1:-6000}"
+    local reports_index=$(model_report_get_index)
+    local reports_dir="$REPORTS_BASE_DIR"
+    local index_file="$reports_dir/index.html"
+    
+    # Generate the Dashboard
+    view_render_report_dashboard "$reports_index" > "$index_file"
+    
+    # Start the server
+    view_reports_serve_start "$port"
+    (cd "$reports_dir" && python3 -m http.server "$port")
+}

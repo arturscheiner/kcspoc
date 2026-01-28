@@ -375,8 +375,8 @@ MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --agents"
 
 # Reports Help
 MSG_HELP_REPORTS_DESC="Management command for generated diagnostic and analysis reports."
-MSG_HELP_REPORTS_OPTS="--list|-l [cmd]|List all generated reports (optionally filtered by command).\n--show|-v <hash>|Open and display a specific report content.\n--save-as|-s <path>|Export a report to a specific file path (Coupled with --show).\n--cleanup [cmd]|Permanently delete all reports (optionally filtered by command)."
-MSG_HELP_REPORTS_EX="kcspoc reports --list\nkcspoc reports --show A1B2C3\nkcspoc reports --show A1B2C3 --save-as audit.html\nkcspoc reports --cleanup check"
+MSG_HELP_REPORTS_OPTS="--list|-l [cmd]|List all generated reports (optionally filtered by command).\n--show|-v <hash>|Open and display a specific report content.\n--save-as|-s <path>|Export a report to a specific file path (Coupled with --show).\n--cleanup [cmd]|Permanently delete all reports (optionally filtered by command).\n--serve|-p [port]|Start a local web dashboard (Default port: 6000)."
+MSG_HELP_REPORTS_EX="kcspoc reports --list\nkcspoc reports --list --serve\nkcspoc reports --list --serve 8080\nkcspoc reports --show A1B2C3 --save-as audit.html"
 
 MSG_CMD_REPORTS_DESC="Manage generated reports (Discovery, View)"
 MSG_HELP_DEPLOY_DESC="Manages the deployment lifecycle of Kaspersky Container Security components."
