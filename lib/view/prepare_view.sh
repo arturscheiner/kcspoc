@@ -75,3 +75,20 @@ view_prepare_confirm_step() {
     fi
     return 0
 }
+
+view_prepare_confirm_reinstall() {
+    local label="$1"
+    local unattended="${2:-false}"
+    
+    if [ "$unattended" == "true" ]; then
+        return 0
+    fi
+    
+    echo -e "\n${BOLD}${BRIGHT_YELLOW}${ICON_WAIT} $label is already installed.${NC}"
+    echo -ne "   Do you want to reinstall it? (y/n) [n]: "
+    read -r ans
+    if [ "$ans" == "y" ] || [ "$ans" == "Y" ]; then
+        return 0
+    fi
+    return 1
+}

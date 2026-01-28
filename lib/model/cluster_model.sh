@@ -61,7 +61,7 @@ model_cluster_create_namespace() {
 model_cluster_delete_namespace() {
     local ns="$1"
     local wait="${2:-false}"
-    kubectl delete namespace "$ns" --wait="$wait" &>> "$DEBUG_OUT"
+    kubectl delete namespace "$ns" --wait="$wait" --ignore-not-found &>> "$DEBUG_OUT"
 }
 
 model_cluster_get_default_storageclass() {
