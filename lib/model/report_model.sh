@@ -17,7 +17,7 @@ model_report_generate_hash() {
 }
 
 # Saves a report artifact
-# Usage: model_report_save <command> <hash> <content_file> [suffix] [type] [ai_model] [orig_log_id] [orig_exec_id]
+# Usage: model_report_save <command> <hash> <content_file> [suffix] [type] [ai_model] [orig_log_id] [orig_exec_id] [no_index]
 model_report_save() {
     local cmd="$1"
     local hash="$2"
@@ -27,6 +27,7 @@ model_report_save() {
     local ai_model="${6:-}"
     local orig_log_id="${7:-}"
     local orig_exec_id="${8:-}"
+    local no_index="${9:-false}"
     
     local cmd_dir="$REPORTS_BASE_DIR/$cmd"
     [ -d "$cmd_dir" ] || mkdir -p "$cmd_dir"
@@ -44,8 +45,10 @@ model_report_save() {
         cp "$src_file" "$report_file"
     fi
     
-    # Update index
-    _model_report_index_add "$cmd" "$hash" "$suffix" "$type" "$ai_model" "$orig_log_id" "$orig_exec_id"
+    # Update index unless suppressed
+    if [ "$no_index" != "true" ]; then
+        _model_report_index_add "$cmd" "$hash" "$suffix" "$type" "$ai_model" "$orig_log_id" "$orig_exec_id"
+    fi
 }
 
 # Internal helper to maintain a metadata index

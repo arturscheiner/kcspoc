@@ -96,9 +96,10 @@ check_controller() {
 
     # If report enabled, we capture output. (S-030)
     if [ "$report_enabled" == "true" ]; then
-        # 1. Baseline: Save execution log
-        model_report_save "check" "$EXEC_HASH" "$EXEC_LOG_FILE" "txt"
-        echo -e "   ${ICON_OK} ${BRIGHT_GREEN}Execution Log saved:${NC} ~/.kcspoc/reports/check/${EXEC_HASH}.txt"
+        # 1. Baseline: Save execution log (SILENTLY initially)
+        model_report_save "check" "$EXEC_HASH" "$EXEC_LOG_FILE" "txt" "template" "" "$LOG_ID" "$EXEC_HASH" "true"
+        
+        local ai_report_success="false"
         
         # 2. AI Audit (S-030)
         config_service_load
@@ -125,7 +126,14 @@ check_controller() {
                 model_report_save "check" "$audit_hash" "$tmp_audit" "$report_format" "ai" "$mod" "$LOG_ID" "$EXEC_HASH"
                 rm "$tmp_audit"
                 view_check_report_success "$audit_hash"
+                ai_report_success="true"
             fi
+        fi
+
+        # 3. Fallback: If AI was not generated, index the execution log as the primary report
+        if [ "$ai_report_success" == "false" ]; then
+            model_report_save "check" "$EXEC_HASH" "$EXEC_LOG_FILE" "txt" "template" "" "$LOG_ID" "$EXEC_HASH" "false"
+            echo -e "   ${ICON_OK} ${BRIGHT_GREEN}Execution Log saved:${NC} ~/.kcspoc/reports/check/${EXEC_HASH}.txt"
         fi
     fi
 
