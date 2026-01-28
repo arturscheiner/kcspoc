@@ -12,7 +12,7 @@ service_destroy_run() {
     local release_name="${3:-kcs}"
 
     # Phase I: Transition Signaling
-    _update_state "$target_ns" "cleaning" "destroy" "$EXEC_HASH" "$(model_config_get_hash)" ""
+    model_ns_update_state "$target_ns" "cleaning" "destroy" "$EXEC_HASH" "$(model_config_get_hash)" ""
 
     view_destroy_start_msg
 

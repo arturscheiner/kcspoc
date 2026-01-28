@@ -79,12 +79,12 @@ service_deploy_core() {
     view_deploy_section "$MSG_DEPLOY_CORE"
 
     # 3. Execution
-    _update_state "$ns" "deploying" "$op_type" "$exec_id" "$local_hash" "$target_ver"
+    model_ns_update_state "$ns" "deploying" "$op_type" "$exec_id" "$local_hash" "$target_ver"
     
     # 3.1 Namespace & Registry Secret
     view_deploy_step_start "[1/5] $MSG_PREPARE_STEP_1_A"
     model_kubectl_create_namespace "$ns"
-    _update_state "$ns" "deploying" "$op_type" "$exec_id" "$local_hash" "$target_ver"
+    model_ns_update_state "$ns" "deploying" "$op_type" "$exec_id" "$local_hash" "$target_ver"
     view_deploy_step_stop "PASS"
 
     if [ -z "$values_override" ]; then
@@ -257,7 +257,7 @@ service_deploy_watch_stability() {
             for ((i=0; i<empty; i++)); do bar+="-"; done
             bar+="]"
 
-            _update_state "$ns" "deploying" "$op_type" "$exec_id" "$(model_config_get_hash)" "$target_ver" "$percent"
+            model_ns_update_state "$ns" "deploying" "$op_type" "$exec_id" "$(model_config_get_hash)" "$target_ver" "$percent"
             poll_counter=0
         fi
 
@@ -266,7 +266,7 @@ service_deploy_watch_stability() {
         if [ "$poll_counter" -eq 0 ] && [ "$stable_count" -eq "$total_pods" ] && [ "$total_pods" -gt 0 ]; then
             view_deploy_stability_watcher_stop
             view_deploy_stability_success
-            _update_state "$ns" "stable" "$op_type" "$exec_id" "$local_hash" "$target_ver" "100"
+            model_ns_update_state "$ns" "stable" "$op_type" "$exec_id" "$local_hash" "$target_ver" "100"
             
             # Final Boarding Pass
             local domain=$(model_kubectl_get_ingress_domain "$ns")
@@ -285,7 +285,7 @@ service_deploy_watch_stability() {
         if [ "$elapsed" -gt "$timeout" ]; then
             view_deploy_stability_watcher_stop
             view_deploy_stability_timeout
-            _update_state "$ns" "failed" "$op_type" "$exec_id" "$local_hash" "$target_ver" "$percent"
+            model_ns_update_state "$ns" "failed" "$op_type" "$exec_id" "$local_hash" "$target_ver" "$percent"
             return 1
         fi
 
