@@ -48,7 +48,7 @@ reports_controller() {
                     port="$2"
                     shift 2
                 else
-                    port="6000"
+                    port="8080"
                     shift 1
                 fi
                 ;;

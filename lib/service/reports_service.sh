@@ -50,7 +50,7 @@ service_reports_cleanup() {
 }
 
 service_report_serve() {
-    local port="${1:-6000}"
+    local port="${1:-8080}"
     local reports_index=$(model_report_get_index)
     local reports_dir="$REPORTS_BASE_DIR"
     local index_file="$reports_dir/index.html"
