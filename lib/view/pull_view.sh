@@ -53,14 +53,6 @@ view_pull_auth_start() {
     service_spinner_start "$MSG_PULL_AUTH"
 }
 
-view_pull_auth_fallback_start() {
-    service_spinner_start "${MSG_PULL_AUTH} (Fallback)"
-}
-
-view_pull_login_fail_hint() {
-    local server="$1"
-    echo -e "      ${YELLOW}${ICON_INFO} $MSG_PULL_LOGIN_FAIL ($server)...${NC}"
-}
 
 view_pull_login_error() {
     echo -e "      ${RED}${ICON_FAIL} ${MSG_PULL_LOGIN_ERR}${NC}"

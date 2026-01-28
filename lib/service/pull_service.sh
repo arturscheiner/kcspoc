@@ -36,19 +36,12 @@ service_pull_perform() {
 
     # 1. Registry Login
     view_pull_auth_start
-    if model_helm_login "$REGISTRY_SERVER/v2/" "$REGISTRY_USER" "$REGISTRY_PASS" > /dev/null; then
+    if model_helm_login "$REGISTRY_SERVER" "$REGISTRY_USER" "$REGISTRY_PASS" > /dev/null; then
         service_spinner_stop "PASS"
     else
         service_spinner_stop "FAIL"
-        view_pull_login_fail_hint "$REGISTRY_SERVER"
-        view_pull_auth_fallback_start
-        if model_helm_login "$REGISTRY_SERVER" "$REGISTRY_USER" "$REGISTRY_PASS" > /dev/null; then
-             service_spinner_stop "PASS"
-        else
-             service_spinner_stop "FAIL"
-             view_pull_login_error
-             exit 1
-        fi
+        view_pull_login_error
+        exit 1
     fi
 
     # 2. Determine Version
