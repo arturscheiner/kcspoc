@@ -133,7 +133,7 @@ service_extra_pack_install() {
                 model_kubectl_delete_namespace "local-path-storage" "false"
                 service_exec_wait_and_force_delete_ns "local-path-storage" 5
                 local CHART_PATH="$ARTIFACTS_DIR/local-path-provisioner/deploy/chart/local-path-provisioner"
-                if model_helm_upgrade_install_local "local-path-storage" "$CHART_PATH" "local-path-storage"; then
+                if model_helm_upgrade_install_local "local-path-storage" "$CHART_PATH" "local-path-storage" &>> "$DEBUG_OUT"; then
                     model_kubectl_patch_storageclass "local-path" '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
                     model_kubectl_label "sc" "local-path" "" "$POC_LABEL"
                     view_prepare_step_stop "PASS"

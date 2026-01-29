@@ -46,8 +46,12 @@ model_helm_upgrade_install_local() {
     local release="$1"
     local chart_path="$2"
     local ns="$3"
+    local values_file="$4"
+    local val_args=""
+    [ -n "$values_file" ] && val_args="-f $values_file"
+
     helm upgrade --install "$release" "$chart_path" \
-        --namespace "$ns" --create-namespace &>> "$DEBUG_OUT"
+        --namespace "$ns" --create-namespace $val_args
 }
 
 model_helm_uninstall() {

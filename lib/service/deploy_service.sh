@@ -184,7 +184,7 @@ EOF
     # Helm Action
     view_deploy_step_start "[4/5] Helm Upgrade/Install"
     local helm_err="/tmp/kcspoc_helm_deploy.err"
-    if model_helm_upgrade_install_local "kcs" "$tgz_file" "$ns" &> "$helm_err"; then
+    if model_helm_upgrade_install_local "kcs" "$tgz_file" "$ns" "$processed_values" &> "$helm_err"; then
         view_deploy_step_stop "PASS"
     else
         # Self-Healing for Immutability
@@ -194,7 +194,7 @@ EOF
             kubectl delete sts kcs-s3 kcs-postgres kcs-clickhouse -n "$ns" --cascade=orphan &>> "$DEBUG_OUT"
             
             view_deploy_step_start "[4/5] Retrying Helm Upgrade/Install"
-            if model_helm_upgrade_install_local "kcs" "$tgz_file" "$ns" &>> "$DEBUG_OUT"; then
+            if model_helm_upgrade_install_local "kcs" "$tgz_file" "$ns" "$processed_values" &>> "$DEBUG_OUT"; then
                 view_deploy_step_stop "PASS"
             else
                 view_deploy_step_stop "FAIL"
@@ -312,8 +312,7 @@ service_deploy_verify_config_integrity() {
 service_deploy_verify_health() {
     local ns="$1"
     view_deploy_info "$MSG_DEPLOY_HEALTH_CHECK"
-    # Port original health checks to service
-    _verify_deploy_bootstrap "$ns" # Keeping temporarily as internal helper or move to health_service
+    # Port original health checks to service if needed later
 }
 
 service_deploy_check_integrity() {
