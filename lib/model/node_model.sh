@@ -69,7 +69,7 @@ model_node_exec_probe() {
     local name="$1"
     local ns="$2"
     shift 2
-    kubectl exec "$name" -n "$ns" -- "$@"
+    kubectl exec "$name" -n "$ns" -- "$@" < /dev/null
 }
 
 model_node_delete_probe_pod() {
