@@ -93,6 +93,8 @@ view_bootstrap_asset_download_stop() {
     service_spinner_stop "$status"
     if [ "$status" == "PASS" ]; then
         echo -e "      ${DIM}Assets saved to: ${path}${NC}"
+    elif [ "$status" == "SKIPPED" ]; then
+        echo -e "      ${DIM}Local assets are already in sync with server.${NC}"
     fi
 }
 

@@ -76,11 +76,15 @@ service_bootstrap_run() {
 
     # Phase 6: Asset Management
     if [ -n "$group_id" ]; then
-        local asset_path
+        local asset_result
         view_bootstrap_asset_download_start
-        asset_path=$(bootstrap_service_download_assets "$DOMAIN" "$token" "$group_id")
-        if [ $? -eq 0 ]; then
-            view_bootstrap_asset_download_stop "PASS" "$asset_path"
+        asset_result=$(bootstrap_service_download_assets "$DOMAIN" "$token" "$group_id")
+        local status=$?
+        
+        if [ $status -eq 0 ]; then
+            view_bootstrap_asset_download_stop "PASS" "$asset_result"
+        elif [ $status -eq 2 ]; then # 2 means SKIPPED/SYNCED
+            view_bootstrap_asset_download_stop "SKIPPED"
         else
             view_bootstrap_asset_download_stop "FAIL"
         fi
@@ -103,12 +107,22 @@ bootstrap_service_download_assets() {
 
     local target_file="${artifacts_dir}/kcs-agent-deployment.yaml"
 
-    # Call API to download config
-    # model_kcs_api_download_config returns the raw content
+    # 1. Download content from server
     local content
     content=$(model_kcs_api_download_config "$domain" "$token" "$group_id")
     [ $? -ne 0 ] && return 1
 
+    # 2. Compare with local version using hash (SHA-256)
+    local server_hash=$(echo "$content" | sha256sum | awk '{print $1}')
+    
+    if [ -f "$target_file" ]; then
+        local local_hash=$(sha256sum "$target_file" | awk '{print $1}')
+        if [ "$server_hash" == "$local_hash" ]; then
+            return 2 # Signal: Already in sync
+        fi
+    fi
+
+    # 3. Save new content
     if echo "$content" > "$target_file"; then
         echo "$target_file"
         return 0
