@@ -51,6 +51,21 @@ view_bootstrap_saving_stop() {
     service_spinner_stop "PASS"
 }
 
+view_bootstrap_discovery_start() {
+    service_spinner_start "Discovering KCS Environment"
+}
+
+view_bootstrap_discovery_stop() {
+    local status="$1"
+    service_spinner_stop "$status"
+}
+
+view_bootstrap_scope_found() {
+    local name="$1"
+    local id="$2"
+    echo -e "      ${BOLD}Scope Detected:${NC} ${BRIGHT_WHITE}${name}${NC} ${DIM}(ID: ${id})${NC}"
+}
+
 view_bootstrap_success() {
     echo -e "\n   ${BRIGHT_GREEN}${BOLD}${ICON_OK} BOOTSTRAP COMPLETED!${NC}"
     echo -e "   The API token has been securely stored in ~/.kcspoc/config."

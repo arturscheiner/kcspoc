@@ -40,7 +40,22 @@ service_bootstrap_run() {
         return 1
     fi
 
-    # Phase 4: Finalization
+    # Phase 4: Environment Discovery
+    view_bootstrap_discovery_start
+    local scope_id
+    scope_id=$(bootstrap_service_get_default_scope_id "$DOMAIN" "$token")
+    local status=$?
+
+    if [ $status -eq 0 ]; then
+        view_bootstrap_discovery_stop "PASS"
+        view_bootstrap_scope_found "Default scope" "$scope_id"
+    else
+        view_bootstrap_discovery_stop "FAIL"
+        # We don't fail the whole bootstrap if discovery fails, we just warn
+        echo -e "      ${RED}${ICON_FAIL} Warning: Could not discover Default scope automatically.${NC}"
+    fi
+
+    # Phase 5: Finalization
     view_bootstrap_success
     return 0
 }
