@@ -28,11 +28,11 @@ echo "🔍 kcspoc bootstrap installer"
 # ----------------------------
 if [[ "$MODE" == "dev" ]]; then
   echo "⚠️ Installing DEVELOPMENT version (main)"
-  ZIP_URL="https://github.com/${REPO}/archive/refs/heads/main.zip"
+  ZIP_URL="https://github.com/${REPO}/archive/refs/heads/main.tar.gz"
 
 elif [[ "$MODE" == "version" ]]; then
   echo "📌 Installing specific version: ${REQUESTED_TAG}"
-  ZIP_URL="https://github.com/${REPO}/archive/refs/tags/${REQUESTED_TAG}.zip"
+  ZIP_URL="https://github.com/${REPO}/archive/refs/tags/${REQUESTED_TAG}.tar.gz"
 
 else
   echo "🔍 Resolving latest stable release"
@@ -47,16 +47,16 @@ else
     exit 1
   fi
 
-  ZIP_URL="https://github.com/${REPO}/archive/refs/tags/${LATEST_TAG}.zip"
+  ZIP_URL="https://github.com/${REPO}/archive/refs/tags/${LATEST_TAG}.tar.gz"
 fi
 
 # ----------------------------
 # Download & execute installer
 # ----------------------------
 echo "⬇️ Downloading package"
-curl -sSL "$ZIP_URL" -o "$TMP_DIR/kcspoc.zip"
+curl -sSL "$ZIP_URL" -o "$TMP_DIR/kcspoc.tar.gz"
 
-unzip -q "$TMP_DIR/kcspoc.zip" -d "$TMP_DIR"
+tar -xzf "$TMP_DIR/kcspoc.tar.gz" -C "$TMP_DIR"
 
 # Find extraction root (e.g., kcspoc-main or kcspoc-0.5.12)
 EXTRACT_ROOT="$(find "$TMP_DIR" -maxdepth 1 -type d ! -path "$TMP_DIR" | head -n1)"
