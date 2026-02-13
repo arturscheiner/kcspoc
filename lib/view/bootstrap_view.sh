@@ -66,6 +66,23 @@ view_bootstrap_scope_found() {
     echo -e "      ${BOLD}Scope Detected:${NC} ${BRIGHT_WHITE}${name}${NC} ${DIM}(ID: ${id})${NC}"
 }
 
+view_bootstrap_group_create_start() {
+    local name="$1"
+    service_spinner_start "Creating PoC Agent Group ($name)"
+}
+
+view_bootstrap_group_exists() {
+    local name="$1"
+    service_spinner_stop "WARN"
+    echo -e "      ${YELLOW}${ICON_GEAR} Group '${name}' already exists. Skipping creation.${NC}"
+}
+
+view_bootstrap_group_created() {
+    local id="$1"
+    service_spinner_stop "PASS"
+    echo -e "      ${DIM}Group ID: ${id}${NC}"
+}
+
 view_bootstrap_success() {
     echo -e "\n   ${BRIGHT_GREEN}${BOLD}${ICON_OK} BOOTSTRAP COMPLETED!${NC}"
     echo -e "   The API token has been securely stored in ~/.kcspoc/config."
