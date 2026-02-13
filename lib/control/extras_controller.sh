@@ -11,6 +11,9 @@ extras_controller() {
     local install_pack=""
     local uninstall_pack=""
     
+    # 0. Check critical dependency for controller logic
+    service_base_require_dependencies "jq"
+    
     while [[ "$#" -gt 0 ]]; do
         case $1 in
             --list|-l)
@@ -57,6 +60,12 @@ extras_controller() {
             # Loop through JSON array using jq
             local count
             count=$(echo "$catalog_json" | jq '. | length')
+            
+            # Validate count is a number to prevent arithmetic errors
+            if ! [[ "$count" =~ ^[0-9]+$ ]]; then
+                count=0
+            fi
+
             for (( i=0; i<$count; i++ )); do
                 local id name desc is_installed
                 id=$(echo "$catalog_json" | jq -r ".[$i].id")

@@ -29,6 +29,9 @@ model_state_record_install() {
 
     model_state_init
     
+    # 0. Ensure jq is available for state mutation
+    service_base_require_dependencies "jq"
+
     # Remove existing entry for same ID+context to avoid duplicates
     local temp_file="${_STATE_FILE}.tmp"
     jq "del(.[] | select(.id == \"$id\" and .context == \"$context\"))" "$_STATE_FILE" > "$temp_file"
@@ -50,6 +53,9 @@ model_state_record_uninstall() {
 
     model_state_init
     
+    # 0. Ensure jq is available for state mutation
+    service_base_require_dependencies "jq"
+
     local temp_file="${_STATE_FILE}.tmp"
     jq "del(.[] | select(.id == \"$id\" and .context == \"$context\"))" "$_STATE_FILE" > "$temp_file"
     mv "$temp_file" "$_STATE_FILE"

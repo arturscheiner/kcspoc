@@ -47,11 +47,12 @@ _service_extra_is_installed() {
     esac
 }
 
-service_extra_pack_install() {
-    local pack="$1"
     local unattended="${2:-false}"
     local context
     context=$(model_cluster_get_current_context)
+
+    # 0. Check Dependencies
+    service_base_require_dependencies "helm" "kubectl"
 
     local is_installed=false
     _service_extra_is_installed "$pack" && is_installed=true
@@ -299,10 +300,12 @@ EOF
     return 0
 }
 
-service_extra_pack_uninstall() {
     local pack="$1"
     local context
     context=$(model_cluster_get_current_context)
+
+    # 0. Check Dependencies
+    service_base_require_dependencies "helm" "kubectl"
     
     case "$pack" in
         "ingress-nginx")
