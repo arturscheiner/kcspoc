@@ -71,8 +71,6 @@ deploy_controller() {
     elif [ "$install_core" == "true" ]; then
         service_deploy_core "$values_override" "$mode_override"
     elif [ "$install_agents" == "true" ]; then
-        # Agents logic (Placeholder)
-        view_deploy_section "$MSG_DEPLOY_AGENTS"
-        view_deploy_info "Agents deployment logic is being finalized."
+        service_deploy_agents
     fi
 }

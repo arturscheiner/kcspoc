@@ -351,3 +351,28 @@ service_deploy_check_integrity() {
         view_deploy_mismatch_warning "$mode"
     fi
 }
+
+service_deploy_agents() {
+    local asset_path="${HOME}/.kcspoc/artifacts/deployments/kcs-agent-deployment.yaml"
+    local ns="$NAMESPACE"
+
+    view_deploy_agents_start
+
+    # 1. Verify Asset Presence
+    if [ ! -f "$asset_path" ]; then
+        view_deploy_agents_error "Deployment assets not found. Please run './kcspoc bootstrap' first."
+        return 1
+    fi
+
+    # 2. Deploy via Kubectl
+    view_deploy_step_start "Applying Agent Deployment manifest"
+    if model_kubectl_apply_file "$asset_path" "$ns"; then
+        view_deploy_step_stop "PASS"
+        view_deploy_agents_success
+        return 0
+    else
+        view_deploy_step_stop "FAIL"
+        view_deploy_agents_error "Kubectl apply failed. Check debug logs for details."
+        return 1
+    fi
+}

@@ -146,3 +146,17 @@ view_deploy_prompt_install() {
 view_deploy_healing_immutability() {
     echo -e "      ${BRIGHT_YELLOW}${ICON_GEAR} Immutability detected. Fixing StatefulSets...${NC}"
 }
+
+view_deploy_agents_start() {
+    view_ui_section_header "KCS Agents Deployment"
+    echo -e "   ${ICON_GEAR} Initiating deployment of KCS Agents using local assets..."
+}
+
+view_deploy_agents_success() {
+    echo -e "\n   ${BRIGHT_GREEN}${BOLD}${ICON_OK} AGENTS DEPLOYED SUCCESSFULLY!${NC}"
+    echo -e "   The KCS Agents have been applied to the cluster."
+}
+
+view_deploy_agents_error() {
+    echo -e "   ${BRIGHT_RED}${ICON_FAIL} Error: $1${NC}"
+}
