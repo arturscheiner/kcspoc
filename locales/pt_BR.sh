@@ -285,7 +285,7 @@ MSG_HELP_EXAMPLES="Exemplos"
 
 # Config Help
 MSG_HELP_CONFIG_DESC="Inicia o assistente de configuração interativo para configurar ou atualizar suas variáveis de ambiente em ~/.kcspoc/config."
-MSG_HELP_CONFIG_OPTS="--set-version <ver>|Atualiza rapidamente a versão ativa do KCS sem entrar no assistente."
+MSG_HELP_CONFIG_OPTS="--set-version <ver>|Atualiza rapidamente a versão ativa do KCS sem entrar no assistente.\n--verify <componente>|Executa uma verificação rápida de saúde (ex: --verify ai, api ou kcs)"
 MSG_HELP_CONFIG_EX="kcspoc config\nkcspoc config --set-version 2.3.0"
 
 # Pull Help

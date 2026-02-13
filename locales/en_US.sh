@@ -335,7 +335,7 @@ MSG_HELP_EXAMPLES="Examples"
 
 # Config Help
 MSG_HELP_CONFIG_DESC="Interactive wizard to manage local environment variables and deployment parameters."
-MSG_HELP_CONFIG_OPTS="--set-version <ver>|Pin the target KCS version without entering the console wizard.\n--verify <component>|Perform a fast health-check (e.g., --verify ai)"
+MSG_HELP_CONFIG_OPTS="--set-version <ver>|Pin the target KCS version without entering the console wizard.\n--verify <component>|Perform a fast health-check (e.g., --verify ai, api or kcs)"
 MSG_HELP_CONFIG_EX="kcspoc config\nkcspoc config --set-version 2.3.0\nkcspoc config --verify ai"
 
 # Pull Help
