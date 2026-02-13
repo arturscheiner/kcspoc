@@ -74,9 +74,47 @@ service_bootstrap_run() {
         echo -e "      ${RED}${ICON_FAIL} Error: Failed to create Agent Group.${NC}"
     fi
 
-    # Phase 6: Finalization
+    # Phase 6: Asset Management
+    if [ -n "$group_id" ]; then
+        local asset_path
+        view_bootstrap_asset_download_start
+        asset_path=$(bootstrap_service_download_assets "$DOMAIN" "$token" "$group_id")
+        if [ $? -eq 0 ]; then
+            view_bootstrap_asset_download_stop "PASS" "$asset_path"
+        else
+            view_bootstrap_asset_download_stop "FAIL"
+        fi
+    fi
+
+    # Phase 7: Finalization
     view_bootstrap_success
     return 0
+}
+
+bootstrap_service_download_assets() {
+    local domain="$1"
+    local token="$2"
+    local group_id="$3"
+
+    [ -z "$domain" ] || [ -z "$token" ] || [ -z "$group_id" ] && return 1
+
+    local artifacts_dir="${HOME}/.kcspoc/artifacts/deployments"
+    mkdir -p "$artifacts_dir" || return 1
+
+    local target_file="${artifacts_dir}/kcs-agent-deployment.yaml"
+
+    # Call API to download config
+    # model_kcs_api_download_config returns the raw content
+    local content
+    content=$(model_kcs_api_download_config "$domain" "$token" "$group_id")
+    [ $? -ne 0 ] && return 1
+
+    if echo "$content" > "$target_file"; then
+        echo "$target_file"
+        return 0
+    fi
+
+    return 1
 }
 
 bootstrap_service_create_poc_group() {
@@ -92,8 +130,8 @@ bootstrap_service_create_poc_group() {
     payload=$(jq -n \
         --arg name "$name" \
         --arg scope "$scope_id" \
-        --arg ns "${KCSPOC_NAMESPACE:-kcspoc}" \
-        --arg reg "$REGISTRY_SERVER" \
+        --arg ns "${NAMESPACE:-kcs}" \
+        --arg reg "${REGISTRY_SERVER}/images" \
         --arg user "$REGISTRY_USER" \
         '{
             "agentType": "tron-kube-agent",
@@ -101,7 +139,7 @@ bootstrap_service_create_poc_group() {
             "description": "PoC Agent Group created by kcspoc",
             "fileOperationsEnabled": true,
             "fileThreatProtectionEnabled": true,
-            "fileThreatProtectionMonitoring": "containers",
+            "fileThreatProtectionMonitoring": "all",
             "groupName": $name,
             "hostLoginEnabled": true,
             "kcsNamespace": $ns,

@@ -83,6 +83,19 @@ view_bootstrap_group_created() {
     echo -e "      ${DIM}Group ID: ${id}${NC}"
 }
 
+view_bootstrap_asset_download_start() {
+    service_spinner_start "Downloading KCS Agent Deployment Assets"
+}
+
+view_bootstrap_asset_download_stop() {
+    local status="$1"
+    local path="$2"
+    service_spinner_stop "$status"
+    if [ "$status" == "PASS" ]; then
+        echo -e "      ${DIM}Assets saved to: ${path}${NC}"
+    fi
+}
+
 view_bootstrap_success() {
     echo -e "\n   ${BRIGHT_GREEN}${BOLD}${ICON_OK} BOOTSTRAP COMPLETED!${NC}"
     echo -e "   The API token has been securely stored in ~/.kcspoc/config."
