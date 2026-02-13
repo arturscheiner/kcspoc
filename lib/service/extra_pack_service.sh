@@ -47,6 +47,8 @@ _service_extra_is_installed() {
     esac
 }
 
+service_extra_pack_install() {
+    local pack="$1"
     local unattended="${2:-false}"
     local context
     context=$(model_cluster_get_current_context)
@@ -300,6 +302,7 @@ EOF
     return 0
 }
 
+service_extra_pack_uninstall() {
     local pack="$1"
     local context
     context=$(model_cluster_get_current_context)
