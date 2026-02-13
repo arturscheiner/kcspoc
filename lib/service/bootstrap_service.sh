@@ -38,3 +38,25 @@ service_bootstrap_run() {
     view_bootstrap_success
     return 0
 }
+
+bootstrap_service_get_default_scope_id() {
+    local domain="$1"
+    local token="$2"
+
+    [ -z "$domain" ] || [ -z "$token" ] && return 1
+
+    local json_response
+    json_response=$(model_kcs_api_get_scopes "$domain" "$token")
+    [ $? -ne 0 ] && return 1
+
+    # Extract ID for "Default scope"
+    local scope_id
+    scope_id=$(echo "$json_response" | jq -r '.[] | select(.name == "Default scope") | .id')
+
+    if [ -z "$scope_id" ] || [ "$scope_id" == "null" ]; then
+        return 2 # Scope not found
+    fi
+
+    echo "$scope_id"
+    return 0
+}
