@@ -364,6 +364,9 @@ service_deploy_agents() {
         return 1
     fi
 
+    # 1.1 Ensure Registry Secret (Fix: ImagePullBackOff)
+    service_deploy_ensure_registry_secret "$ns"
+
     # 2. Deploy via Kubectl
     view_deploy_step_start "Applying Agent Deployment manifest"
     if model_kubectl_apply_file "$asset_path" "$ns"; then
@@ -374,5 +377,32 @@ service_deploy_agents() {
         view_deploy_step_stop "FAIL"
         view_deploy_agents_error "Kubectl apply failed. Check debug logs for details."
         return 1
+    fi
+}
+
+service_deploy_ensure_registry_secret() {
+    local ns="$1"
+    local secret_name="kcs-registry-secret"
+
+    # Ensure dependencies are loaded
+    [ -z "$REGISTRY_SERVER" ] && model_fs_load_config &>/dev/null
+
+    view_deploy_step_start "Verifying Registry Credentials ($ns)"
+    
+    if model_kubectl_get_resource_exists "secret" "$secret_name" "$ns"; then
+        view_deploy_step_stop "OK"
+    else
+        if [ -n "$REGISTRY_SERVER" ] && [ -n "$REGISTRY_USER" ] && [ -n "$REGISTRY_PASS" ]; then
+            if model_kubectl_create_docker_secret "$secret_name" "$ns" "$REGISTRY_SERVER" "$REGISTRY_USER" "$REGISTRY_PASS"; then
+                model_kubectl_label "secret" "$secret_name" "$ns" "kcspoc.io/managed-by=kcspoc"
+                view_deploy_step_stop "CREATED"
+            else
+                view_deploy_step_stop "FAIL"
+                view_deploy_error "Failed to create registry secret. Agents might fail to pull images."
+            fi
+        else
+            view_deploy_step_stop "SKIP (No Credentials)"
+            view_deploy_info "Registry credentials not configured. Skipping secret creation."
+        fi
     fi
 }
