@@ -184,6 +184,7 @@ bootstrap_service_create_poc_group() {
         --arg ns "${NAMESPACE:-kcs}" \
         --arg reg "${REGISTRY_SERVER}/images" \
         --arg user "$REGISTRY_USER" \
+        --arg pass "$REGISTRY_PASS" \
         '{
             "agentType": "tron-kube-agent",
             "containerLifecycleEnabled": true,
@@ -194,6 +195,7 @@ bootstrap_service_create_poc_group() {
             "groupName": $name,
             "hostLoginEnabled": true,
             "kcsNamespace": $ns,
+            "kcsPassword": $pass,
             "kcsRegistryUrl": $reg,
             "kcsRegistryUsername": $user,
             "logicalName": $name,
