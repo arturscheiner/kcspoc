@@ -78,7 +78,7 @@ config_controller() {
                     return 1
                     ;;
             esac
-        elif [[ "$VERIFY_TARGET" == "kcs" ]]; then
+        elif [[ "$VERIFY_TARGET" == "kcs" ]] || [[ "$VERIFY_TARGET" == "api" ]]; then
             config_view_verify_header "Kaspersky Container Security (KCS)"
             config_service_load
             
