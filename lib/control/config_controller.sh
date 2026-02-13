@@ -78,6 +78,37 @@ config_controller() {
                     return 1
                     ;;
             esac
+        elif [[ "$VERIFY_TARGET" == "kcs" ]]; then
+            config_view_verify_header "Kaspersky Container Security (KCS)"
+            config_service_load
+            
+            config_service_verify_kcs
+            local res=$?
+            
+            case $res in
+                0)
+                    config_view_verify_result "KCS API Connectivity" "PASS"
+                    config_view_verify_result "KCS Token Validity" "PASS"
+                    return 0
+                    ;;
+                1)
+                    config_view_verify_result "KCS API Connectivity" "FAIL" "Endpoint unreachable (check DOMAIN configuration)."
+                    return 1
+                    ;;
+                2)
+                    config_view_verify_result "KCS API Connectivity" "PASS"
+                    config_view_verify_result "KCS Token Validity" "FAIL" "Unauthorized (ADMIN_API_TOKEN might be invalid or expired)."
+                    return 1
+                    ;;
+                127)
+                    config_view_verify_result "KCS API Connectivity" "FAIL" "The 'curl' command is not installed."
+                    return 1
+                    ;;
+                *)
+                    config_view_verify_result "KCS API Connectivity" "FAIL" "An unexpected error occurred (Code: $res)."
+                    return 1
+                    ;;
+            esac
         else
             echo "Error: Unknown verification target '$VERIFY_TARGET'"
             return 1

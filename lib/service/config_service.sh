@@ -69,3 +69,36 @@ config_service_verify_ai() {
     
     return 0
 }
+
+config_service_verify_kcs() {
+    # 1. Check dependencies
+    if ! command -v curl &>/dev/null; then
+        return 127
+    fi
+
+    local domain="${DOMAIN:-}"
+    local token="${ADMIN_API_TOKEN:-}"
+
+    if [ -z "$domain" ] || [ -z "$token" ]; then
+        return 1 # Configuration missing
+    fi
+
+    # 2. Call API model (Get Scopes is a lightweight read operation)
+    # captures the actual HTTP status to distinguish 401/403 from connectivity errors
+    local response_info
+    response_info=$(curl -s -k -o /dev/null -w "%{http_code}" \
+        -X 'GET' "https://${domain}/api/v1/security/scopes" \
+        -H "Tron-Token: ${token}" \
+        --connect-timeout 5)
+    local status=$?
+
+    if [ $status -ne 0 ]; then
+        return 1 # Connectivity error
+    fi
+
+    case "$response_info" in
+        200) return 0 ;;
+        401|403) return 2 ;; # Unauthorized
+        *) return 3 ;; # Other API error
+    esac
+}
