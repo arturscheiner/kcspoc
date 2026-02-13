@@ -27,6 +27,14 @@ view_bootstrap_prompt_token() {
     echo ""
 }
 
+view_bootstrap_token_detected() {
+    local token="$1"
+    # Show masked token for security
+    local masked="********************${token: -4}"
+    echo -e "   ${ICON_OK} ${BRIGHT_WHITE}Existing API Token detected:${NC} ${DIM}${masked}${NC}"
+    echo -e "      ${DIM}Skipping interactive prompt. To change, edit ~/.kcspoc/config.${NC}\n"
+}
+
 view_bootstrap_error_empty() {
     echo -e "      ${BRIGHT_RED}${ICON_FAIL} Token cannot be empty. Please try again.${NC}"
 }

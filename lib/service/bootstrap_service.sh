@@ -9,14 +9,20 @@
 service_bootstrap_run() {
     view_bootstrap_intro
 
-    # Phase 1: Interactive Token Collection
+    # Phase 1: Interactive Token Collection (Skip if already configured)
     local token=""
-    while [ -z "$token" ]; do
-        view_bootstrap_prompt_token token
-        if [ -z "$token" ]; then
-            view_bootstrap_error_empty
-        fi
-    done
+    
+    if config_service_load && [ -n "$ADMIN_API_TOKEN" ]; then
+        token="$ADMIN_API_TOKEN"
+        view_bootstrap_token_detected "$token"
+    else
+        while [ -z "$token" ]; do
+            view_bootstrap_prompt_token token
+            if [ -z "$token" ]; then
+                view_bootstrap_error_empty
+            fi
+        done
+    fi
 
     # Phase 2: Validation
     # Validate token format (simple length check for now)
