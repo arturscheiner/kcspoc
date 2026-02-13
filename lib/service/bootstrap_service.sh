@@ -62,24 +62,21 @@ service_bootstrap_run() {
     view_bootstrap_group_create_start "$group_name"
     
     local group_id
-    group_id=$(bootstrap_service_create_poc_group "$DOMAIN" "$token" "$scope_id" "$group_name")
+    local group_response
+    group_response=$(bootstrap_service_create_poc_group "$DOMAIN" "$token" "$scope_id" "$group_name")
     local group_status=$?
 
     if [ $group_status -eq 0 ]; then
+        group_id="$group_response"
         view_bootstrap_group_created "$group_id"
-    elif [ $group_status -eq 4 ]; then # 4 = Conflict (Group already exists)
+    elif [ $group_status -eq 4 ]; then # 4 = Recovered existing group
+        group_id="$group_response"
         view_bootstrap_group_exists "$group_name"
-        # Recover ID to allow Asset Management sync
-        view_bootstrap_discovery_start "Recovering Group ID..."
-        group_id=$(bootstrap_service_get_group_id_by_name "$DOMAIN" "$token" "$group_name")
-        if [ -n "$group_id" ]; then
-            view_bootstrap_discovery_stop "PASS"
-        else
-            view_bootstrap_discovery_stop "FAIL"
-        fi
+        echo -e "      ${DIM}Group ID: ${group_id}${NC}"
     else
         service_spinner_stop "FAIL"
         echo -e "      ${RED}${ICON_FAIL} Error: Failed to create Agent Group.${NC}"
+        [ -n "$group_response" ] && echo -e "      ${DIM}${group_response}${NC}"
     fi
 
     # Phase 6: Asset Management
@@ -121,6 +118,7 @@ bootstrap_service_download_assets() {
     [ $? -ne 0 ] && return 1
 
     # 2. Compare with local version using hash (SHA-256)
+    view_bootstrap_asset_compare
     local server_hash=$(echo "$content" | sha256sum | awk '{print $1}')
     
     if [ -f "$target_file" ]; then
@@ -147,7 +145,7 @@ bootstrap_service_get_group_id_by_name() {
     [ -z "$domain" ] || [ -z "$token" ] || [ -z "$name" ] && return 1
 
     local json_response
-    json_response=$(model_kcs_api_get_agent_groups "$domain" "$token")
+    json_response=$(model_kcs_api_get_agent_groups "$domain" "$token" "$name")
     [ $? -ne 0 ] && return 1
 
     local id
@@ -169,7 +167,15 @@ bootstrap_service_create_poc_group() {
 
     [ -z "$domain" ] || [ -z "$token" ] || [ -z "$scope_id" ] || [ -z "$name" ] && return 1
 
-    # Prepare JSON payload
+    # 1. Proactive Check: Does it already exist?
+    local existing_id
+    existing_id=$(bootstrap_service_get_group_id_by_name "$domain" "$token" "$name")
+    if [ -n "$existing_id" ]; then
+        echo "$existing_id"
+        return 4 # Use 4 as a "Conflict/Exists but recovered" signal
+    fi
+
+    # 2. Prepare JSON payload
     local payload
     payload=$(jq -n \
         --arg name "$name" \

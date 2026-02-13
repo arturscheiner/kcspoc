@@ -81,8 +81,14 @@ model_kcs_api_download_config() {
 model_kcs_api_get_agent_groups() {
     local domain="$1"
     local token="$2"
+    local name="$3"
 
     [ -z "$domain" ] || [ -z "$token" ] && return 1
 
-    _kcs_api_do_request "GET" "https://${domain}/api/v1/integrations/agent-group" "$token"
+    local url="https://${domain}/api/v1/integrations/agent-group"
+    if [ -n "$name" ]; then
+        url="${url}?name=$(echo -n "$name" | jq -sRr @uri)"
+    fi
+
+    _kcs_api_do_request "GET" "$url" "$token"
 }

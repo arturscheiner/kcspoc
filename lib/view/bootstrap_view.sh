@@ -87,6 +87,10 @@ view_bootstrap_asset_download_start() {
     service_spinner_start "Downloading KCS Agent Deployment Assets"
 }
 
+view_bootstrap_asset_compare() {
+    echo -e "      ${DIM}Comparing online yaml with local configuration...${NC}"
+}
+
 view_bootstrap_asset_download_stop() {
     local status="$1"
     local path="$2"
