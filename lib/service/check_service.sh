@@ -21,20 +21,8 @@ service_check_validate_prereqs() {
 
     # 2. Tools
     view_check_step_start "$MSG_CHECK_TOOLS"
-    local missing_tools=""
-    for tool in kubectl helm jq; do
-        if ! command -v "$tool" &>> "$DEBUG_OUT"; then
-            missing_tools="$missing_tools $tool"
-        fi
-    done
-
-    if [ -n "$missing_tools" ]; then
-        view_check_step_stop "FAIL"
-        view_check_prereq_tools_fail "$missing_tools"
-        error=1
-    else
-        view_check_step_stop "PASS"
-    fi
+    service_base_require_dependencies kubectl helm jq
+    view_check_step_stop "PASS"
 
     # 3. Config
     view_check_step_start "$MSG_CHECK_CONFIG"

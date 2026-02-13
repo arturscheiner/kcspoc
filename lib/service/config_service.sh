@@ -9,6 +9,7 @@
 
 config_service_generate_secret() {
     local length=${1:-32}
+    service_base_require_dependencies "tr" "head"
     LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$length"
 }
 

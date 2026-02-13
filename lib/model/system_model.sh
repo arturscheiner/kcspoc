@@ -17,3 +17,14 @@ model_system_install_headers() {
     fi
     return 1
 }
+
+# Returns a space-separated string of missing dependencies
+model_system_get_missing_dependencies() {
+    local missing=()
+    for dep in "$@"; do
+        if ! command -v "$dep" &>/dev/null; then
+            missing+=("$dep")
+        fi
+    done
+    echo "${missing[*]}"
+}

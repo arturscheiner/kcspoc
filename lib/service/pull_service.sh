@@ -34,6 +34,9 @@ service_pull_list_local() {
 service_pull_perform() {
     local force_version="$1"
 
+    # 0. Check Dependencies
+    service_base_require_dependencies "helm" "sed" "grep"
+
     # 1. Registry Login
     view_pull_auth_start
     if model_helm_login "$REGISTRY_SERVER" "$REGISTRY_USER" "$REGISTRY_PASS" > /dev/null; then

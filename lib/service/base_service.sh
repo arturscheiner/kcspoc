@@ -11,3 +11,14 @@
 # 3. MUST NOT print output directly (use Views instead).
 # 4. MUST NOT parse CLI arguments.
 # ==============================================================================
+
+service_base_require_dependencies() {
+    local missing
+    missing=$(model_system_get_missing_dependencies "$@")
+    
+    if [ -n "$missing" ]; then
+        view_ui_missing_dependency_error "$missing"
+        exit 1
+    fi
+    return 0
+}

@@ -337,3 +337,18 @@ view_ui_log_info() {
     echo -e "\n${DIM}${ICON_INFO} Log saved (ID: ${BOLD}$log_id${DIM}). Parent Execution: ${BOLD}$exec_id${NC}"
     echo -e "${DIM}   View with: ./kcspoc logs --show $log_id${NC}\n"
 }
+
+view_ui_missing_dependency_error() {
+    local missing_deps="$1"
+    
+    echo -e "   ${ICON_FAIL} ${RED}${BOLD}Missing Command Dependencies:${NC}"
+    echo -e "      ${DIM}The following required tools are missing on this system:${NC}"
+    echo ""
+    for dep in $missing_deps; do
+        echo -e "      ${RED}✘${NC} ${BOLD}${dep}${NC}"
+    done
+    echo ""
+    echo -e "   ${ICON_INFO} ${CYAN}Please install these tools and try again.${NC}"
+    echo -e "      ${DIM}Example: sudo apt update && sudo apt install -y $missing_deps${NC}"
+    echo ""
+}

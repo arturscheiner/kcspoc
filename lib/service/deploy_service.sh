@@ -14,6 +14,9 @@ service_deploy_core() {
     local exec_id="$EXEC_HASH"
     local local_hash=$(model_config_get_hash)
 
+    # 0. Check Dependencies
+    service_base_require_dependencies "kubectl" "helm" "sed" "grep"
+
     # 1. Pre-flight Diagnostics
     view_deploy_section "Pre-flight Diagnostics"
     
