@@ -149,7 +149,8 @@ bootstrap_service_get_group_id_by_name() {
     [ $? -ne 0 ] && return 1
 
     local id
-    id=$(echo "$json_response" | jq -r ".[] | select(.groupName == \"$name\") | .id")
+    # Handle both paginated ({items: []}) and direct ([]) responses
+    id=$(echo "$json_response" | jq -r "if type == \"array\" then .[] else .items[]? // empty end | select(.groupName == \"$name\") | .id" 2>/dev/null | head -n 1)
     
     if [ -n "$id" ] && [ "$id" != "null" ]; then
         echo "$id"
