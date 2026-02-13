@@ -67,8 +67,16 @@ service_bootstrap_run() {
 
     if [ $group_status -eq 0 ]; then
         view_bootstrap_group_created "$group_id"
-    elif [ $group_status -eq 409 ]; then
+    elif [ $group_status -eq 4 ]; then # 4 = Conflict (Group already exists)
         view_bootstrap_group_exists "$group_name"
+        # Recover ID to allow Asset Management sync
+        view_bootstrap_discovery_start "Recovering Group ID..."
+        group_id=$(bootstrap_service_get_group_id_by_name "$DOMAIN" "$token" "$group_name")
+        if [ -n "$group_id" ]; then
+            view_bootstrap_discovery_stop "PASS"
+        else
+            view_bootstrap_discovery_stop "FAIL"
+        fi
     else
         service_spinner_stop "FAIL"
         echo -e "      ${RED}${ICON_FAIL} Error: Failed to create Agent Group.${NC}"
@@ -131,6 +139,28 @@ bootstrap_service_download_assets() {
     return 1
 }
 
+bootstrap_service_get_group_id_by_name() {
+    local domain="$1"
+    local token="$2"
+    local name="$3"
+
+    [ -z "$domain" ] || [ -z "$token" ] || [ -z "$name" ] && return 1
+
+    local json_response
+    json_response=$(model_kcs_api_get_agent_groups "$domain" "$token")
+    [ $? -ne 0 ] && return 1
+
+    local id
+    id=$(echo "$json_response" | jq -r ".[] | select(.groupName == \"$name\") | .id")
+    
+    if [ -n "$id" ] && [ "$id" != "null" ]; then
+        echo "$id"
+        return 0
+    fi
+
+    return 1
+}
+
 bootstrap_service_create_poc_group() {
     local domain="$1"
     local token="$2"
@@ -175,11 +205,7 @@ bootstrap_service_create_poc_group() {
     local exit_code=$?
 
     if [ $exit_code -ne 0 ]; then
-        # Check if error is "already exists" (usually 400 or 409 depending on API)
-        # For now, let's assume if it fails it might be a conflict if we want to be smart
-        # Better: parse response if possible, but curl -f hide response body on error.
-        # We'll use a secondary check or specific exit code mapping in future.
-        return 1
+        return $exit_code
     fi
 
     # Extract ID from response
