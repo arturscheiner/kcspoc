@@ -88,7 +88,8 @@ view_bootstrap_asset_download_start() {
 }
 
 view_bootstrap_asset_compare() {
-    echo -e "      ${DIM}Comparing online yaml with local configuration...${NC}"
+    # Redirect to stderr to avoid being captured in $(...) subshells
+    echo -e "      ${DIM}Comparing online yaml with local configuration...${NC}" >&2
 }
 
 view_bootstrap_asset_download_stop() {
@@ -96,7 +97,8 @@ view_bootstrap_asset_download_stop() {
     local path="$2"
     service_spinner_stop "$status"
     if [ "$status" == "PASS" ]; then
-        echo -e "      ${DIM}Assets saved to: ${path}${NC}"
+        echo -e "      ${DIM}Assets saved to:${NC}"
+        echo -e "      ${path}"
     elif [ "$status" == "SKIPPED" ]; then
         echo -e "      ${DIM}Local assets are already in sync with server.${NC}"
     fi
