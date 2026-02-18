@@ -71,13 +71,15 @@ config_service_verify_ai() {
 }
 
 config_service_verify_kcs() {
+    local token_override="${1:-}"
+    
     # 1. Check dependencies
     if ! command -v curl &>/dev/null; then
         return 127
     fi
 
     local domain="${DOMAIN:-}"
-    local token="${ADMIN_API_TOKEN:-}"
+    local token="${token_override:-${ADMIN_API_TOKEN:-}}"
 
     if [ -z "$domain" ] || [ -z "$token" ]; then
         return 1 # Configuration missing

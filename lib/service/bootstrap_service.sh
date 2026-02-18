@@ -9,26 +9,60 @@
 service_bootstrap_run() {
     view_bootstrap_intro
 
-    # Phase 1: Interactive Token Collection (Skip if already configured)
+    # Phase 1: Interactive Token Collection & Validation
     local token=""
+    local valid=false
     
+    # Check if we have an existing token to start with
     if config_service_load && [ -n "$ADMIN_API_TOKEN" ]; then
         token="$ADMIN_API_TOKEN"
         view_bootstrap_token_detected "$token"
-    else
-        while [ -z "$token" ]; do
+    fi
+
+    while [ "$valid" = false ]; do
+        if [ -z "$token" ]; then
             view_bootstrap_prompt_token token
             if [ -z "$token" ]; then
                 view_bootstrap_error_empty
+                continue
             fi
-        done
-    fi
+        fi
 
-    # Phase 2: Validation
-    # Validate token format (simple length check for now)
-    if [ ${#token} -lt 20 ]; then
-        view_bootstrap_warn_short
-    fi
+        # Validate token format (simple length check)
+        if [ ${#token} -lt 20 ]; then
+            view_bootstrap_warn_short
+        fi
+
+        # Verify token validity against API
+        view_bootstrap_verifying_token
+        config_service_verify_kcs "$token"
+        local verify_status=$?
+
+        case $verify_status in
+            0)
+                service_spinner_stop "PASS"
+                valid=true
+                ;;
+            2)
+                view_bootstrap_error_invalid_token
+                token="" # Force re-prompt
+                ;;
+            *)
+                view_bootstrap_error_connectivity
+                # We let it pass but warn, or should we force valid?
+                # User said: "if the token is expired/invalid it should ask for a valid token"
+                # If connectivity fails, we might not know if it's expired.
+                # But usually bootstrap is done when connectivity is expected.
+                # For now, let's treat connectivity as "maybe valid" but show warning,
+                # or force re-prompt if we want to be strict.
+                # Given the prompt "it should ask for a valid token", let's be strict if it's explicitly 401/403.
+                # If it's connectivity (1), we might be offline but token could be ok.
+                # Let's proceed if it's connectivity error but warn.
+                service_spinner_stop "WARN"
+                valid=true 
+                ;;
+        esac
+    done
 
     # Phase 3: Persistence
     view_bootstrap_saving_start

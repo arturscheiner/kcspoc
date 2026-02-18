@@ -43,6 +43,20 @@ view_bootstrap_warn_short() {
     echo -e "   ${BRIGHT_RED}${ICON_FAIL} The token seems too short. Are you sure it's correct?${NC}"
 }
 
+view_bootstrap_verifying_token() {
+    service_spinner_start "Verifying API Token validity"
+}
+
+view_bootstrap_error_invalid_token() {
+    service_spinner_stop "FAIL"
+    echo -e "      ${BRIGHT_RED}${ICON_FAIL} Invalid or expired token. Please provide a valid one.${NC}"
+}
+
+view_bootstrap_error_connectivity() {
+    service_spinner_stop "FAIL"
+    echo -e "      ${YELLOW}${ICON_GEAR} Warning: Could not reach KCS API. Check your network or DOMAIN config.${NC}"
+}
+
 view_bootstrap_saving_start() {
     service_spinner_start "Saving configuration to $CONFIG_FILE"
 }
