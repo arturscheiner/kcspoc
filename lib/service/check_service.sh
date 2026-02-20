@@ -154,11 +154,24 @@ service_check_topology() {
 
 service_check_infrastructure() {
     view_check_infra_header
-    view_check_infra_item "Cert-Manager" "$([ $(model_cluster_get_infrastructure_status "namespace" "cert-manager") ] && echo "INSTALLED" || echo "MISSING")"
-    view_check_infra_item "MetalLB" "$([ $(model_cluster_get_infrastructure_status "namespace" "metallb-system") ] && echo "INSTALLED" || echo "MISSING")"
-    view_check_infra_item "Ingress-Nginx" "$([ $(model_cluster_get_infrastructure_status "namespace" "ingress-nginx") ] && echo "INSTALLED" || echo "MISSING")"
-    view_check_infra_item "Local Path Storage" "$([ $(model_cluster_get_infrastructure_status "namespace" "local-path-storage") ] && echo "INSTALLED" || echo "MISSING")"
-    view_check_infra_item "Metrics Server" "$([ $(model_cluster_get_infrastructure_status "deployment" "metrics-server" "kube-system") ] && echo "INSTALLED" || echo "MISSING")"
+    
+    local status
+    
+    model_cluster_get_infrastructure_status "namespace" "cert-manager" && status="INSTALLED" || status="MISSING"
+    view_check_infra_item "Cert-Manager" "$status"
+    
+    model_cluster_get_infrastructure_status "namespace" "metallb-system" && status="INSTALLED" || status="MISSING"
+    view_check_infra_item "MetalLB" "$status"
+    
+    model_cluster_get_infrastructure_status "namespace" "ingress-nginx" && status="INSTALLED" || status="MISSING"
+    view_check_infra_item "Ingress-Nginx" "$status"
+    
+    model_cluster_get_infrastructure_status "namespace" "local-path-storage" && status="INSTALLED" || status="MISSING"
+    view_check_infra_item "Local Path Storage" "$status"
+    
+    model_cluster_get_infrastructure_status "deployment" "metrics-server" "kube-system" && status="INSTALLED" || status="MISSING"
+    view_check_infra_item "Metrics Server" "$status"
+    
     echo ""
 }
 
@@ -410,11 +423,11 @@ service_check_collect_facts() {
     local infra_json="{}"
     for item in "cert-manager" "metallb-system" "ingress-nginx" "local-path-storage"; do
         local status="MISSING"
-        [ -n "$(model_cluster_get_infrastructure_status "namespace" "$item")" ] && status="INSTALLED"
+        model_cluster_get_infrastructure_status "namespace" "$item" && status="INSTALLED"
         infra_json=$(echo "$infra_json" | jq -c ". + {\"$item\": \"$status\"}")
     done
     local metrics_status="MISSING"
-    [ -n "$(model_cluster_get_infrastructure_status "deployment" "metrics-server" "kube-system")" ] && metrics_status="INSTALLED"
+    model_cluster_get_infrastructure_status "deployment" "metrics-server" "kube-system" && metrics_status="INSTALLED"
     infra_json=$(echo "$infra_json" | jq -c ". + {\"metrics-server\": \"$metrics_status\"}")
 
     # Cloud Provider
