@@ -54,3 +54,20 @@ view_extras_uninstall_start() {
     local pack="$1"
     view_ui_section_header "Removing Extra-Pack: $pack"
 }
+
+view_extras_uninstall_all_start() {
+    view_ui_section_header "Removing All Extra-Packs"
+}
+
+view_extras_uninstall_all_confirm() {
+    local count="$1"
+    echo -e "   ${BRIGHT_YELLOW}${ICON_WARN} WARNING: You are about to uninstall ALL ($count) extra-packs.${NC}"
+    echo -e "   This operation cannot be undone."
+    echo ""
+    echo -ne "   ${BOLD}Are you sure you want to proceed? (y/n): ${NC}"
+    read -r response
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+        return 0
+    fi
+    return 1
+}

@@ -357,3 +357,39 @@ service_extra_pack_uninstall() {
             ;;
     esac
 }
+
+service_extra_pack_uninstall_all() {
+    local context
+    context=$(model_cluster_get_current_context)
+    
+    # 0. Check Dependencies
+    service_base_require_dependencies "jq" "kubectl" "helm"
+    
+    # 1. Get list of installed packs
+    local installed_ids
+    installed_ids=$(model_state_get_installed_in_context "$context")
+    
+    if [ -z "$installed_ids" ]; then
+        echo -e "   ${DIM}No extra-packs found in current context ($context).${NC}"
+        return 0
+    fi
+    
+    local count
+    count=$(echo "$installed_ids" | wc -w)
+    
+    # 2. Confirm removal
+    if ! view_extras_uninstall_all_confirm "$count"; then
+        echo -e "   ${YELLOW}Operation cancelled.${NC}"
+        return 0
+    fi
+    
+    view_extras_uninstall_all_start
+    
+    # 3. Loop and uninstall
+    for id in $installed_ids; do
+        service_extra_pack_uninstall "$id"
+        echo -e "   ${BRIGHT_GREEN}${ICON_OK} $id removed.${NC}"
+    done
+    
+    return 0
+}

@@ -112,9 +112,13 @@ extras_controller() {
             return 1
         fi
         
-        view_extras_uninstall_start "$uninstall_pack"
-        service_extra_pack_uninstall "$uninstall_pack"
-        echo -e "\n${BRIGHT_GREEN}${ICON_OK} $uninstall_pack removed successfully.${NC}"
+        if [ "$uninstall_pack" == "all" ]; then
+            service_extra_pack_uninstall_all
+        else
+            view_extras_uninstall_start "$uninstall_pack"
+            service_extra_pack_uninstall "$uninstall_pack"
+            echo -e "\n${BRIGHT_GREEN}${ICON_OK} $uninstall_pack removed successfully.${NC}"
+        fi
         return 0
     fi
 

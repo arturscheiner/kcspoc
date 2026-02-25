@@ -317,3 +317,10 @@ MSG_HELP_LOGS_EX="kcspoc logs --list\nkcspoc logs --list prepare\nkcspoc logs --
 MSG_HELP_DEPLOY_DESC="Implanta os componentes do Kaspersky Container Security (Core e Agents) no seu cluster."
 MSG_HELP_DEPLOY_OPTS="--core|Implanta o console principal e o backend do KCS.\n--agents|Implanta os agentes de segurança nos seus nós (Finalizando).\n--values <arquivo>|Fornece um arquivo values.yaml customizado para ignorar o template padrão."
 MSG_HELP_DEPLOY_EX="kcspoc deploy --core\nkcspoc deploy --agents"
+MSG_CMD_REPORTS_DESC="Gerenciar relatórios gerados (Descoberta, Visualização)"
+MSG_CMD_EXTRAS_DESC="Gerenciar pacotes extras de infraestrutura (Descoberta, Instalação, Remoção)"
+
+# Extras Help
+MSG_HELP_EXTRAS_DESC="Hub central para gerenciar componentes opcionais de infraestrutura (extra-packs). Conecta-se ao repositório do projeto para descoberta dinâmica."
+MSG_HELP_EXTRAS_OPTS="--list|Exibir todos os pacotes extras disponíveis no catálogo online.\n--install <pack>|Instalar um componente específico (ex: ingress-nginx).\n--uninstall <pack>|Remover um componente específico (use 'all' para remover todos os pacotes vinculados ao contexto)."
+MSG_HELP_EXTRAS_EX="kcspoc extras --list\nkcspoc extras --install cert-manager\nkcspoc extras --uninstall metallb\nkcspoc extras --uninstall all"
