@@ -380,6 +380,9 @@ service_extra_pack_uninstall() {
             fi
             ;;
         *)
+            echo "Unknown extra-pack id: '$pack'" >> "$DEBUG_OUT"
+            echo -e "   ${RED}${ICON_FAIL} Unknown pack: '${pack}'.${NC}" >&2
+            echo -e "   ${DIM}Valid IDs: registry-auth, cert-manager, local-path-storage, metrics-server, metallb, ingress-nginx, kernel-headers${NC}" >&2
             return 1
             ;;
     esac
