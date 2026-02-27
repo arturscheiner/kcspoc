@@ -313,8 +313,8 @@ service_extra_pack_uninstall() {
     case "$pack" in
         "ingress-nginx")
             view_prepare_step_start "Removing Ingress-Nginx"
-            if model_helm_uninstall "ingress-nginx" "ingress-nginx" &&
-               model_kubectl_delete_namespace "ingress-nginx" "0s"; then
+            if model_helm_uninstall "ingress-nginx" "ingress-nginx"; then
+                model_kubectl_delete_namespace_nowait "ingress-nginx"
                 service_exec_wait_and_force_delete_ns "ingress-nginx" 3
                 view_prepare_step_stop "PASS"
                 model_state_record_uninstall "$pack" "$context"
@@ -325,8 +325,8 @@ service_extra_pack_uninstall() {
             ;;
         "metallb")
             view_prepare_step_start "Removing MetalLB"
-            if model_helm_uninstall "metallb" "metallb-system" &&
-               model_kubectl_delete_namespace "metallb-system" "0s"; then
+            if model_helm_uninstall "metallb" "metallb-system"; then
+                model_kubectl_delete_namespace_nowait "metallb-system"
                 service_exec_wait_and_force_delete_ns "metallb-system" 3
                 view_prepare_step_stop "PASS"
                 model_state_record_uninstall "$pack" "$context"
@@ -347,8 +347,8 @@ service_extra_pack_uninstall() {
             ;;
         "local-path-storage")
             view_prepare_step_start "Removing Local Path Storage"
-            if model_helm_uninstall "local-path-storage" "local-path-storage" &&
-               model_kubectl_delete_namespace "local-path-storage" "0s"; then
+            if model_helm_uninstall "local-path-storage" "local-path-storage"; then
+                model_kubectl_delete_namespace_nowait "local-path-storage"
                 service_exec_wait_and_force_delete_ns "local-path-storage" 3
                 view_prepare_step_stop "PASS"
                 model_state_record_uninstall "$pack" "$context"
@@ -359,8 +359,8 @@ service_extra_pack_uninstall() {
             ;;
         "cert-manager")
             view_prepare_step_start "Removing Cert-Manager"
-            if model_helm_uninstall "cert-manager" "cert-manager" &&
-               model_kubectl_delete_namespace "cert-manager" "0s"; then
+            if model_helm_uninstall "cert-manager" "cert-manager"; then
+                model_kubectl_delete_namespace_nowait "cert-manager"
                 service_exec_wait_and_force_delete_ns "cert-manager" 3
                 view_prepare_step_stop "PASS"
                 model_state_record_uninstall "$pack" "$context"

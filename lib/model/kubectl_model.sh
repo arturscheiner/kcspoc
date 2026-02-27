@@ -87,6 +87,11 @@ model_kubectl_delete_namespace() {
     kubectl delete namespace "$ns" --timeout="$timeout" &>> "$DEBUG_OUT"
 }
 
+model_kubectl_delete_namespace_nowait() {
+    local ns="$1"
+    kubectl delete namespace "$ns" --wait=false &>> "$DEBUG_OUT"
+}
+
 model_kubectl_delete_pvc_all() {
     local ns="$1"
     local timeout="${2:-60s}"

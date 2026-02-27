@@ -76,21 +76,21 @@ service_destroy_run() {
          # Ingress
          view_destroy_step_start "$MSG_DESTROY_DEPS_INGRESS"
          model_helm_uninstall "ingress-nginx" "ingress-nginx"
-         model_kubectl_delete_namespace "ingress-nginx" "0s"
+         model_kubectl_delete_namespace_nowait "ingress-nginx"
          service_exec_wait_and_force_delete_ns "ingress-nginx" 3
          view_destroy_step_stop "PASS"
  
          # MetalLB
          view_destroy_step_start "$MSG_DESTROY_DEPS_METALLB"
          model_helm_uninstall "metallb" "metallb-system"
-         model_kubectl_delete_namespace "metallb-system" "0s"
+         model_kubectl_delete_namespace_nowait "metallb-system"
          service_exec_wait_and_force_delete_ns "metallb-system" 3
          view_destroy_step_stop "PASS"
          
          # Cert-Manager
          view_destroy_step_start "$MSG_DESTROY_DEPS_CERT"
          model_helm_uninstall "cert-manager" "cert-manager"
-         model_kubectl_delete_namespace "cert-manager" "0s"
+         model_kubectl_delete_namespace_nowait "cert-manager"
          service_exec_wait_and_force_delete_ns "cert-manager" 3
          view_destroy_step_stop "PASS"
          
@@ -98,14 +98,14 @@ service_destroy_run() {
          view_destroy_step_start "$MSG_DESTROY_DEPS_STORAGE"
          model_kubectl_delete_deployment "metrics-server" "kube-system" || true
          model_helm_uninstall "local-path-storage" "local-path-storage" || true
-         model_kubectl_delete_namespace "local-path-storage" "0s" || true
+         model_kubectl_delete_namespace_nowait "local-path-storage" || true
          service_exec_wait_and_force_delete_ns "local-path-storage" 3 || true
          view_destroy_step_stop "PASS"
 
          # KCSPOC Isolation Namespace
          local kcspoc_ns="${KCSPOC_NAMESPACE:-kcspoc}"
          view_destroy_step_start "Cleaning $kcspoc_ns"
-         model_kubectl_delete_namespace "$kcspoc_ns" "false"
+         model_kubectl_delete_namespace_nowait "$kcspoc_ns"
          service_exec_wait_and_force_delete_ns "$kcspoc_ns" 3
          view_destroy_step_stop "PASS"
     else
