@@ -24,3 +24,8 @@ export KCS_DEBUG=false
 export POC_LABEL_KEY="kcspoc.io/managed-by"
 export POC_LABEL_VAL="kcspoc"
 export POC_LABEL="${POC_LABEL_KEY}=${POC_LABEL_VAL}"
+
+# --- Extras Labels ---
+export EXTRAS_LABEL_KEY="kcspoc.io/component"
+export EXTRAS_LABEL_VAL="extras"
+export EXTRAS_LABEL="${EXTRAS_LABEL_KEY}=${EXTRAS_LABEL_VAL}"

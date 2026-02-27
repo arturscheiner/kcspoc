@@ -72,7 +72,8 @@ service_extra_pack_install() {
                 view_prepare_step_start "$MSG_PREPARE_STEP_1"
                 model_kubectl_create_namespace "$NAMESPACE"
                 if model_kubectl_create_docker_secret "kcs-registry-secret" "$NAMESPACE" "$REGISTRY_SERVER" "$REGISTRY_USER" "$REGISTRY_PASS" && \
-                   model_kubectl_label "secret" "kcs-registry-secret" "$NAMESPACE" "$POC_LABEL"; then
+                   model_kubectl_label "secret" "kcs-registry-secret" "$NAMESPACE" "$POC_LABEL" && \
+                   model_kubectl_label "secret" "kcs-registry-secret" "$NAMESPACE" "$EXTRAS_LABEL"; then
                     view_prepare_step_stop "PASS"
                     if model_ns_check_label "secret" "kcs-registry-secret" "$NAMESPACE" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
                         view_prepare_infra_status "PASS" "secret" "kcs-registry-secret"
@@ -97,14 +98,16 @@ service_extra_pack_install() {
             if [ "$proceed" == "true" ]; then
                 view_prepare_step_start "$MSG_PREPARE_INSTALL_CERT"
                 model_helm_uninstall "cert-manager" "cert-manager"
-                model_kubectl_delete_namespace "cert-manager" "false"
+                model_kubectl_delete_namespace_nowait "cert-manager"
                 service_exec_wait_and_force_delete_ns "cert-manager" 5
                 model_helm_repo_add "jetstack" "https://charts.jetstack.io"
                 local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
                 if model_helm_upgrade_install "cert-manager" "jetstack/cert-manager" "cert-manager" "300s" "$HELM_ERR" \
                     --set crds.enabled=true --set startupapicheck.enabled=false; then
                     model_kubectl_label "namespace" "cert-manager" "" "$POC_LABEL"
+                    model_kubectl_label "namespace" "cert-manager" "" "$EXTRAS_LABEL"
                     model_kubectl_label_all "deployment" "cert-manager" "$POC_LABEL"
+                    model_kubectl_label_all "deployment" "cert-manager" "$EXTRAS_LABEL"
                     view_prepare_step_stop "PASS"
                     if model_ns_check_label "namespace" "cert-manager" "" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
                         view_prepare_infra_status "PASS" "namespace" "cert-manager"
@@ -133,12 +136,13 @@ service_extra_pack_install() {
                 model_fs_download_artifact "local-path-provisioner" "https://github.com/rancher/local-path-provisioner.git"
                 view_prepare_step_start "$MSG_PREPARE_INSTALL_LOCAL"
                 model_helm_uninstall "local-path-storage" "local-path-storage"
-                model_kubectl_delete_namespace "local-path-storage" "false"
+                model_kubectl_delete_namespace_nowait "local-path-storage"
                 service_exec_wait_and_force_delete_ns "local-path-storage" 5
                 local CHART_PATH="$ARTIFACTS_DIR/local-path-provisioner/deploy/chart/local-path-provisioner"
                 if model_helm_upgrade_install_local "local-path-storage" "$CHART_PATH" "local-path-storage" &>> "$DEBUG_OUT"; then
                     model_kubectl_patch_storageclass "local-path" '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
                     model_kubectl_label "sc" "local-path" "" "$POC_LABEL"
+                    model_kubectl_label "sc" "local-path" "" "$EXTRAS_LABEL"
                     view_prepare_step_stop "PASS"
                     if model_ns_check_label "sc" "local-path" "" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
                         view_prepare_infra_status "PASS" "sc" "local-path"
@@ -169,7 +173,8 @@ service_extra_pack_install() {
                      {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"},
                      {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-preferred-address-types=InternalIP"}
                    ]' && \
-                   model_kubectl_label "deployment" "metrics-server" "kube-system" "$POC_LABEL"; then
+                   model_kubectl_label "deployment" "metrics-server" "kube-system" "$POC_LABEL" && \
+                   model_kubectl_label "deployment" "metrics-server" "kube-system" "$EXTRAS_LABEL"; then
                     view_prepare_step_stop "PASS"
                     if model_ns_check_label "deployment" "metrics-server" "kube-system" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
                         view_prepare_infra_status "PASS" "deployment" "metrics-server"
@@ -194,13 +199,15 @@ service_extra_pack_install() {
             if [ "$proceed" == "true" ]; then
                 view_prepare_step_start "$MSG_PREPARE_STEP_3"
                 model_helm_uninstall "metallb" "metallb-system"
-                model_kubectl_delete_namespace "metallb-system" "false"
+                model_kubectl_delete_namespace_nowait "metallb-system"
                 service_exec_wait_and_force_delete_ns "metallb-system" 5
                 model_helm_repo_add "metallb" "https://metallb.github.io/metallb"
                 local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
                 if model_helm_upgrade_install "metallb" "metallb/metallb" "metallb-system" "300s" "$HELM_ERR"; then
                     model_kubectl_label "namespace" "metallb-system" "" "$POC_LABEL"
+                    model_kubectl_label "namespace" "metallb-system" "" "$EXTRAS_LABEL"
                     model_kubectl_label_all "deployment" "metallb-system" "$POC_LABEL"
+                    model_kubectl_label_all "deployment" "metallb-system" "$EXTRAS_LABEL"
                     sleep 5
                     cat <<EOF | model_kubectl_apply_stdin
 apiVersion: metallb.io/v1beta1
@@ -210,6 +217,7 @@ metadata:
   namespace: metallb-system
   labels:
     $POC_LABEL_KEY: "$POC_LABEL_VAL"
+    $EXTRAS_LABEL_KEY: "$EXTRAS_LABEL_VAL"
 spec:
   addresses:
   - $IP_RANGE
@@ -221,6 +229,7 @@ metadata:
   namespace: metallb-system
   labels:
     $POC_LABEL_KEY: "$POC_LABEL_VAL"
+    $EXTRAS_LABEL_KEY: "$EXTRAS_LABEL_VAL"
 spec:
   ipAddressPools:
   - first-pool
@@ -252,13 +261,15 @@ EOF
             if [ "$proceed" == "true" ]; then
                 view_prepare_step_start "$MSG_PREPARE_STEP_4"
                 model_helm_uninstall "ingress-nginx" "ingress-nginx"
-                model_kubectl_delete_namespace "ingress-nginx" "false"
+                model_kubectl_delete_namespace_nowait "ingress-nginx"
                 service_exec_wait_and_force_delete_ns "ingress-nginx" 5
                 model_helm_repo_add "ingress-nginx" "https://kubernetes.github.io/ingress-nginx"
                 local HELM_ERR="/tmp/kcspoc_helm_err.tmp"
                 if model_helm_upgrade_install "ingress-nginx" "ingress-nginx/ingress-nginx" "ingress-nginx" "300s" "$HELM_ERR"; then
                     model_kubectl_label "namespace" "ingress-nginx" "" "$POC_LABEL"
+                    model_kubectl_label "namespace" "ingress-nginx" "" "$EXTRAS_LABEL"
                     model_kubectl_label_all "deployment" "ingress-nginx" "$POC_LABEL"
+                    model_kubectl_label_all "deployment" "ingress-nginx" "$EXTRAS_LABEL"
                     view_prepare_step_stop "PASS"
                     if model_ns_check_label "namespace" "ingress-nginx" "" "$POC_LABEL_KEY" "$POC_LABEL_VAL"; then
                         view_prepare_infra_status "PASS" "namespace" "ingress-nginx"
