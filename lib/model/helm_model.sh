@@ -57,7 +57,17 @@ model_helm_upgrade_install_local() {
 model_helm_uninstall() {
     local release="$1"
     local ns="$2"
-    helm uninstall "$release" -n "$ns" &>> "$DEBUG_OUT"
+    local output
+    local exit_code
+    output=$(helm uninstall "$release" -n "$ns" 2>&1)
+    exit_code=$?
+    echo "$output" >> "$DEBUG_OUT"
+    if [ "$exit_code" -ne 0 ]; then
+        # "not found" means the release is already gone — treat as success (idempotent)
+        echo "$output" | grep -qi "not found" && return 0
+        return "$exit_code"
+    fi
+    return 0
 }
 
 model_helm_status() {
