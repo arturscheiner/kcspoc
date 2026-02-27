@@ -192,3 +192,15 @@ model_kubectl_get_resource_exists() {
         kubectl get "$type" "$name" &>/dev/null
     fi
 }
+
+model_kubectl_delete_deployment() {
+    local name="$1"
+    local ns="$2"
+    kubectl delete deployment "$name" -n "$ns" --ignore-not-found &>> "$DEBUG_OUT"
+}
+
+model_kubectl_delete_secret() {
+    local name="$1"
+    local ns="$2"
+    kubectl delete secret "$name" -n "$ns" --ignore-not-found &>> "$DEBUG_OUT"
+}

@@ -116,8 +116,12 @@ extras_controller() {
             service_extra_pack_uninstall_all
         else
             view_extras_uninstall_start "$uninstall_pack"
-            service_extra_pack_uninstall "$uninstall_pack"
-            echo -e "\n${BRIGHT_GREEN}${ICON_OK} $uninstall_pack removed successfully.${NC}"
+            if service_extra_pack_uninstall "$uninstall_pack"; then
+                echo -e "\n${BRIGHT_GREEN}${ICON_OK} $uninstall_pack removed successfully.${NC}"
+            else
+                echo -e "\n${BRIGHT_RED}${ICON_FAIL} $uninstall_pack removal failed.${NC}"
+                return 1
+            fi
         fi
         return 0
     fi

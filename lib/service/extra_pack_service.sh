@@ -313,49 +313,77 @@ service_extra_pack_uninstall() {
     case "$pack" in
         "ingress-nginx")
             view_prepare_step_start "Removing Ingress-Nginx"
-            model_helm_uninstall "ingress-nginx" "ingress-nginx"
-            model_kubectl_delete_namespace "ingress-nginx" "false"
-            service_exec_wait_and_force_delete_ns "ingress-nginx" 3
-            view_prepare_step_stop "PASS"
-            model_state_record_uninstall "$pack" "$context"
+            if model_helm_uninstall "ingress-nginx" "ingress-nginx" &&
+               model_kubectl_delete_namespace "ingress-nginx" "0s"; then
+                service_exec_wait_and_force_delete_ns "ingress-nginx" 3
+                view_prepare_step_stop "PASS"
+                model_state_record_uninstall "$pack" "$context"
+            else
+                view_prepare_step_stop "FAIL"
+                return 1
+            fi
             ;;
         "metallb")
             view_prepare_step_start "Removing MetalLB"
-            model_helm_uninstall "metallb" "metallb-system"
-            model_kubectl_delete_namespace "metallb-system" "false"
-            service_exec_wait_and_force_delete_ns "metallb-system" 3
-            view_prepare_step_stop "PASS"
-            model_state_record_uninstall "$pack" "$context"
+            if model_helm_uninstall "metallb" "metallb-system" &&
+               model_kubectl_delete_namespace "metallb-system" "0s"; then
+                service_exec_wait_and_force_delete_ns "metallb-system" 3
+                view_prepare_step_stop "PASS"
+                model_state_record_uninstall "$pack" "$context"
+            else
+                view_prepare_step_stop "FAIL"
+                return 1
+            fi
             ;;
         "metrics-server")
             view_prepare_step_start "Removing Metrics Server"
-            kubectl delete deployment metrics-server -n kube-system &>> "$DEBUG_OUT" || true
-            view_prepare_step_stop "PASS"
-            model_state_record_uninstall "$pack" "kube-system" # Special case or default context
+            if model_kubectl_delete_deployment "metrics-server" "kube-system"; then
+                view_prepare_step_stop "PASS"
+                model_state_record_uninstall "$pack" "$context"
+            else
+                view_prepare_step_stop "FAIL"
+                return 1
+            fi
             ;;
         "local-path-storage")
             view_prepare_step_start "Removing Local Path Storage"
-            model_helm_uninstall "local-path-storage" "local-path-storage"
-            model_kubectl_delete_namespace "local-path-storage" "false"
-            service_exec_wait_and_force_delete_ns "local-path-storage" 3
-            view_prepare_step_stop "PASS"
-            model_state_record_uninstall "$pack" "$context"
+            if model_helm_uninstall "local-path-storage" "local-path-storage" &&
+               model_kubectl_delete_namespace "local-path-storage" "0s"; then
+                service_exec_wait_and_force_delete_ns "local-path-storage" 3
+                view_prepare_step_stop "PASS"
+                model_state_record_uninstall "$pack" "$context"
+            else
+                view_prepare_step_stop "FAIL"
+                return 1
+            fi
             ;;
         "cert-manager")
             view_prepare_step_start "Removing Cert-Manager"
-            model_helm_uninstall "cert-manager" "cert-manager"
-            model_kubectl_delete_namespace "cert-manager" "false"
-            service_exec_wait_and_force_delete_ns "cert-manager" 3
-            view_prepare_step_stop "PASS"
-            model_state_record_uninstall "$pack" "$context"
+            if model_helm_uninstall "cert-manager" "cert-manager" &&
+               model_kubectl_delete_namespace "cert-manager" "0s"; then
+                service_exec_wait_and_force_delete_ns "cert-manager" 3
+                view_prepare_step_stop "PASS"
+                model_state_record_uninstall "$pack" "$context"
+            else
+                view_prepare_step_stop "FAIL"
+                return 1
+            fi
             ;;
         "registry-auth")
             view_prepare_step_start "Removing Registry Secret"
-            kubectl delete secret kcs-registry-secret -n "$NAMESPACE" &>> "$DEBUG_OUT" || true
-            view_prepare_step_stop "PASS"
-            model_state_record_uninstall "$pack" "$context"
+            if model_kubectl_delete_secret "kcs-registry-secret" "$NAMESPACE"; then
+                view_prepare_step_stop "PASS"
+                model_state_record_uninstall "$pack" "$context"
+            else
+                view_prepare_step_stop "FAIL"
+                return 1
+            fi
+            ;;
+        *)
+            return 1
             ;;
     esac
+    return 0
 }
 
 service_extra_pack_uninstall_all() {
