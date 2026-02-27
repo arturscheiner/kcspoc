@@ -47,6 +47,11 @@ _service_extra_is_installed() {
     esac
 }
 
+# Public wrapper — safe to call from Controller layer
+service_extra_is_installed() {
+    _service_extra_is_installed "$1"
+}
+
 service_extra_pack_install() {
     local pack="$1"
     local unattended="${2:-false}"

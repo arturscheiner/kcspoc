@@ -40,6 +40,9 @@ extras_controller() {
 
     # 1. Feature: List Catalog
     if [ "$list" = true ]; then
+        # Load config so NAMESPACE is available for registry-auth detection
+        model_fs_load_config &>> "$DEBUG_OUT" || true
+        
         view_extras_catalog_header
         
         # Fetch remote catalog (with local fallback)
@@ -50,12 +53,6 @@ extras_controller() {
         
         if [ -n "$catalog_json" ]; then
             view_extras_catalog_table_header
-            
-            # Get local installed state
-            local current_context
-            current_context=$(model_cluster_get_current_context)
-            local installed_ids
-            installed_ids=$(model_state_get_installed_in_context "$current_context")
             
             # Loop through JSON array using jq
             local count
@@ -72,10 +69,9 @@ extras_controller() {
                 name=$(echo "$catalog_json" | jq -r ".[$i].name")
                 desc=$(echo "$catalog_json" | jq -r ".[$i].description")
                 
+                # Query actual cluster state — never trust the state file alone
                 is_installed="false"
-                if [[ " $installed_ids " == *" $id "* ]]; then
-                    is_installed="true"
-                fi
+                service_extra_is_installed "$id" && is_installed="true"
                 
                 view_extras_catalog_item "$id" "$name" "$desc" "$is_installed"
             done
